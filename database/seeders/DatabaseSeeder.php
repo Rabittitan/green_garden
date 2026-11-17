@@ -2,32 +2,50 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
-use App\Models\Plant;
-use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
+/**
+ * Dữ liệu mẫu. Ghi thẳng bằng DB (không qua Model) để seeder chỉ phụ thuộc schema.
+ * Tồn đầu kỳ của mỗi cây = 1 bút toán 'opening' trong sổ kho, nên plants.stock khớp SUM(stock_movements).
+ */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // ===== 1. Tài khoản mẫu =====
-        User::create([
-            'name' => 'Quản Trị Viên', 'email' => 'admin@greenlife.test',
-            'password' => Hash::make('123456'), 'role' => 'admin',
-            'phone' => '0900000001', 'address' => 'TP. Hồ Chí Minh',
-        ])->markEmailAsVerified();   // tài khoản mẫu: coi như đã xác thực email
-        User::create([
-            'name' => 'Nguyễn Văn Khách', 'email' => 'khach@greenlife.test',
-            'password' => Hash::make('123456'), 'role' => 'customer',
-            'phone' => '0900000002', 'address' => '12 Nguyễn Huệ, Quận 1, TP.HCM',
-        ])->markEmailAsVerified();
+        $now = now();
+        $baseTier = DB::table('membership_tiers')->where('rank', 0)->value('id');
+
+        // ===== 1. Tài khoản mẫu (hạng cơ bản + lịch sử hạng 'initial') =====
+        $accounts = [
+            ['Quản Trị Viên', 'admin@greenlife.test', 'admin', '0900000001'],
+            ['Nguyễn Văn Khách', 'khach@greenlife.test', 'customer', '0900000002'],
+        ];
+        foreach ($accounts as [$name, $email, $role, $phone]) {
+            $userId = DB::table('users')->insertGetId([
+                'name' => $name, 'email' => $email, 'password' => Hash::make('123456'), 'role' => $role,
+                'phone' => $phone, 'membership_tier_id' => $baseTier, 'tier_achieved_at' => $now,
+                'email_verified_at' => $now, 'created_at' => $now, 'updated_at' => $now,
+            ]);
+            DB::table('membership_tier_histories')->insert([
+                'user_id' => $userId, 'to_tier_id' => $baseTier, 'reason' => 'initial', 'created_at' => $now,
+            ]);
+        }
+        $customerId = DB::table('users')->where('email', 'khach@greenlife.test')->value('id');
+        DB::table('user_addresses')->insert([
+            'user_id' => $customerId, 'recipient_name' => 'Nguyễn Văn Khách', 'phone' => '0900000002',
+            'province' => 'TP. Hồ Chí Minh', 'district' => 'Quận 1', 'ward' => 'Phường Bến Nghé',
+            'address_line' => '12 Nguyễn Huệ', 'is_default' => true, 'created_at' => $now, 'updated_at' => $now,
+        ]);
 
         // ===== 2. Danh mục (id tự tăng 1->5) =====
         $categories = ['Cây phong thủy', 'Cây để bàn văn phòng', 'Sen đá - Xương rồng', 'Cây nội thất lá đẹp', 'Cây ban công - sân vườn'];
-        foreach ($categories as $name) {
-            Category::create(['name' => $name]);
+        foreach ($categories as $i => $name) {
+            DB::table('categories')->insert([
+                'name' => $name, 'slug' => Str::slug($name), 'sort_order' => $i, 'created_at' => $now, 'updated_at' => $now,
+            ]);
         }
 
         // Hàm nhỏ tạo link ảnh Unsplash cho gọn
@@ -53,15 +71,39 @@ class DatabaseSeeder extends Seeder
             [1, 'Dang Cao Tri', 10090000, 1, 'ua_bong', 'kim', $img('1463320898484-cdee8141c787'), 'Lá có đốm trắng bạc, hợp mệnh Kim, tạo điểm nhấn cho góc làm việc.'],
         ];
 
-        foreach ($plants as $p) {
-            Plant::create([
-                'category_id' => $p[0], 'name' => $p[1], 'price' => $p[2], 'stock' => $p[3],
+        foreach ($plants as $i => $p) {
+            $sku = 'GL'.str_pad((string) ($i + 1), 5, '0', STR_PAD_LEFT);
+            $costPrice = intdiv($p[2] * 6, 10);                          // giá vốn mẫu = 60% giá bán
+            $plantId = DB::table('plants')->insertGetId([
+                'category_id' => $p[0], 'sku' => $sku, 'name' => $p[1], 'slug' => Str::slug($p[1]).'-'.($i + 1),
+                'price' => $p[2], 'cost_price' => $costPrice, 'stock' => $p[3],
                 'light' => $p[4], 'element' => $p[5], 'image' => $p[6], 'description' => $p[7],
+                'created_at' => $now, 'updated_at' => $now,
             ]);
+            if ($p[3] > 0) {
+                DB::table('stock_movements')->insert([
+                    'plant_id' => $plantId, 'type' => 'opening', 'quantity' => $p[3], 'stock_after' => $p[3],
+                    'unit_cost' => $costPrice, 'note' => 'Tồn đầu kỳ', 'created_at' => $now,
+                ]);
+            }
         }
 
-        // goi lai ham tao news in db 
-        $this->call(ArticleSeeder::class); 
+        // ===== 4. Mã giảm giá mẫu =====
+        $silverTier = DB::table('membership_tiers')->where('code', 'silver')->value('id');
+        DB::table('coupons')->insert([
+            ['code' => 'CHAOBAN', 'name' => 'Giảm 50.000đ đơn đầu tiên', 'type' => 'fixed', 'value' => 50000,
+             'max_discount_amount' => null, 'min_order_amount' => 300000, 'min_tier_id' => null, 'combinable_with_tier' => true,
+             'first_order_only' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'GIAM10', 'name' => 'Giảm 10% tối đa 100.000đ cho hạng Bạc trở lên', 'type' => 'percent', 'value' => 10,
+             'max_discount_amount' => 100000, 'min_order_amount' => 0, 'min_tier_id' => $silverTier, 'combinable_with_tier' => false,
+             'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'FREESHIP', 'name' => 'Miễn phí vận chuyển', 'type' => 'free_shipping', 'value' => 0,
+             'max_discount_amount' => null, 'min_order_amount' => 150000, 'min_tier_id' => null, 'combinable_with_tier' => true,
+             'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
+        ]);
+
+        // ===== 5. Bài viết =====
+        $this->call(ArticleSeeder::class);
     }
 
     
