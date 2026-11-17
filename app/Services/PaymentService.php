@@ -13,9 +13,12 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentWebhookLog;
 use App\Models\User;
+use App\Notifications\PaymentReceived;
+use App\Notifications\RefundCompleted;
 use App\Services\Orders\OrderStateWriter;
 use App\Services\Payments\GatewayResult;
 use App\Services\Payments\PaymentGateway;
+use App\Support\Notifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -183,6 +186,7 @@ class PaymentService
         if ($order->status === OrderStatus::PendingPayment) {
             $this->state->transition($order, OrderStatus::Pending, $actor, $by, 'Đã thanh toán',
                 $this->paymentAttributes($order, OrderStatus::Pending));
+            Notifier::send($order->user, new PaymentReceived($order));
         } elseif ($order->status === OrderStatus::Cancelled) {
             // Tiền về SAU khi đơn đã hủy (hết hạn): không mở lại đơn (hàng có thể đã bán), hoàn tiền cho khách
             $this->createRefund($order, $charge->amount, $by, 'Thanh toán đến sau khi đơn đã hủy - hoàn tiền tự động');
@@ -263,6 +267,7 @@ class PaymentService
             $refund->forceFill(['status' => PaymentState::Succeeded, 'paid_at' => now(), 'provider_txn_no' => $providerRef,
                 'note' => trim(($refund->note ?? '').' | Xác nhận bởi '.$by->name)])->save();
             $this->recalc($order);
+            Notifier::send($order->user, new RefundCompleted($order, $refund));
 
             return $order;
         }, 3);

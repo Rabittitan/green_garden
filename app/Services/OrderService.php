@@ -10,9 +10,13 @@ use App\Exceptions\BusinessException;
 use App\Exceptions\PriceChangedException;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\OrderCancelled;
+use App\Notifications\OrderShipped;
+use App\Notifications\ReturnInstructions;
 use App\Services\Orders\OrderStateWriter;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\Pricing\Quote;
+use App\Support\Notifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -171,8 +175,13 @@ class OrderService
             throw new BusinessException('Phải nhập đơn vị vận chuyển và mã vận đơn.');
         }
 
-        return $this->locked($order, fn (Order $o) => $this->state->transition($o, OrderStatus::Shipping, ActorType::Staff, $by->id, null,
-            ['shipping_carrier' => trim($carrier), 'tracking_code' => trim($trackingCode), 'shipped_at' => now()]));
+        return $this->locked($order, function (Order $o) use ($carrier, $trackingCode, $by) {
+            $this->state->transition($o, OrderStatus::Shipping, ActorType::Staff, $by->id, null,
+                ['shipping_carrier' => trim($carrier), 'tracking_code' => trim($trackingCode), 'shipped_at' => now()]);
+            Notifier::send($o->user, new OrderShipped($o));
+
+            return $o;
+        });
     }
 
     /** Giao thành công. COD: shipper đã thu tiền -> charge thành công. */
@@ -233,8 +242,11 @@ class OrderService
             $this->payments->createRefund($o, $refundable, $by, "Hủy đơn: {$reason}");
         }
 
-        return $this->state->transition($o, OrderStatus::Cancelled, $actor, $by, $reason,
+        $this->state->transition($o, OrderStatus::Cancelled, $actor, $by, $reason,
             ['cancelled_at' => now(), 'cancel_reason' => mb_substr($reason, 0, 255)] + $this->payments->paymentAttributes($o, OrderStatus::Cancelled));
+        Notifier::send($o->user, new OrderCancelled($o));
+
+        return $o;
     }
 
     /** Hủy các đơn chờ thanh toán đã quá hạn (lệnh chạy mỗi phút). Trả số đơn đã hủy. */
@@ -288,7 +300,13 @@ class OrderService
                 throw new BusinessException("Đơn {$o->code} không thể chuyển sang hoàn hàng (đã quá hạn đổi trả hoặc sai trạng thái).");
             }
 
-            return $this->state->transition($o, OrderStatus::Returning, $actor, $by?->id, $reason);
+            $wasDelivered = $o->status === OrderStatus::Completed;
+            $this->state->transition($o, OrderStatus::Returning, $actor, $by?->id, $reason);
+            if ($wasDelivered) {                                            // khách đang giữ cây: gửi hướng dẫn gửi trả
+                Notifier::send($o->user, new ReturnInstructions($o));
+            }
+
+            return $o;
         });
     }
 

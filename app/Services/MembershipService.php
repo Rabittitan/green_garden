@@ -9,6 +9,8 @@ use App\Models\MembershipTier;
 use App\Models\MembershipTierHistory;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\TierUpgraded;
+use App\Support\Notifier;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -128,6 +130,10 @@ class MembershipService
         $from = $user->membership_tier_id;
         $user->forceFill(['membership_tier_id' => $to->id, 'tier_achieved_at' => now()])->save();
         $user->unsetRelation('tier');
+
+        if ($to->rank > MembershipTier::findOrFail($from)->rank) {
+            Notifier::send($user, new TierUpgraded($to));
+        }
 
         MembershipTierHistory::create([
             'user_id' => $user->id, 'from_tier_id' => $from, 'to_tier_id' => $to->id, 'reason' => $reason,

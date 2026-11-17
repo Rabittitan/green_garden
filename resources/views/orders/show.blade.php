@@ -29,6 +29,12 @@
         </div>
     @endif
 @endif
+@if($order->status === \App\Enums\OrderStatus::Returning && $order->completed_at)
+    <div class="alert alert-secondary">
+        <i class="fa fa-box"></i> <strong>Hướng dẫn trả hàng:</strong> gửi cây về <strong>{{ config('shop.return_address') }}</strong>,
+        ghi mã đơn <strong>{{ $order->code }}</strong> bên ngoài gói hàng. Shop kiểm tra khi nhận và hoàn tiền theo tình trạng thực tế.
+    </div>
+@endif
 @if($order->payment_status === \App\Enums\PaymentStatus::RefundPending)
     <div class="alert alert-info"><i class="fa fa-rotate-left"></i> Shop đang hoàn @money($order->payments->where('type', \App\Enums\PaymentType::Refund)->where('status', \App\Enums\PaymentState::Pending)->sum('amount')) cho bạn.</div>
 @endif
