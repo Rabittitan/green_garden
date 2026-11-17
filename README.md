@@ -68,7 +68,7 @@ routes/console.php     lệnh artisan + lịch chạy nền
 config/shop.php        tham số nghiệp vụ (phí ship, thời gian giữ hàng, hạn đổi trả...)
 deploy/                script triển khai, sao lưu, khôi phục, cron, supervisor, nginx
 tests/                 Unit, Feature (Services, Http, Audit, Security, Ops, Concurrency), Browser
-docs/                  hồ sơ rà soát luồng (H5), sổ tay vận hành (H7)
+docs/                  ADR (adr/), rà soát luồng (H5), sổ tay vận hành (H7), nghiệm thu (H8)
 ```
 
 ## Triển khai production
