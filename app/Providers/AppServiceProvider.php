@@ -6,6 +6,9 @@ use Illuminate\Pagination\Paginator;
 use App\Models\Article;
 use App\Models\Plant;
 use App\Models\User;
+use App\Services\Payments\FakeGateway;
+use App\Services\Payments\PaymentGateway;
+use App\Services\Payments\VnpayGateway;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,7 +18,14 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Cổng thanh toán online: 'vnpay' (sandbox / thật) hoặc 'fake' (dev: VNPay không gọi IPN về localhost được)
+        $this->app->bind(PaymentGateway::class, function () {
+            $cfg = config('shop.vnpay');
+
+            return config('shop.payment.gateway') === 'vnpay'
+                ? new VnpayGateway((string) $cfg['tmn_code'], (string) $cfg['hash_secret'], (string) $cfg['url'], (string) $cfg['version'])
+                : new FakeGateway((string) config('app.key'), url('/thanh-toan/gia-lap'));
+        });
     }
 
     public function boot(): void

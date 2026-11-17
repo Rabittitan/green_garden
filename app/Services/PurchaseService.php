@@ -11,7 +11,7 @@ use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
+use App\Exceptions\BusinessException;
 
 /** Yêu cầu nhập hàng -> duyệt -> phiếu nhập kho -> cộng kho. */
 class PurchaseService
@@ -53,10 +53,10 @@ class PurchaseService
         DB::transaction(function () use ($pr, $to, $by, $reason) {
             $pr = PurchaseRequest::lockForUpdate()->findOrFail($pr->id);
             if (! $pr->status->canTransitionTo($to)) {
-                throw new RuntimeException("Không thể chuyển từ \"{$pr->status->label()}\" sang \"{$to->label()}\".");
+                throw new BusinessException("Không thể chuyển từ \"{$pr->status->label()}\" sang \"{$to->label()}\".");
             }
             if ($to === PurchaseRequestStatus::Approved && $pr->requested_by === $by->id) {
-                throw new RuntimeException('Người tạo yêu cầu không được tự duyệt.');   // tách quyền (4 mắt)
+                throw new BusinessException('Người tạo yêu cầu không được tự duyệt.');   // tách quyền (4 mắt)
             }
 
             $data = ['status' => $to];
@@ -75,24 +75,28 @@ class PurchaseService
     }
 
     /** Hoàn tất phiếu nhập: cộng kho, ghi sổ kho, cập nhật số đã nhận và trạng thái yêu cầu. */
-    public function completeReceipt(GoodsReceipt $receipt): void
+    public function completeReceipt(GoodsReceipt $receipt, ?int $by = null): void
     {
-        DB::transaction(function () use ($receipt) {
-            $receipt = GoodsReceipt::with('items')->lockForUpdate()->findOrFail($receipt->id);
+        DB::transaction(function () use ($receipt, $by) {
+            $receipt = GoodsReceipt::lockForUpdate()->findOrFail($receipt->id);
             if ($receipt->status !== GoodsReceiptStatus::Draft) {
-                throw new RuntimeException('Phiếu nhập đã được xử lý.');
+                throw new BusinessException('Phiếu nhập đã được xử lý.');
             }
 
+            // Khóa cây theo id tăng dần (cùng thứ tự với đặt hàng) để không deadlock
+            $items = $receipt->items()->orderBy('plant_id')->get();
+            $plants = $this->inventory->lockPlants($items->pluck('plant_id')->all());
+
             $total = 0;
-            foreach ($receipt->items as $item) {
+            foreach ($items as $item) {
                 if ($item->quantity_received > 0) {
-                    $this->inventory->move($item->plant_id, StockMovementType::PurchaseReceipt,
-                        $item->quantity_received, $receipt, $item->unit_cost, "Nhập kho {$receipt->code}");
+                    $this->inventory->move($plants[$item->plant_id], StockMovementType::PurchaseReceipt, $item->quantity_received,
+                        receiptItem: $item, unitCost: $item->unit_cost, note: "Nhập kho {$receipt->code}", by: $by);
                 }
                 if ($item->purchase_request_item_id) {
                     $pri = PurchaseRequestItem::lockForUpdate()->findOrFail($item->purchase_request_item_id);
                     if ($item->quantity_received > $pri->remaining) {
-                        throw new RuntimeException("Số nhập của \"{$item->plant->name}\" vượt số đã duyệt.");
+                        throw new BusinessException("Số nhập của \"{$plants[$item->plant_id]->name}\" vượt số đã duyệt.");
                     }
                     $pri->increment('quantity_received', $item->quantity_received);
                 }
@@ -106,7 +110,7 @@ class PurchaseService
                 $done = $pr->items->every(fn ($i) => $i->remaining === 0);
                 $pr->update(['status' => $done ? PurchaseRequestStatus::Received : PurchaseRequestStatus::PartiallyReceived]);
             }
-        });
+        }, 3);
     }
 
     /** Mã chứng từ dạng YCN-2611-0001, đánh số lại theo tháng. */

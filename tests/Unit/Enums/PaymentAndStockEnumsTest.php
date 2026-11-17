@@ -16,6 +16,7 @@ class PaymentAndStockEnumsTest extends TestCase
         return [
             'chưa trả' => [280000, 0, 0, false, PaymentStatus::Unpaid],
             'đơn 0đ' => [0, 0, 0, false, PaymentStatus::Paid],
+            'đơn 0đ đã hủy' => [0, 0, 0, false, PaymentStatus::Unpaid, true],
             'đã trả đủ' => [280000, 280000, 0, false, PaymentStatus::Paid],
             'chờ hoàn' => [280000, 280000, 0, true, PaymentStatus::RefundPending],
             'chờ hoàn tiếp sau khi đã hoàn 1 phần' => [280000, 280000, 100000, true, PaymentStatus::RefundPending],
@@ -25,9 +26,9 @@ class PaymentAndStockEnumsTest extends TestCase
     }
 
     #[DataProvider('deriveCases')]
-    public function test_payment_status_is_derived_from_amounts(int $total, int $paid, int $refunded, bool $pending, PaymentStatus $expected): void
+    public function test_payment_status_is_derived_from_amounts(int $total, int $paid, int $refunded, bool $pending, PaymentStatus $expected, bool $closed = false): void
     {
-        $this->assertSame($expected, PaymentStatus::derive($total, $paid, $refunded, $pending));
+        $this->assertSame($expected, PaymentStatus::derive($total, $paid, $refunded, $pending, $closed));
     }
 
     public function test_payment_state_machine(): void

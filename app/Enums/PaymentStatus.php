@@ -34,15 +34,17 @@ enum PaymentStatus: string
 
     /**
      * Suy ra trạng thái từ số tiền đã thu / đã hoàn (đều tính từ payments succeeded).
-     * Đơn 0đ coi như đã thanh toán (không có gì để thu).
+     * Đơn 0đ còn hiệu lực coi như đã thanh toán (không có gì để thu); đơn 0đ đã đóng
+     * (hủy / hoàn hàng) là "chưa thanh toán" vì DB cấm đơn đóng ở trạng thái paid.
      */
-    public static function derive(int $total, int $paid, int $refunded, bool $hasPendingRefund): self
+    public static function derive(int $total, int $paid, int $refunded, bool $hasPendingRefund, bool $orderClosed = false): self
     {
         return match (true) {
             $hasPendingRefund => self::RefundPending,
             $refunded > 0 && $refunded >= $paid => self::Refunded,
             $refunded > 0 => self::PartiallyRefunded,
-            $paid > 0, $total === 0 => self::Paid,
+            $paid > 0 => self::Paid,
+            $total === 0 && ! $orderClosed => self::Paid,
             default => self::Unpaid,
         };
     }
