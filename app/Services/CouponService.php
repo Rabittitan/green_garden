@@ -4,162 +4,171 @@ namespace App\Services;
 
 use App\Enums\CouponScope;
 use App\Enums\CouponType;
+use App\Enums\OrderStatus;
+use App\Enums\RedemptionStatus;
+use App\Exceptions\CouponNotApplicableException;
+use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\Order;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use RuntimeException;
+use App\Services\Pricing\QuoteLine;
+use App\Support\Allocator;
 
 /**
- * Kiểm tra, tính tiền giảm và ghi nhận lượt dùng phiếu giảm giá.
- *
- * $lines: [['plant_id'=>1, 'category_id'=>2, 'price'=>250000, 'quantity'=>2], ...]
- * (giá lấy từ DB, KHÔNG lấy từ session)
+ * Phiếu giảm giá.
+ *  - find():            tra mã (tùy chọn KHÓA DÒNG khi gọi trong transaction đặt hàng)
+ *  - assertUsable():    điều kiện về khách / thời gian / lượt dùng
+ *  - applyToLines():    tính + phân bổ tiền giảm vào các dòng (percent / fixed)
+ *  - shippingDiscount() : tiền giảm phí ship (free_shipping)
+ *  - redeem() / release(): ghi nhận / trả lượt — gọi trong transaction đã khóa coupon
  */
 class CouponService
 {
-    /**
-     * Gọi BÊN TRONG transaction đặt hàng. Coupon bị khóa dòng để 2 người cùng dùng
-     * lượt cuối không thể cùng thành công.
-     *
-     * @return array{coupon: Coupon, discount: int, shipping_discount: int, allocations: array<int,int>}
-     */
-    public function lockAndQuote(string $code, User $user, array $lines, int $shippingFee): array
+    public function find(string $code, bool $lock = false): Coupon
     {
-        $coupon = Coupon::where('code', strtoupper(trim($code)))->lockForUpdate()->first();
+        $query = Coupon::where('code', Coupon::normalizeCode($code));
+        $coupon = ($lock ? $query->lockForUpdate() : $query)->first();
+        if (! $coupon) {
+            throw new CouponNotApplicableException('Mã giảm giá không tồn tại.');
+        }
 
-        if (! $coupon || ! $coupon->is_active) {
-            throw new RuntimeException('Mã giảm giá không tồn tại hoặc đã ngừng.');
+        return $coupon;
+    }
+
+    /** @param list<QuoteLine> $lines */
+    public function assertUsable(Coupon $coupon, User $user, array $lines): void
+    {
+        if (! $coupon->is_active) {
+            throw new CouponNotApplicableException('Mã giảm giá đã ngừng áp dụng.');
         }
-        if ($coupon->starts_at && $coupon->starts_at->isFuture()) {
-            throw new RuntimeException('Mã giảm giá chưa tới thời gian sử dụng.');
+        if ($coupon->starts_at?->isFuture()) {
+            throw new CouponNotApplicableException('Mã giảm giá chưa tới thời gian sử dụng.');
         }
-        if ($coupon->ends_at && $coupon->ends_at->isPast()) {
-            throw new RuntimeException('Mã giảm giá đã hết hạn.');
+        if ($coupon->ends_at?->isPast()) {
+            throw new CouponNotApplicableException('Mã giảm giá đã hết hạn.');
         }
         if ($coupon->usage_limit !== null && $coupon->used_count >= $coupon->usage_limit) {
-            throw new RuntimeException('Mã giảm giá đã hết lượt.');
+            throw new CouponNotApplicableException('Mã giảm giá đã hết lượt sử dụng.');
+        }
+        if ($coupon->min_tier_id !== null) {
+            $minTier = $coupon->minTier;
+            if ($user->tier->rank < $minTier->rank) {
+                throw new CouponNotApplicableException("Mã chỉ dành cho thành viên hạng {$minTier->name} trở lên.");
+            }
         }
 
-        $usedByUser = CouponRedemption::where('coupon_id', $coupon->id)
-            ->where('user_id', $user->id)->where('status', 'applied')->count();
+        $usedByUser = CouponRedemption::where('coupon_id', $coupon->id)->where('user_id', $user->id)
+            ->where('status', RedemptionStatus::Applied->value)->count();
         if ($usedByUser >= $coupon->usage_limit_per_user) {
-            throw new RuntimeException('Bạn đã dùng hết lượt cho mã này.');
+            throw new CouponNotApplicableException('Bạn đã dùng hết lượt cho mã này.');
         }
 
-        if ($coupon->first_order_only && $user->orders()->where('status', '!=', 'cancelled')->exists()) {
-            throw new RuntimeException('Mã chỉ dành cho đơn hàng đầu tiên.');
+        if ($coupon->first_order_only
+            && $user->orders()->where('status', '<>', OrderStatus::Cancelled->value)->exists()) {
+            throw new CouponNotApplicableException('Mã chỉ dành cho đơn hàng đầu tiên.');
         }
 
-        $orderSubtotal = array_sum(array_map(fn ($l) => $l['price'] * $l['quantity'], $lines));
-        if ($orderSubtotal < $coupon->min_order_amount) {
-            throw new RuntimeException('Đơn hàng chưa đạt giá trị tối thiểu '.number_format($coupon->min_order_amount, 0, ',', '.').'đ.');
+        $subtotal = array_sum(array_map(fn (QuoteLine $l) => $l->subtotal(), $lines));
+        if ($subtotal < $coupon->min_order_amount) {
+            throw new CouponNotApplicableException('Đơn hàng chưa đạt giá trị tối thiểu '.number_format($coupon->min_order_amount, 0, ',', '.').'đ để dùng mã.');
         }
 
-        // Lọc các dòng hàng thuộc phạm vi áp dụng
-        $eligible = match ($coupon->scope) {
-            CouponScope::Order => $lines,
-            CouponScope::Plants => $this->filterLines($lines, 'plant_id',
-                $coupon->plants()->pluck('plants.id')->map(fn ($id) => (int) $id)->all()),
-            CouponScope::Categories => $this->filterLines($lines, 'category_id',
-                $coupon->categories()->pluck('categories.id')->map(fn ($id) => (int) $id)->all()),
-        };
-        if (! $eligible) {
-            throw new RuntimeException('Mã không áp dụng cho sản phẩm trong giỏ.');
+        if ($coupon->type !== CouponType::FreeShipping && $this->eligibleLines($coupon, $lines) === []) {
+            throw new CouponNotApplicableException('Mã không áp dụng cho sản phẩm nào trong giỏ.');
         }
-        $eligibleSubtotal = array_sum(array_map(fn ($l) => $l['price'] * $l['quantity'], $eligible));
-
-        $discount = 0;
-        $shippingDiscount = 0;
-        switch ($coupon->type) {
-            case CouponType::Percent:
-                $discount = intdiv($eligibleSubtotal * $coupon->value, 100);
-                break;
-            case CouponType::Fixed:
-                $discount = $coupon->value;
-                break;
-            case CouponType::FreeShipping:
-                $shippingDiscount = $shippingFee;
-                break;
-        }
-        if ($coupon->max_discount_amount !== null) {
-            $discount = min($discount, $coupon->max_discount_amount);
-            $shippingDiscount = min($shippingDiscount, $coupon->max_discount_amount);
-        }
-        $discount = min($discount, $eligibleSubtotal);   // không bao giờ giảm quá tiền hàng
-
-        return [
-            'coupon' => $coupon,
-            'discount' => $discount,
-            'shipping_discount' => $shippingDiscount,
-            'allocations' => $this->allocate($discount, $eligible),
-        ];
-    }
-
-    private function filterLines(array $lines, string $key, array $allowedIds): array
-    {
-        return array_values(array_filter($lines, fn ($l) => in_array((int) $l[$key], $allowedIds, true)));
     }
 
     /**
-     * Phân bổ tiền giảm xuống từng dòng theo tỷ lệ thành tiền (phương pháp phần dư lớn nhất),
-     * đảm bảo tổng phân bổ = đúng $discount, không lệch 1đ.
+     * Ghi tiền giảm theo mã vào $line->couponDiscount (percent/fixed). Trả tổng tiền giảm.
+     * Tính trên thành tiền SAU giảm theo hạng của các dòng thuộc phạm vi mã.
      *
-     * @return array<int,int> plant_id => discount
+     * @param list<QuoteLine> $lines
      */
-    public function allocate(int $discount, array $lines): array
+    public function applyToLines(Coupon $coupon, array $lines): int
     {
-        $total = array_sum(array_map(fn ($l) => $l['price'] * $l['quantity'], $lines));
-        if ($discount === 0 || $total === 0) {
-            return [];
-        }
-
-        $result = [];
-        $remainders = [];
         foreach ($lines as $l) {
-            $exact = $discount * $l['price'] * $l['quantity'] / $total;
-            $result[$l['plant_id']] = (int) floor($exact);
-            $remainders[$l['plant_id']] = $exact - floor($exact);
+            $l->couponDiscount = 0;
         }
-        arsort($remainders);
-        $left = $discount - array_sum($result);
-        foreach (array_keys($remainders) as $plantId) {
-            if ($left-- <= 0) {
-                break;
-            }
-            $result[$plantId]++;
+        if ($coupon->type === CouponType::FreeShipping) {
+            return 0;
         }
 
-        return $result;
+        $eligible = $this->eligibleLines($coupon, $lines);
+        $base = array_sum(array_map(fn (QuoteLine $l) => $l->afterMemberDiscount(), $eligible));
+
+        $discount = match ($coupon->type) {
+            CouponType::Percent => intdiv($base * $coupon->value, 100),
+            CouponType::Fixed => $coupon->value,
+        };
+        if ($coupon->max_discount_amount !== null) {
+            $discount = min($discount, $coupon->max_discount_amount);
+        }
+        $discount = min($discount, $base);                      // không bao giờ giảm quá tiền hàng
+
+        $weights = [];
+        foreach ($eligible as $i => $l) {
+            $weights[$i] = $l->afterMemberDiscount();
+        }
+        foreach (Allocator::allocate($discount, $weights) as $i => $share) {
+            $eligible[$i]->couponDiscount = $share;
+        }
+
+        return $discount;
     }
 
-    /** Ghi nhận lượt dùng. Gọi trong cùng transaction với lockAndQuote, sau khi đã tạo Order. */
-    public function redeem(Coupon $coupon, Order $order, int $totalDiscount): CouponRedemption
+    public function shippingDiscount(Coupon $coupon, int $shippingFee): int
+    {
+        if ($coupon->type !== CouponType::FreeShipping) {
+            return 0;
+        }
+        $discount = $shippingFee;
+        if ($coupon->max_discount_amount !== null) {
+            $discount = min($discount, $coupon->max_discount_amount);
+        }
+
+        return $discount;
+    }
+
+    /**
+     * @param  list<QuoteLine>  $lines
+     * @return list<QuoteLine>
+     */
+    public function eligibleLines(Coupon $coupon, array $lines): array
+    {
+        $ids = match ($coupon->scope) {
+            CouponScope::Order => null,
+            CouponScope::Plants => $coupon->plants()->pluck('plants.id')->map(fn ($id) => (int) $id)->all(),
+            CouponScope::Categories => Category::withDescendantIds(
+                $coupon->categories()->pluck('categories.id')->map(fn ($id) => (int) $id)->all()
+            ),
+        };
+        $key = $coupon->scope === CouponScope::Categories ? 'category_id' : 'id';
+
+        return array_values(array_filter($lines, fn (QuoteLine $l) => $ids === null || in_array((int) $l->plant->{$key}, $ids, true)));
+    }
+
+    /** Ghi nhận lượt dùng. Gọi trong transaction đặt hàng, SAU khi đã khóa coupon và tạo đơn. */
+    public function redeem(Coupon $coupon, Order $order, int $benefit): CouponRedemption
     {
         $coupon->increment('used_count');
 
         return CouponRedemption::create([
-            'coupon_id' => $coupon->id,
-            'user_id' => $order->user_id,
-            'order_id' => $order->id,
-            'discount_amount' => $totalDiscount,
-            'status' => 'applied',
+            'coupon_id' => $coupon->id, 'user_id' => $order->user_id, 'order_id' => $order->id,
+            'discount_amount' => $benefit, 'status' => RedemptionStatus::Applied,
         ]);
     }
 
-    /** Hủy đơn: trả lại lượt dùng mã (tùy chính sách shop có muốn trả hay không). */
+    /** Trả lượt khi hủy đơn. Gọi trong transaction đã khóa đơn (thứ tự khóa: order -> coupon). */
     public function release(Order $order): void
     {
-        DB::transaction(function () use ($order) {
-            $redemption = CouponRedemption::where('order_id', $order->id)
-                ->where('status', 'applied')->lockForUpdate()->first();
-            if (! $redemption) {
-                return;
-            }
-            $redemption->update(['status' => 'released', 'released_at' => now()]);
-            Coupon::withTrashed()->whereKey($redemption->coupon_id)
-                ->where('used_count', '>', 0)->decrement('used_count');
-        });
+        $redemption = CouponRedemption::where('order_id', $order->id)
+            ->where('status', RedemptionStatus::Applied->value)->lockForUpdate()->first();
+        if (! $redemption) {
+            return;
+        }
+        Coupon::withTrashed()->whereKey($redemption->coupon_id)->lockForUpdate()->first();
+        $redemption->update(['status' => RedemptionStatus::Released, 'released_at' => now()]);
+        Coupon::withTrashed()->whereKey($redemption->coupon_id)->where('used_count', '>', 0)->decrement('used_count');
     }
 }
