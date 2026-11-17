@@ -4,18 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AddressRequest;
 use App\Models\UserAddress;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /** Sổ địa chỉ của khách. Đơn hàng đã lưu snapshot nên sửa / xóa địa chỉ không ảnh hưởng đơn cũ. */
 class AddressController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         return view('account.addresses', ['addresses' => $request->user()->addresses()->get()]);
     }
 
-    public function store(AddressRequest $request)
+    public function store(AddressRequest $request): RedirectResponse
     {
         $user = $request->user();
         DB::transaction(function () use ($request, $user) {
@@ -29,7 +31,7 @@ class AddressController extends Controller
         return back()->with('success', 'Đã thêm địa chỉ.');
     }
 
-    public function update(AddressRequest $request, UserAddress $address)
+    public function update(AddressRequest $request, UserAddress $address): RedirectResponse
     {
         abort_unless($address->user_id === $request->user()->id, 404);
         $address->update($request->safe()->except('is_default'));
@@ -37,7 +39,7 @@ class AddressController extends Controller
         return back()->with('success', 'Đã cập nhật địa chỉ.');
     }
 
-    public function makeDefault(Request $request, UserAddress $address)
+    public function makeDefault(Request $request, UserAddress $address): RedirectResponse
     {
         abort_unless($address->user_id === $request->user()->id, 404);
         DB::transaction(function () use ($address) {
@@ -48,7 +50,7 @@ class AddressController extends Controller
         return back()->with('success', 'Đã đặt làm địa chỉ mặc định.');
     }
 
-    public function destroy(Request $request, UserAddress $address)
+    public function destroy(Request $request, UserAddress $address): RedirectResponse
     {
         abort_unless($address->user_id === $request->user()->id, 404);
         DB::transaction(function () use ($address) {

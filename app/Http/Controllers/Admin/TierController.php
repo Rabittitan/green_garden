@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MembershipTier;
 use App\Services\MembershipService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,12 +17,12 @@ use Illuminate\Support\Facades\DB;
  */
 class TierController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         return view('admin.tiers.index', ['tiers' => MembershipTier::ordered()->withCount('users')->get()]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $tiers = MembershipTier::ordered()->get();
         $rules = [];

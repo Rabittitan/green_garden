@@ -7,13 +7,14 @@ use App\Models\Category;
 use App\Models\Plant;
 use App\Models\PlantReview;
 use App\Services\ReviewService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PlantController extends Controller
 {
     // Danh sách cây + bộ lọc (danh mục, giá, ánh sáng, mệnh, từ khóa)
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         // Bắt đầu câu truy vấn, nạp sẵn danh mục
         $query = Plant::with('category')->active();             // chỉ cây đang bán
@@ -67,7 +68,7 @@ class PlantController extends Controller
     }
 
     // Chi tiết 1 cây
-    public function show($id, ReviewService $reviewService)
+    public function show(int $id, ReviewService $reviewService): View
     {
         $plant = Plant::with('category')->active()->findOrFail($id);   // cây ngừng bán -> 404
         $user = auth()->user();

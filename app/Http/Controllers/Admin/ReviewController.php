@@ -7,6 +7,8 @@ use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Models\PlantReview;
 use App\Services\ReviewService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +17,7 @@ class ReviewController extends Controller
 {
     public function __construct(private ReviewService $reviews) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $status = $request->validate(['status' => ['nullable', Rule::enum(ReviewStatus::class)]])['status'] ?? 'pending';
         $reviews = PlantReview::with(['plant', 'user', 'orderItem.order'])->where('status', $status)->latest('id')->paginate(20)->withQueryString();
@@ -24,7 +26,7 @@ class ReviewController extends Controller
         return view('admin.reviews.index', compact('reviews', 'counts', 'status'));
     }
 
-    public function moderate(Request $request, PlantReview $review)
+    public function moderate(Request $request, PlantReview $review): RedirectResponse
     {
         $data = $request->validate(['status' => ['required', Rule::in(['approved', 'rejected'])], 'reason' => ['nullable', 'string', 'max:255']]);
         try {
@@ -36,7 +38,7 @@ class ReviewController extends Controller
         return back()->with('success', $data['status'] === 'approved' ? 'Đã duyệt đánh giá.' : 'Đã từ chối đánh giá.');
     }
 
-    public function reply(Request $request, PlantReview $review)
+    public function reply(Request $request, PlantReview $review): RedirectResponse
     {
         $data = $request->validate(['shop_reply' => ['nullable', 'string', 'max:2000']]);
         $this->reviews->reply($review, $data['shop_reply'] ?? null);
@@ -44,7 +46,7 @@ class ReviewController extends Controller
         return back()->with('success', 'Đã lưu trả lời của shop.');
     }
 
-    public function destroy(PlantReview $review)
+    public function destroy(PlantReview $review): RedirectResponse
     {
         $this->reviews->delete($review);
 

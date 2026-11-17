@@ -4,13 +4,38 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
  * plants.stock là CACHE của sổ kho: chỉ InventoryService được đổi, bên trong Plant::writingLedger().
  * Mọi đường khác (form admin, tinker, seeder qua Model...) đổi stock sẽ bị ném lỗi ngay,
  * thay vì âm thầm ghi đè làm lệch kho như trước.
+ *
+ * @property int $id
+ * @property int $category_id
+ * @property string $sku
+ * @property string $name
+ * @property string $slug
+ * @property int $price
+ * @property int $cost_price
+ * @property int $stock
+ * @property int $reorder_point
+ * @property string $light
+ * @property string $element
+ * @property string|null $image
+ * @property string|null $description
+ * @property int $rating_sum
+ * @property int $rating_count
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 class Plant extends Model
 {
@@ -27,24 +52,24 @@ class Plant extends Model
     /** Chạy $fn trong ngữ cảnh được phép đổi stock / cost_price (chỉ InventoryService dùng). */
     public static function writingLedger(callable $fn): mixed
     {
-        static::$ledgerDepth++;
+        self::$ledgerDepth++;
         try {
             return $fn();
         } finally {
-            static::$ledgerDepth--;
+            self::$ledgerDepth--;
         }
     }
 
     protected static function booted(): void
     {
         static::creating(function (Plant $plant) {
-            if (static::$ledgerDepth === 0 && (int) $plant->stock !== 0) {
+            if (self::$ledgerDepth === 0 && (int) $plant->stock !== 0) {
                 throw new LogicException('Tạo cây với tồn đầu phải qua InventoryService::opening().');
             }
         });
 
         static::updating(function (Plant $plant) {
-            if (static::$ledgerDepth === 0 && $plant->isDirty(['stock', 'cost_price'])) {
+            if (self::$ledgerDepth === 0 && $plant->isDirty(['stock', 'cost_price'])) {
                 throw new LogicException('Không được sửa trực tiếp tồn kho / giá vốn. Dùng InventoryService (kiểm kê, nhập hàng).');
             }
         });
@@ -62,37 +87,44 @@ class Plant extends Model
 
     const LIGHTS = ['ua_bong' => 'Ưa bóng', 'ua_sang' => 'Ưa sáng'];
 
-    public function category()
+    /** @return BelongsTo<Category, $this> */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function orderItems()
+    /** @return HasMany<OrderItem, $this> */
+    public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
     }
 
-    public function reviews()
+    /** @return HasMany<PlantReview, $this> */
+    public function reviews(): HasMany
     {
         return $this->hasMany(PlantReview::class);
     }
 
-    public function approvedReviews()
+    /** @return HasMany<PlantReview, $this> */
+    public function approvedReviews(): HasMany
     {
         return $this->reviews()->where('status', 'approved');
     }
 
-    public function comments()
+    /** @return MorphMany<Comment, $this> */
+    public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
     }
 
-    public function articles()
+    /** @return BelongsToMany<Article, $this> */
+    public function articles(): BelongsToMany
     {
         return $this->belongsToMany(Article::class);
     }
 
-    public function stockMovements()
+    /** @return HasMany<StockMovement, $this> */
+    public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
     }
@@ -102,12 +134,21 @@ class Plant extends Model
         return $this->rating_count ? round($this->rating_sum / $this->rating_count, 1) : 0.0;
     }
 
+    /**
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('is_active', true);
     }
 
-    /** Cây cần nhập thêm: tồn <= ngưỡng riêng của từng cây. */
+    /**
+     * Cây cần nhập thêm: tồn <= ngưỡng riêng của từng cây.
+     *
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
     public function scopeNeedsReorder(Builder $q): Builder
     {
         return $q->whereColumn('stock', '<=', 'reorder_point');

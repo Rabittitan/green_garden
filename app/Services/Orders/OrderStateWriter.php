@@ -15,6 +15,9 @@ use App\Models\OrderStatusHistory;
  */
 class OrderStateWriter
 {
+    /**
+     * @param  array<string, mixed>  $attrs
+     */
     public function transition(Order $order, OrderStatus $to, ActorType $actor, ?int $by, ?string $note = null, array $attrs = []): Order
     {
         $from = $order->status;

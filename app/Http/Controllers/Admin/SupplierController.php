@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /** Nhà cung cấp. Không xóa (phiếu nhập cũ vẫn tham chiếu): chỉ ngừng hợp tác. */
 class SupplierController extends Controller
 {
+    /**
+     * @return array<string, mixed>
+     */
     private function rules(?Supplier $s = null): array
     {
         return [
@@ -24,24 +29,24 @@ class SupplierController extends Controller
         ];
     }
 
-    public function index()
+    public function index(): View
     {
         return view('admin.suppliers.index', ['suppliers' => Supplier::withCount('goodsReceipts')->orderByDesc('is_active')->orderBy('name')->paginate(20)]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         Supplier::create($request->validate($this->rules()) + ['is_active' => true]);
 
         return back()->with('success', 'Đã thêm nhà cung cấp.');
     }
 
-    public function edit(Supplier $supplier)
+    public function edit(Supplier $supplier): View
     {
         return view('admin.suppliers.edit', compact('supplier'));
     }
 
-    public function update(Request $request, Supplier $supplier)
+    public function update(Request $request, Supplier $supplier): RedirectResponse
     {
         $supplier->update($request->validate($this->rules($supplier)) + ['is_active' => $request->boolean('is_active')]);
 

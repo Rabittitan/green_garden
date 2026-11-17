@@ -16,6 +16,9 @@ class DisabledGateway implements PaymentGateway
         return 'disabled';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function initParams(Payment $payment, string $clientIp): array
     {
         throw new BusinessException('Thanh toán online chưa được cấu hình.');
@@ -26,6 +29,9 @@ class DisabledGateway implements PaymentGateway
         throw new BusinessException('Thanh toán online chưa được cấu hình.');
     }
 
+    /**
+     * @param  array<string, mixed>  $query
+     */
     public function parseCallback(array $query): GatewayResult
     {
         return new GatewayResult(false, $query['vnp_TxnRef'] ?? null, false, null, null, null, $query);

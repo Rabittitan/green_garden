@@ -4,8 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
-/** Hạng thành viên. Hạng xét theo tổng chi tiêu trọn đời (users.lifetime_spend), chỉ đi lên. */
+/** Hạng thành viên. Hạng xét theo tổng chi tiêu trọn đời (users.lifetime_spend), chỉ đi lên.
+ *
+ * @property int $id
+ * @property string $code
+ * @property string $name
+ * @property int $rank
+ * @property int $min_spend
+ * @property int $discount_percent
+ * @property int|null $max_discount_per_order
+ * @property int|null $free_shipping_min_order
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class MembershipTier extends Model
 {
     protected $fillable = [
@@ -21,16 +36,25 @@ class MembershipTier extends Model
         ];
     }
 
-    public function users()
+    /** @return HasMany<User, $this> */
+    public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
+    /**
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('is_active', true);
     }
 
+    /**
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
     public function scopeOrdered(Builder $q): Builder
     {
         return $q->orderBy('rank');

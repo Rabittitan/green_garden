@@ -47,7 +47,12 @@ class PurchaseService
         }, 3);
     }
 
-    /** Sửa yêu cầu khi còn nháp (gồm cả khi bị trả về từ "chờ duyệt"). */
+    /**
+     * Sửa yêu cầu khi còn nháp (gồm cả khi bị trả về từ "chờ duyệt").
+     *
+     * @param  array<int, array{quantity:int, estimated_unit_cost:int, note?:?string}>  $items
+     * @param  array<string, mixed>  $meta
+     */
     public function updateDraft(PurchaseRequest $pr, array $items, array $meta, User $by): PurchaseRequest
     {
         return DB::transaction(function () use ($pr, $items, $meta) {
@@ -65,7 +70,7 @@ class PurchaseService
     /** @param array<int, array{quantity:int, estimated_unit_cost:int, note?:?string}> $items */
     private function replaceItems(PurchaseRequest $pr, array $items): void
     {
-        $items = array_filter($items, fn ($i) => (int) ($i['quantity'] ?? 0) > 0);
+        $items = array_filter($items, fn ($i) => $i['quantity'] > 0);
         if ($items === []) {
             throw new BusinessException('Yêu cầu nhập phải có ít nhất 1 cây với số lượng lớn hơn 0.');
         }
@@ -78,7 +83,7 @@ class PurchaseService
         $total = 0;
         foreach ($items as $plantId => $i) {
             $qty = (int) $i['quantity'];
-            $cost = max(0, (int) ($i['estimated_unit_cost'] ?? 0));
+            $cost = max(0, $i['estimated_unit_cost']);
             $pr->items()->create([
                 'plant_id' => $plantId, 'quantity_requested' => $qty, 'estimated_unit_cost' => $cost,
                 'stock_at_request' => $plants[$plantId]->stock, 'note' => $i['note'] ?? null,
@@ -103,7 +108,11 @@ class PurchaseService
         return $this->createRequest($user, $items, ['reason' => 'Tự động đề xuất từ cây dưới ngưỡng tồn kho']);
     }
 
-    /** Duyệt (4 mắt): người duyệt khác người tạo, được giảm số lượng từng dòng (0 = bỏ dòng). */
+    /**
+     * Duyệt (4 mắt): người duyệt khác người tạo, được giảm số lượng từng dòng (0 = bỏ dòng).
+     *
+     * @param  array<int, int>  $approvedQuantities  purchase_request_item_id => số duyệt
+     */
     public function approve(PurchaseRequest $pr, User $by, array $approvedQuantities = []): void
     {
         DB::transaction(function () use ($pr, $by, $approvedQuantities) {
@@ -137,7 +146,11 @@ class PurchaseService
         $this->transition($pr, PurchaseRequestStatus::Ordered, $by, null, ['supplier_id' => $supplier->id]);
     }
 
-    /** Chuyển trạng thái thủ công: gửi duyệt, trả về nháp, từ chối, hủy, đóng (chấp nhận nhận thiếu). */
+    /**
+     * Chuyển trạng thái thủ công: gửi duyệt, trả về nháp, từ chối, hủy, đóng (chấp nhận nhận thiếu).
+     *
+     * @param  array<string, mixed>  $extra
+     */
     public function transition(PurchaseRequest $pr, PurchaseRequestStatus $to, User $by, ?string $reason = null, array $extra = []): void
     {
         if ($to === PurchaseRequestStatus::Approved) {
@@ -191,7 +204,7 @@ class PurchaseService
         if (! $supplier->is_active) {
             throw new BusinessException('Nhà cung cấp đang ngừng hợp tác.');
         }
-        $lines = array_filter($lines, fn ($l) => (int) ($l['quantity_received'] ?? 0) + (int) ($l['quantity_rejected'] ?? 0) > 0);
+        $lines = array_filter($lines, fn ($l) => $l['quantity_received'] + ($l['quantity_rejected'] ?? 0) > 0);
         if ($lines === []) {
             throw new BusinessException('Phiếu nhập phải có ít nhất 1 dòng có số lượng.');
         }

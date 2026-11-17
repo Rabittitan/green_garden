@@ -9,12 +9,58 @@ use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 /**
  * Đơn hàng. CHỈ OrderService / PaymentService ghi (trong transaction có khóa dòng),
  * nên không có $fillable cho request; dùng $guarded để service gán đủ cột snapshot.
  *
  * total = subtotal - member_discount - coupon_discount + shipping_fee - shipping_discount
+ *
+ * @property int $id
+ * @property string $code
+ * @property int $user_id
+ * @property string $checkout_token
+ * @property OrderStatus $status
+ * @property string $recipient_name
+ * @property string $phone
+ * @property string $province
+ * @property string $district
+ * @property string $ward
+ * @property string $address_line
+ * @property string|null $note
+ * @property int $membership_tier_id
+ * @property int $member_discount_percent
+ * @property int|null $coupon_id
+ * @property string|null $coupon_code
+ * @property int $subtotal
+ * @property int $member_discount
+ * @property int $coupon_discount
+ * @property int $shipping_fee
+ * @property int $shipping_discount
+ * @property int $total
+ * @property PaymentMethod $payment_method
+ * @property PaymentStatus $payment_status
+ * @property int $paid_amount
+ * @property int $refunded_amount
+ * @property Carbon|null $payment_expires_at
+ * @property string|null $shipping_carrier
+ * @property string|null $tracking_code
+ * @property Carbon $placed_at
+ * @property Carbon|null $paid_at
+ * @property Carbon|null $confirmed_at
+ * @property Carbon|null $shipped_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $returned_at
+ * @property Carbon|null $cancelled_at
+ * @property string|null $cancel_reason
+ * @property Carbon|null $spend_recorded_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Order extends Model
 {
@@ -47,52 +93,62 @@ class Order extends Model
         ];
     }
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function tier()
+    /** @return BelongsTo<MembershipTier, $this> */
+    public function tier(): BelongsTo
     {
         return $this->belongsTo(MembershipTier::class, 'membership_tier_id');
     }
 
-    public function coupon()
+    /** @return BelongsTo<Coupon, $this> */
+    public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class)->withTrashed();
     }
 
-    public function items()
+    /** @return HasMany<OrderItem, $this> */
+    public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class)->orderBy('id');
     }
 
-    public function payments()
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->orderBy('id');
     }
 
-    public function charges()
+    /** @return HasMany<Payment, $this> */
+    public function charges(): HasMany
     {
         return $this->payments()->where('type', PaymentType::Charge->value);
     }
 
-    public function refunds()
+    /** @return HasMany<Payment, $this> */
+    public function refunds(): HasMany
     {
         return $this->payments()->where('type', PaymentType::Refund->value);
     }
 
-    public function redemption()
+    /** @return HasOne<CouponRedemption, $this> */
+    public function redemption(): HasOne
     {
         return $this->hasOne(CouponRedemption::class);
     }
 
-    public function histories()
+    /** @return HasMany<OrderStatusHistory, $this> */
+    public function histories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at')->orderBy('id');
     }
 
-    public function stockMovements()
+    /** @return HasManyThrough<StockMovement, OrderItem, $this> */
+    public function stockMovements(): HasManyThrough
     {
         return $this->hasManyThrough(StockMovement::class, OrderItem::class);
     }
@@ -151,6 +207,10 @@ class Order extends Model
             && $this->completed_at->copy()->addDays((int) config('shop.return_window_days'))->isFuture();
     }
 
+    /**
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
     public function scopeStatus(Builder $q, OrderStatus ...$statuses): Builder
     {
         return $q->whereIn('status', array_map(fn ($s) => $s->value, $statuses));

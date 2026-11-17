@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -12,13 +14,13 @@ use Illuminate\Validation\Rules\Password;
 class AuthController extends Controller
 {
     // Hiện form đăng nhập
-    public function showLogin()
+    public function showLogin(): View
     {
         return view('auth.login');
     }
 
     // Xử lý đăng nhập
-    public function login(Request $request)
+    public function login(Request $request): RedirectResponse
     {
         // Lấy email và mật khẩu, bắt buộc phải nhập
         $credentials = $request->validate([
@@ -43,13 +45,13 @@ class AuthController extends Controller
     }
 
     // Hiện form đăng ký
-    public function showRegister()
+    public function showRegister(): View
     {
         return view('auth.register');
     }
 
     // Xử lý đăng ký
-    public function register(Request $request)
+    public function register(Request $request): RedirectResponse
     {
         // Kiểm tra dữ liệu: email không được trùng, mật khẩu >= 6 ký tự và phải nhập lại khớp (password_confirmation)
         $data = $request->validate([
@@ -83,7 +85,7 @@ class AuthController extends Controller
     }
 
     // Đăng xuất
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();                                        // xóa trạng thái đăng nhập
         $request->session()->invalidate();                     // hủy session cũ (giỏ hàng cũng mất)

@@ -15,6 +15,9 @@ class TierUpgraded extends Notification implements ShouldQueue
 
     public function __construct(public MembershipTier $tier) {}
 
+    /**
+     * @return list<string>
+     */
     public function via(object $notifiable): array
     {
         return ['mail'];

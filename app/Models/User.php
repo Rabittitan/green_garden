@@ -4,20 +4,51 @@ namespace App\Models;
 
 use App\Enums\TierChangeReason;
 use App\Enums\UserRole;
+use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 
 /**
  * role, membership_tier_id, lifetime_spend, tier_achieved_at, is_active KHÔNG cho gán hàng loạt:
  * chỉ Service (MembershipService, quản trị) đổi bằng forceFill để chống leo quyền / tự nâng hạng.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property Carbon|null $email_verified_at
+ * @property string $password
+ * @property UserRole $role
+ * @property string|null $phone
+ * @property int $membership_tier_id
+ * @property int $lifetime_spend
+ * @property Carbon|null $tier_achieved_at
+ * @property bool $is_active
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory;
+
+    use Notifiable;
 
     protected $fillable = ['name', 'email', 'password', 'phone'];
+
+    /**
+     * Giá trị mặc định GIỐNG DB: model vừa create() (chưa đọc lại từ DB) vẫn có role / is_active,
+     * nên isBackOffice(), middleware... không gặp null.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['role' => 'customer', 'is_active' => true, 'lifetime_spend' => 0];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -58,45 +89,53 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isBackOffice(): bool
     {
-        return $this->role?->isBackOffice() ?? false;
+        return $this->role->isBackOffice();
     }
 
-    public function tier()
+    /** @return BelongsTo<MembershipTier, $this> */
+    public function tier(): BelongsTo
     {
         return $this->belongsTo(MembershipTier::class, 'membership_tier_id');
     }
 
-    public function tierHistories()
+    /** @return HasMany<MembershipTierHistory, $this> */
+    public function tierHistories(): HasMany
     {
         return $this->hasMany(MembershipTierHistory::class)->latest('created_at')->latest('id');
     }
 
-    public function addresses()
+    /** @return HasMany<UserAddress, $this> */
+    public function addresses(): HasMany
     {
         return $this->hasMany(UserAddress::class)->orderByDesc('is_default')->latest('id');
     }
 
-    public function defaultAddress()
+    /** @return HasOne<UserAddress, $this> */
+    public function defaultAddress(): HasOne
     {
         return $this->hasOne(UserAddress::class)->where('is_default', true);
     }
 
-    public function orders()
+    /** @return HasMany<Order, $this> */
+    public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
     }
 
-    public function reviews()
+    /** @return HasMany<PlantReview, $this> */
+    public function reviews(): HasMany
     {
         return $this->hasMany(PlantReview::class);
     }
 
-    public function comments()
+    /** @return HasMany<Comment, $this> */
+    public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
 
-    public function couponRedemptions()
+    /** @return HasMany<CouponRedemption, $this> */
+    public function couponRedemptions(): HasMany
     {
         return $this->hasMany(CouponRedemption::class);
     }

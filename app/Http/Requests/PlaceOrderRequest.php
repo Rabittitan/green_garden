@@ -9,6 +9,9 @@ use Illuminate\Validation\Rule;
 
 class PlaceOrderRequest extends FormRequest
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return AddressRules::rules() + [

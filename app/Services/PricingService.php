@@ -94,7 +94,10 @@ class PricingService
         return $quote;
     }
 
-    /** @param list<array{plant: Plant, quantity: int}> $items  @param list<string> $notices */
+    /**
+     * @param  list<array{plant: Plant, quantity: int}>  $items
+     * @param  list<string>  $notices
+     */
     private function scenario(User $user, array $items, bool $withMember, ?Coupon $coupon, array $notices = []): Quote
     {
         $tier = $user->tier;
@@ -123,7 +126,10 @@ class PricingService
         );
     }
 
-    /** @param list<array{plant: Plant, quantity: int}> $items  @return list<QuoteLine> */
+    /**
+     * @param  list<array{plant: Plant, quantity: int}>  $items
+     * @return list<QuoteLine>
+     */
     private function freshLines(array $items): array
     {
         return array_map(fn ($it) => new QuoteLine($it['plant'], $it['quantity'], (int) $it['plant']->price), $items);

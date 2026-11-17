@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\CommentStatus;
 use App\Models\Article;
+use Illuminate\Contracts\View\View;
 
 class ArticleController extends Controller
 {
     // Trang danh sách tin tức
-    public function index()
+    public function index(): View
     {
         // Lấy bài mới nhất trước, 6 bài mỗi trang
         $articles = Article::published()->latest('published_at')->paginate(6);
@@ -18,7 +19,7 @@ class ArticleController extends Controller
     }
 
     // Trang chi tiết 1 bài
-    public function show($id)
+    public function show(int $id): View
     {
         // Tìm bài theo id, không thấy thì tự trả về trang 404
         $article = Article::published()->findOrFail($id);

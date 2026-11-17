@@ -9,6 +9,8 @@ use App\Models\Plant;
 use App\Models\PurchaseRequest;
 use App\Models\Supplier;
 use App\Services\PurchaseService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /** Phiếu nhập kho: lập (nháp) -> kiểm hàng -> hoàn tất (cộng kho) | hủy (nháp). */
@@ -16,14 +18,14 @@ class GoodsReceiptController extends Controller
 {
     public function __construct(private PurchaseService $purchases) {}
 
-    public function index()
+    public function index(): View
     {
         $receipts = GoodsReceipt::with(['supplier', 'purchaseRequest', 'receiver'])->latest('id')->paginate(20);
 
         return view('admin.goods-receipts.index', compact('receipts'));
     }
 
-    public function create(Request $request)
+    public function create(Request $request): RedirectResponse|View
     {
         $pr = $request->filled('purchase_request') ? PurchaseRequest::with('items.plant')->findOrFail($request->integer('purchase_request')) : null;
         if ($pr && ! $pr->status->isReceivable()) {
@@ -37,7 +39,7 @@ class GoodsReceiptController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'supplier_id' => ['required', 'exists:suppliers,id'],
@@ -66,12 +68,12 @@ class GoodsReceiptController extends Controller
         return redirect()->route('admin.goods-receipts.show', $receipt)->with('success', "Đã lập phiếu {$receipt->code}. Kiểm hàng xong bấm \"Nhập kho\".");
     }
 
-    public function show(GoodsReceipt $goodsReceipt)
+    public function show(GoodsReceipt $goodsReceipt): View
     {
         return view('admin.goods-receipts.show', ['receipt' => $goodsReceipt->load(['items.plant', 'supplier', 'purchaseRequest', 'receiver'])]);
     }
 
-    public function complete(Request $request, GoodsReceipt $goodsReceipt)
+    public function complete(Request $request, GoodsReceipt $goodsReceipt): RedirectResponse
     {
         try {
             $this->purchases->completeReceipt($goodsReceipt, $request->user()->id);
@@ -82,7 +84,7 @@ class GoodsReceiptController extends Controller
         return back()->with('success', 'Đã nhập kho, tồn kho và giá vốn đã được cập nhật.');
     }
 
-    public function cancel(GoodsReceipt $goodsReceipt)
+    public function cancel(GoodsReceipt $goodsReceipt): RedirectResponse
     {
         try {
             $this->purchases->cancelReceipt($goodsReceipt);

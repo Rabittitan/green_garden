@@ -7,12 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\MembershipTier;
 use App\Models\User;
 use App\Services\MembershipService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /** Khách hàng: hạng, tổng chi tiêu, lịch sử hạng, đơn hàng; admin đổi hạng tay (có lý do). */
 class CustomerController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $customers = User::where('role', 'customer')->with('tier')->withCount('orders')
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', '%'.$request->q.'%')
@@ -23,7 +25,7 @@ class CustomerController extends Controller
         return view('admin.customers.index', ['customers' => $customers, 'tiers' => MembershipTier::ordered()->get()]);
     }
 
-    public function show(User $user)
+    public function show(User $user): View
     {
         $user->load(['tier', 'addresses', 'tierHistories.fromTier', 'tierHistories.toTier', 'tierHistories.changedBy']);
 
@@ -34,7 +36,7 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function setTier(Request $request, User $user, MembershipService $membership)
+    public function setTier(Request $request, User $user, MembershipService $membership): RedirectResponse
     {
         $data = $request->validate(['tier_id' => ['required', 'exists:membership_tiers,id'], 'note' => ['required', 'string', 'max:255']],
             [], ['note' => 'lý do']);
@@ -47,7 +49,7 @@ class CustomerController extends Controller
         return back()->with('success', 'Đã đổi hạng thành viên.');
     }
 
-    public function toggleActive(User $user)
+    public function toggleActive(User $user): RedirectResponse
     {
         abort_if($user->isBackOffice(), 403);
         $user->forceFill(['is_active' => ! $user->is_active])->save();

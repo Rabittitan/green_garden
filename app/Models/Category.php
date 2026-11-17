@@ -4,7 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int|null $parent_id
+ * @property string $name
+ * @property string $slug
+ * @property int $sort_order
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Category extends Model
 {
     protected $fillable = ['name', 'slug', 'parent_id', 'sort_order', 'is_active'];
@@ -14,21 +27,28 @@ class Category extends Model
         return ['is_active' => 'boolean', 'sort_order' => 'integer'];
     }
 
-    public function plants()
+    /** @return HasMany<Plant, $this> */
+    public function plants(): HasMany
     {
         return $this->hasMany(Plant::class);
     }
 
-    public function parent()
+    /** @return BelongsTo<Category, $this> */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    public function children()
+    /** @return HasMany<Category, $this> */
+    public function children(): HasMany
     {
         return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order');
     }
 
+    /**
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('is_active', true);

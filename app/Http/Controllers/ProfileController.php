@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -13,7 +15,7 @@ use Illuminate\Validation\Rules\Password;
 class ProfileController extends Controller
 {
     // Hiện trang hồ sơ
-    public function edit(Request $request)
+    public function edit(Request $request): View
     {
         $user = $request->user();
 
@@ -30,7 +32,7 @@ class ProfileController extends Controller
     }
 
     // Cập nhật thông tin cá nhân
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
 
@@ -61,7 +63,7 @@ class ProfileController extends Controller
     }
 
     // Đổi mật khẩu
-    public function updatePassword(Request $request)
+    public function updatePassword(Request $request): RedirectResponse
     {
         $request->validateWithBag('password', [
             'current_password' => 'required|current_password',   // phải nhập đúng mật khẩu hiện tại

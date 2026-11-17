@@ -7,7 +7,7 @@ on:
 jobs:
   tests:
     name: Test (PHP 8.4 + MySQL 8)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       mysql:
         image: mysql:8.0
@@ -25,7 +25,7 @@ jobs:
       DB_USERNAME: root
       DB_PASSWORD: root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -47,15 +47,15 @@ jobs:
           php artisan shop:reconcile
 
   static-analysis:
-    name: Larastan level 6 (báo cáo, chưa chặn merge)
-    runs-on: ubuntu-latest
-    continue-on-error: true
+    name: Larastan level 6
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           coverage: none
       - run: composer install --no-interaction --no-progress --prefer-dist
       - run: cp .env.example .env && php artisan key:generate
-      - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+      - name: Phân tích tĩnh (chặn merge nếu có lỗi)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G

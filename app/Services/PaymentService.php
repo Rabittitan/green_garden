@@ -90,6 +90,8 @@ class PaymentService
 
     /**
      * Xử lý IPN. Trả mã phản hồi cho cổng (00 = đã nhận). Mọi callback đều được ghi log thô trước.
+     *
+     * @param  array<string, mixed>  $query
      */
     public function handleCallback(array $query, ?string $ip = null): string
     {
@@ -286,7 +288,11 @@ class PaymentService
 
     // ================================================================ đồng bộ số tiền lên đơn
 
-    /** Thuộc tính tiền của đơn, tính từ payments, cho trạng thái đơn $status (dùng chung câu UPDATE với đổi trạng thái). */
+    /**
+     * Thuộc tính tiền của đơn, tính từ payments, cho trạng thái đơn $status (dùng chung câu UPDATE với đổi trạng thái).
+     *
+     * @return array<string, mixed>
+     */
     public function paymentAttributes(Order $order, OrderStatus $status): array
     {
         $paid = $this->sumSucceeded($order, PaymentType::Charge);

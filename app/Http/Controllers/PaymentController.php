@@ -6,7 +6,11 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Payment;
 use App\Services\Payments\PaymentGateway;
+use App\Services\Payments\VnpayGateway;
 use App\Services\PaymentService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -22,7 +26,7 @@ class PaymentController extends Controller
         '04' => 'Invalid amount', '97' => 'Invalid signature', '99' => 'Unknown error',
     ];
 
-    public function vnpayIpn(Request $request, PaymentService $payments)
+    public function vnpayIpn(Request $request, PaymentService $payments): JsonResponse
     {
         try {
             $code = $payments->handleCallback($request->query(), $request->ip());
@@ -34,7 +38,7 @@ class PaymentController extends Controller
         return response()->json(['RspCode' => $code, 'Message' => self::MESSAGES[$code] ?? 'Unknown error']);
     }
 
-    public function vnpayReturn(Request $request, PaymentGateway $gateway)
+    public function vnpayReturn(Request $request, PaymentGateway $gateway): RedirectResponse
     {
         $result = $gateway->parseCallback($request->query());
         $payment = $result->signatureValid && $result->txnRef ? Payment::where('txn_ref', $result->txnRef)->first() : null;
@@ -55,7 +59,7 @@ class PaymentController extends Controller
     }
 
     /** Trang thanh toán giả lập (dev). */
-    public function fakeShow(Request $request)
+    public function fakeShow(Request $request): View
     {
         abort_unless(PaymentMethod::onlineGatewayMode() === 'fake', 404);   // không bao giờ bật ở production
         $payment = Payment::where('txn_ref', $request->query('vnp_TxnRef'))->firstOrFail();
@@ -64,10 +68,11 @@ class PaymentController extends Controller
     }
 
     /** Giả lập: cổng gọi IPN (server -> server) rồi đưa trình duyệt về return URL, giống hệt VNPay. */
-    public function fakeSubmit(Request $request, PaymentGateway $gateway, PaymentService $payments)
+    public function fakeSubmit(Request $request, PaymentGateway $gateway, PaymentService $payments): RedirectResponse
     {
         abort_unless(PaymentMethod::onlineGatewayMode() === 'fake', 404);   // không bao giờ bật ở production
         $data = $request->validate(['vnp_TxnRef' => ['required', 'string'], 'return_url' => ['required', 'url'], 'outcome' => ['required', 'in:success,fail']]);
+        abort_unless($gateway instanceof VnpayGateway, 404);
         $payment = Payment::where('txn_ref', $data['vnp_TxnRef'])->firstOrFail();
         $ok = $data['outcome'] === 'success';
 

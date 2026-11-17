@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Exceptions\BusinessException;
 use App\Models\Plant;
 use App\Services\CartService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /** Giỏ hàng (session). Giá hiển thị luôn lấy từ DB. */
@@ -12,7 +14,7 @@ class CartController extends Controller
 {
     public function __construct(private CartService $cart) {}
 
-    public function index()
+    public function index(): View
     {
         foreach ($this->cart->reconcile() as $notice) {
             session()->now('warning', $notice);
@@ -24,7 +26,7 @@ class CartController extends Controller
         return view('cart.index', ['lines' => $lines, 'subtotal' => $lines->sum('total')]);
     }
 
-    public function add(Request $request, int $id)
+    public function add(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:1', 'max:999']]);
         $plant = Plant::findOrFail($id);
@@ -37,7 +39,7 @@ class CartController extends Controller
         return back()->with('success', "Đã thêm \"{$plant->name}\" vào giỏ hàng!");
     }
 
-    public function update(Request $request, int $id)
+    public function update(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:0', 'max:999'], 'action' => ['nullable', 'in:increase,decrease']]);
         $plant = Plant::withTrashed()->findOrFail($id);
@@ -56,7 +58,7 @@ class CartController extends Controller
         return back();
     }
 
-    public function remove(int $id)
+    public function remove(int $id): RedirectResponse
     {
         $this->cart->remove($id);
 

@@ -9,7 +9,10 @@ use App\Models\Plant;
 use App\Models\PurchaseRequest;
 use App\Models\Supplier;
 use App\Services\PurchaseService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 /** Yêu cầu nhập hàng: nhân viên lập / gửi duyệt; quản trị (khác người lập) duyệt / từ chối. */
@@ -17,7 +20,7 @@ class PurchaseRequestController extends Controller
 {
     public function __construct(private PurchaseService $purchases) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $status = $request->validate(['status' => ['nullable', Rule::enum(PurchaseRequestStatus::class)]])['status'] ?? null;
         $requests = PurchaseRequest::with(['requester', 'supplier'])->withCount('items')
@@ -26,19 +29,19 @@ class PurchaseRequestController extends Controller
         return view('admin.purchase-requests.index', compact('requests'));
     }
 
-    public function create()
+    public function create(): View
     {
         return view('admin.purchase-requests.form', $this->formData(new PurchaseRequest(['priority' => 'normal'])));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         [$items, $meta] = $this->validated($request);
 
         return $this->run(fn () => $this->purchases->createRequest($request->user(), $items, $meta), 'Đã tạo yêu cầu nhập.', true);
     }
 
-    public function fromLowStock(Request $request)
+    public function fromLowStock(Request $request): RedirectResponse
     {
         try {
             $pr = $this->purchases->draftFromLowStock($request->user());
@@ -50,7 +53,7 @@ class PurchaseRequestController extends Controller
             : back()->with('warning', 'Không có cây nào dưới ngưỡng tồn kho.');
     }
 
-    public function show(PurchaseRequest $purchaseRequest)
+    public function show(PurchaseRequest $purchaseRequest): View
     {
         return view('admin.purchase-requests.show', [
             'pr' => $purchaseRequest->load(['items.plant', 'requester', 'approver', 'supplier', 'goodsReceipts.receiver']),
@@ -58,14 +61,14 @@ class PurchaseRequestController extends Controller
         ]);
     }
 
-    public function edit(PurchaseRequest $purchaseRequest)
+    public function edit(PurchaseRequest $purchaseRequest): View
     {
         abort_unless($purchaseRequest->status === PurchaseRequestStatus::Draft, 404);
 
         return view('admin.purchase-requests.form', $this->formData($purchaseRequest->load('items')));
     }
 
-    public function update(Request $request, PurchaseRequest $purchaseRequest)
+    public function update(Request $request, PurchaseRequest $purchaseRequest): RedirectResponse
     {
         [$items, $meta] = $this->validated($request);
 
@@ -73,7 +76,7 @@ class PurchaseRequestController extends Controller
     }
 
     /** Gửi duyệt / trả về nháp / hủy / đóng (chấp nhận nhận thiếu). */
-    public function transition(Request $request, PurchaseRequest $purchaseRequest)
+    public function transition(Request $request, PurchaseRequest $purchaseRequest): RedirectResponse
     {
         $data = $request->validate([
             'to' => ['required', Rule::in(['submitted', 'draft', 'cancelled', 'received'])],
@@ -84,21 +87,21 @@ class PurchaseRequestController extends Controller
             'Đã cập nhật trạng thái yêu cầu.');
     }
 
-    public function approve(Request $request, PurchaseRequest $purchaseRequest)
+    public function approve(Request $request, PurchaseRequest $purchaseRequest): RedirectResponse
     {
         $data = $request->validate(['approved' => ['array'], 'approved.*' => ['integer', 'min:0']]);
 
         return $this->run(fn () => $this->purchases->approve($purchaseRequest, $request->user(), array_map('intval', $data['approved'] ?? [])), 'Đã duyệt yêu cầu nhập.');
     }
 
-    public function reject(Request $request, PurchaseRequest $purchaseRequest)
+    public function reject(Request $request, PurchaseRequest $purchaseRequest): RedirectResponse
     {
         $data = $request->validate(['reason' => ['required', 'string', 'max:255']], [], ['reason' => 'lý do từ chối']);
 
         return $this->run(fn () => $this->purchases->transition($purchaseRequest, PurchaseRequestStatus::Rejected, $request->user(), $data['reason']), 'Đã từ chối yêu cầu nhập.');
     }
 
-    public function order(Request $request, PurchaseRequest $purchaseRequest)
+    public function order(Request $request, PurchaseRequest $purchaseRequest): RedirectResponse
     {
         $data = $request->validate(['supplier_id' => ['required', 'exists:suppliers,id']], [], ['supplier_id' => 'nhà cung cấp']);
 
@@ -126,9 +129,12 @@ class PurchaseRequestController extends Controller
             }
         }
 
-        return [$items, collect($data)->only(['reason', 'needed_by', 'priority', 'supplier_id'])->all()];
+        return [$items, Arr::only($data, ['reason', 'needed_by', 'priority', 'supplier_id'])];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function formData(PurchaseRequest $pr): array
     {
         return [
@@ -139,7 +145,7 @@ class PurchaseRequestController extends Controller
         ];
     }
 
-    private function run(callable $action, string $success, bool $toShow = false)
+    private function run(callable $action, string $success, bool $toShow = false): RedirectResponse
     {
         try {
             $result = $action();

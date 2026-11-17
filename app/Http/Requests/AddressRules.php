@@ -5,6 +5,9 @@ namespace App\Http\Requests;
 /** Quy tắc địa chỉ dùng chung cho sổ địa chỉ và form đặt hàng. */
 final class AddressRules
 {
+    /**
+     * @return array<string, mixed>
+     */
     public static function rules(string $prefix = ''): array
     {
         return [
@@ -17,11 +20,17 @@ final class AddressRules
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public static function messages(string $prefix = ''): array
     {
         return [$prefix.'phone.regex' => 'Số điện thoại không hợp lệ (VD: 0901234567).'];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public static function attributes(string $prefix = ''): array
     {
         return [

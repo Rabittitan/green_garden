@@ -51,7 +51,11 @@ class DbCheck
         DB::statement("ALTER TABLE `{$table}` ".implode(', ', $parts));
     }
 
-    /** Sinh biểu thức "col IN ('a','b')". Migration truyền mảng viết cứng, KHÔNG đọc từ Enum. */
+    /**
+     * Sinh biểu thức "col IN ('a','b')". Migration truyền mảng viết cứng, KHÔNG đọc từ Enum.
+     *
+     * @param  list<string>  $values
+     */
     public static function in(string $column, array $values): string
     {
         $quoted = implode(',', array_map(fn ($v) => "'".str_replace("'", "''", $v)."'", $values));

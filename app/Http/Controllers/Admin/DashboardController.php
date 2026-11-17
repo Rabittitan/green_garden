@@ -8,11 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Plant;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         $completed = Order::status(OrderStatus::Completed);
 

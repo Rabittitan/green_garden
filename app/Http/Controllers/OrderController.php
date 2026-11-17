@@ -7,6 +7,8 @@ use App\Exceptions\BusinessException;
 use App\Models\Order;
 use App\Services\OrderService;
 use App\Services\PaymentService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -15,14 +17,14 @@ class OrderController extends Controller
 {
     public function __construct(private OrderService $orders) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $orders = $request->user()->orders()->latest('id')->paginate(10);
 
         return view('orders.index', compact('orders'));
     }
 
-    public function show(Order $order)
+    public function show(Order $order): View
     {
         Gate::authorize('view', $order);
         $this->orders->expireIfOverdue($order);                         // hết hạn thì hủy ngay, không chờ lệnh định kỳ
@@ -32,7 +34,7 @@ class OrderController extends Controller
     }
 
     /** Sang cổng thanh toán (lần đầu hoặc trả tiếp: cùng một giao dịch đang chờ). */
-    public function pay(Request $request, Order $order, PaymentService $payments)
+    public function pay(Request $request, Order $order, PaymentService $payments): RedirectResponse
     {
         Gate::authorize('view', $order);
         if ($this->orders->expireIfOverdue($order) || $request->user()->cannot('pay', $order->refresh())) {
@@ -47,7 +49,7 @@ class OrderController extends Controller
         return redirect()->away($url);
     }
 
-    public function cancel(Request $request, Order $order)
+    public function cancel(Request $request, Order $order): RedirectResponse
     {
         Gate::authorize('cancel', $order);
         $data = $request->validate(['reason' => ['required', 'string', 'max:255']]);
@@ -60,7 +62,7 @@ class OrderController extends Controller
         return redirect()->route('orders.show', $order)->with('success', 'Đã hủy đơn hàng.');
     }
 
-    public function requestReturn(Request $request, Order $order)
+    public function requestReturn(Request $request, Order $order): RedirectResponse
     {
         Gate::authorize('requestReturn', $order);
         $data = $request->validate(['reason' => ['required', 'string', 'max:255']]);

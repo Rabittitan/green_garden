@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\MembershipTier;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 /** Trang "Hạng thành viên của tôi". */
 class MembershipController extends Controller
 {
-    public function show(Request $request)
+    public function show(Request $request): View
     {
         $user = $request->user()->load('tier');
         $next = $user->tier->next();

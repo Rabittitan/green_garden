@@ -7,6 +7,8 @@ use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Services\CommentService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +17,7 @@ class CommentController extends Controller
 {
     public function __construct(private CommentService $comments) {}
 
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $filter = $request->validate(['filter' => ['nullable', Rule::in(['unanswered', 'hidden', 'all'])]])['filter'] ?? 'unanswered';
         $comments = Comment::with(['user', 'commentable', 'replies.user'])->whereNull('parent_id')
@@ -27,7 +29,7 @@ class CommentController extends Controller
         return view('admin.comments.index', compact('comments', 'filter'));
     }
 
-    public function reply(Request $request, Comment $comment)
+    public function reply(Request $request, Comment $comment): RedirectResponse
     {
         $data = $request->validate(['content' => ['required', 'string', 'max:2000']], [], ['content' => 'nội dung']);
         try {
@@ -39,7 +41,7 @@ class CommentController extends Controller
         return back()->with('success', 'Đã trả lời.');
     }
 
-    public function toggle(Comment $comment)
+    public function toggle(Comment $comment): RedirectResponse
     {
         $this->comments->setStatus($comment, $comment->status === CommentStatus::Hidden ? CommentStatus::Published : CommentStatus::Hidden);
 

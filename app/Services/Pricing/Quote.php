@@ -14,7 +14,10 @@ use LogicException;
  */
 final class Quote
 {
-    /** @param list<QuoteLine> $lines  @param list<string> $notices */
+    /**
+     * @param  list<QuoteLine>  $lines
+     * @param  list<string>  $notices
+     */
     public function __construct(
         public readonly array $lines,
         public readonly MembershipTier $tier,

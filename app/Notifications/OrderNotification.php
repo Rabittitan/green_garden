@@ -23,6 +23,9 @@ abstract class OrderNotification extends Notification implements ShouldQueue
 
     abstract protected function subject(): string;
 
+    /**
+     * @return list<string>
+     */
     public function via(object $notifiable): array
     {
         return ['mail'];

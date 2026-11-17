@@ -114,6 +114,9 @@ class CartService
         }
     }
 
+    /**
+     * @param  array<int, int>  $items
+     */
     private function save(array $items): void
     {
         $this->session->put(self::KEY, $items);

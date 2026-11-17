@@ -30,6 +30,9 @@ class VnpayGateway implements PaymentGateway
         return 'vnpay';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function initParams(Payment $payment, string $clientIp): array
     {
         $tz = 'Asia/Ho_Chi_Minh';                                  // VNPay yêu cầu giờ GMT+7
@@ -64,6 +67,9 @@ class VnpayGateway implements PaymentGateway
         return $this->baseUrl.'?'.$this->sign($params);
     }
 
+    /**
+     * @param  array<string, mixed>  $query
+     */
     public function parseCallback(array $query): GatewayResult
     {
         $params = array_filter($query, fn ($k) => str_starts_with((string) $k, 'vnp_'), ARRAY_FILTER_USE_KEY);
@@ -85,17 +91,27 @@ class VnpayGateway implements PaymentGateway
         );
     }
 
-    /** Trả về query string đã kèm vnp_SecureHash (dùng cả cho test / cổng giả lập). */
+    /**
+     * Trả về query string đã kèm vnp_SecureHash (dùng cả cho test / cổng giả lập).
+     *
+     * @param  array<string, string|null>  $params
+     */
     public function sign(array $params): string
     {
         return $this->query($params).'&vnp_SecureHash='.$this->hash($params);
     }
 
+    /**
+     * @param  array<string, string|null>  $params
+     */
     protected function hash(array $params): string
     {
         return hash_hmac('sha512', $this->query($params), $this->hashSecret);
     }
 
+    /**
+     * @param  array<string, string|null>  $params
+     */
     protected function query(array $params): string
     {
         ksort($params);

@@ -13,6 +13,8 @@ use App\Models\UserAddress;
 use App\Services\CartService;
 use App\Services\OrderService;
 use App\Services\PricingService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -28,7 +30,7 @@ class CheckoutController extends Controller
 
     public function __construct(private CartService $cart, private PricingService $pricing) {}
 
-    public function form(Request $request)
+    public function form(Request $request): RedirectResponse|View
     {
         foreach ($this->cart->reconcile() as $notice) {
             session()->now('warning', $notice);
@@ -63,7 +65,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function applyCoupon(Request $request)
+    public function applyCoupon(Request $request): RedirectResponse
     {
         $data = $request->validate(['coupon_code' => ['required', 'string', 'max:40']]);
         try {
@@ -79,14 +81,14 @@ class CheckoutController extends Controller
         return back()->with('success', "Đã áp dụng mã {$quote->coupon->code}: giảm ".number_format($quote->couponBenefit(), 0, ',', '.').'đ.');
     }
 
-    public function removeCoupon()
+    public function removeCoupon(): RedirectResponse
     {
         session()->forget(self::COUPON_KEY);
 
         return back()->with('success', 'Đã bỏ mã giảm giá.');
     }
 
-    public function store(PlaceOrderRequest $request, OrderService $orders)
+    public function store(PlaceOrderRequest $request, OrderService $orders): RedirectResponse
     {
         if ($this->cart->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Giỏ hàng đang trống!');

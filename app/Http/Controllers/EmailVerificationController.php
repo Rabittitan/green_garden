@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -13,7 +15,7 @@ use Illuminate\Http\Request;
 class EmailVerificationController extends Controller
 {
     // Trang "Vui lòng xác thực email" (middleware 'verified' tự chuyển khách chưa xác thực về đây)
-    public function notice(Request $request)
+    public function notice(Request $request): RedirectResponse|View
     {
         if ($request->user()->hasVerifiedEmail()) {
             return redirect()->route('home');
@@ -24,7 +26,7 @@ class EmailVerificationController extends Controller
     }
 
     // Khách bấm link trong mail. EmailVerificationRequest tự kiểm tra id + hash có khớp user đang đăng nhập không
-    public function verify(EmailVerificationRequest $request)
+    public function verify(EmailVerificationRequest $request): RedirectResponse
     {
         $request->fulfill();   // set email_verified_at = now() và phát event Verified
 
@@ -33,7 +35,7 @@ class EmailVerificationController extends Controller
     }
 
     // Gửi lại mail xác thực
-    public function resend(Request $request)
+    public function resend(Request $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
             return redirect()->route('home');
