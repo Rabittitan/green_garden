@@ -45,3 +45,14 @@ nhập kho, không vào được chức năng quản trị) · quản trị (duy
 | F3 | Cao | 1 đơn lỗi làm dừng cả lô chốt chi tiêu (job mỗi giờ kẹt mãi) | Xử lý từng đơn / từng khách độc lập, lỗi chỉ ghi log |
 | F4 | Thấp | (do sửa F2) nhân viên bị khóa nhận 403 thay vì bị đăng xuất | Kiểm "tài khoản bị khóa" trước kiểm quyền |
 | T1 | Hạ tầng test | Test đua commit dữ liệu thật làm bẩn DB của lớp test sau | Đánh dấu dựng lại DB sau lớp test đua |
+
+## 6. Phân tích tĩnh — Larastan level 6 (CI, chặn merge)
+Lần chạy đầu trên CI: **498 lỗi** → sau khi sửa: **0 lỗi**.
+- ~350 lỗi do model thiếu khai báo kiểu: thêm `@property` sinh từ schema DB thật + casts, relation có kiểu + generics.
+- 113 action controller thiếu kiểu trả về; ~70 kiểu mảng / generics.
+- Lỗi thật tìm được nhờ phân tích tĩnh:
+
+| # | Lỗi | Sửa |
+|---|---|---|
+| S1 | `PaymentController` gọi `sign()` trên interface `PaymentGateway` (interface không có hàm này) | Kiểm tra `instanceof VnpayGateway` trước khi ký |
+| S2 | User vừa `create()` chưa có `role` / `is_active` mặc định của DB trong bộ nhớ → gọi `isBackOffice()` lỗi | Thêm `$attributes` khớp giá trị mặc định của DB |
