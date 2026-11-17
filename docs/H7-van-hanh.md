@@ -8,7 +8,7 @@ Tài liệu cho người triển khai và trực vận hành. Mọi lệnh chạ
 
 | Thành phần | Phiên bản | Ghi chú |
 |---|---|---|
-| PHP | 8.4 (FPM) | extension: `pdo_mysql`, `mbstring`, `intl`, `bcmath`, `xml`, `curl`, `zip` |
+| PHP | **≥ 8.4.1** (FPM) | extension: `pdo_mysql`, `mbstring`, `intl`, `bcmath`, `xml`, `curl`, `zip` |
 | MySQL | **≥ 8.0.16** (hoặc MariaDB ≥ 10.4) | bắt buộc: schema dùng CHECK constraint + cột sinh có UNIQUE. Migration tự dừng nếu engine thấp hơn |
 | Nginx | bất kỳ bản còn hỗ trợ | mẫu: `deploy/nginx-greenlife.conf` |
 | Supervisor | | giữ queue worker gửi mail: `deploy/supervisor-greenlife-worker.conf` |

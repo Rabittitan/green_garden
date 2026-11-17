@@ -19,7 +19,7 @@ Website bán cây cảnh: đặt hàng, thanh toán (COD / VNPay / chuyển kho�
 
 ## Chạy ở máy dev
 
-Cần PHP ≥ 8.2 (CI dùng 8.4), Composer 2, MySQL ≥ 8.0.16.
+Cần **PHP ≥ 8.4.1** (các gói Symfony 8.1 trong `composer.lock` yêu cầu), Composer 2, MySQL ≥ 8.0.16. Laravel 12.
 
 ```bash
 composer install
