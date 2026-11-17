@@ -48,7 +48,8 @@ jobs:
       - name: Cache cấu hình/route/view như production (bắt closure route, lỗi Blade)
         run: |
           php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan event:cache
-          php artisan optimize:clear
+          # Chỉ xóa file cache bootstrap (optimize:clear còn xóa cache store trong DB -> step này không cần DB)
+          php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan event:clear
       - name: Kiểm tra lỗ hổng thư viện (composer audit)
         run: composer audit --no-interaction
 

@@ -1,0 +1,5 @@
+# crontab -u www-data -e   (user chạy PHP-FPM, để file log/cache cùng quyền)
+# Bộ lập lịch Laravel: hủy đơn quá hạn mỗi phút, chốt chi tiêu hạng mỗi giờ, đối soát 02:17, dọn log...
+* * * * * cd /var/www/greenlife && php artisan schedule:run >> /dev/null 2>&1
+# Sao lưu DB 01:15 hằng ngày
+15 1 * * * /var/www/greenlife/deploy/backup-db.sh >> /var/log/greenlife-backup.log 2>&1

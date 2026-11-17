@@ -15,6 +15,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Dữ liệu mẫu có tài khoản admin mật khẩu 123456: tuyệt đối không chạy ở production.
+        // Production tạo quản trị viên bằng: php artisan shop:create-admin
+        if (app()->isProduction()) {
+            throw new \RuntimeException('Không chạy dữ liệu mẫu ở production. Dùng php artisan shop:create-admin để tạo quản trị viên.');
+        }
         $now = now();
         $baseTier = DB::table('membership_tiers')->where('rank', 0)->value('id');
 

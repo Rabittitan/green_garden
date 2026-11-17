@@ -15,10 +15,14 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\Events\DiagnosingHealth;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -41,6 +45,15 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Sau reverse proxy: thiếu bước này thì mọi khách chung IP của proxy -> giới hạn đăng nhập 20 lần/phút
+        // áp cho CẢ site, IP gửi VNPay sai, và HTTPS bị nhận là HTTP (mất HSTS, link sinh ra là http://).
+        $proxies = trim((string) config('shop.trusted_proxies'));
+        if ($proxies !== '') {
+            TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
+
+        // /up (health check cho load balancer / uptime monitor): kiểm tra luôn kết nối DB, không chỉ PHP còn sống
+        Event::listen(DiagnosingHealth::class, fn () => DB::select('SELECT 1'));
 
         Paginator::useBootstrapFive();
 
