@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => AdminMiddleware::class,
         ]);
-        $middleware->web(append: [EnsureUserIsActive::class]);
+        $middleware->web(append: [EnsureUserIsActive::class, SecurityHeaders::class]);
         // Kiểm quyền admin TRƯỚC khi nạp model từ URL: người không có quyền luôn nhận 403,
         // không phân biệt id có tồn tại hay không (tránh dò số đơn / phiếu bằng 404 vs 403).
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: AdminMiddleware::class);

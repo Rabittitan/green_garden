@@ -51,7 +51,7 @@ Route::post('/thanh-toan/gia-lap', [PaymentController::class, 'fakeSubmit'])->na
 // ===== ĐĂNG NHẬP / ĐĂNG KÝ =====
 Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/dang-nhap', [AuthController::class, 'login'])->name('login.post')->middleware('throttle:5,1');
+    Route::post('/dang-nhap', [AuthController::class, 'login'])->name('login.post')->middleware('throttle:login');
     Route::get('/dang-ky', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/dang-ky', [AuthController::class, 'register'])->name('register.post')->middleware('throttle:5,1');
 });

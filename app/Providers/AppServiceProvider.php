@@ -12,10 +12,14 @@ use App\Services\Payments\FakeGateway;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\VnpayGateway;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -39,6 +43,15 @@ class AppServiceProvider extends ServiceProvider
     {
 
         Paginator::useBootstrapFive();
+
+        // Đăng nhập: 5 lần / phút / (email + IP) và 20 lần / phút / IP
+        RateLimiter::for('login', fn (Request $request) => [
+            Limit::perMinute(5)->by(mb_strtolower((string) $request->input('email')).'|'.$request->ip()),
+            Limit::perMinute(20)->by($request->ip()),
+        ]);
+
+        // Ngoài production: báo lỗi ngay khi có truy vấn N+1 (lazy loading) để test bắt được
+        Model::preventLazyLoading(! $this->app->isProduction());
 
         // @money($v) -> 250.000đ   |   @vndt($date) -> giờ Việt Nam
         Blade::directive('money', fn ($e) => "<?php echo e(\\App\\Support\\Format::money({$e})); ?>");
