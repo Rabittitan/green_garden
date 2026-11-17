@@ -23,6 +23,9 @@ use Illuminate\Support\Carbon;
  */
 class UserAddress extends Model
 {
+    /** Sổ địa chỉ không phân trang (hiện cả ở trang đặt hàng) -> giới hạn số lượng thay vì để phình vô hạn. */
+    public const MAX_PER_USER = 10;
+
     protected $fillable = ['user_id', 'recipient_name', 'phone', 'province', 'district', 'ward', 'address_line', 'is_default'];
 
     protected $hidden = ['default_key'];

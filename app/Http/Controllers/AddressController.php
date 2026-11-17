@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AddressRequest;
+use App\Models\User;
 use App\Models\UserAddress;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -20,15 +21,24 @@ class AddressController extends Controller
     public function store(AddressRequest $request): RedirectResponse
     {
         $user = $request->user();
-        DB::transaction(function () use ($request, $user) {
+        $added = DB::transaction(function () use ($request, $user) {
+            // Khóa dòng user: 2 lần thêm đồng thời không cùng thành "mặc định" (đụng UNIQUE -> 500) và không vượt trần
+            User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if ($user->addresses()->count() >= UserAddress::MAX_PER_USER) {
+                return false;
+            }
             $makeDefault = $request->boolean('is_default') || ! $user->addresses()->exists();
             if ($makeDefault) {
                 UserAddress::where('user_id', $user->id)->update(['is_default' => false]);
             }
             $user->addresses()->create($request->safe()->except('is_default') + ['is_default' => $makeDefault]);
+
+            return true;
         });
 
-        return back()->with('success', 'Đã thêm địa chỉ.');
+        return $added
+            ? back()->with('success', 'Đã thêm địa chỉ.')
+            : back()->withInput()->with('error', 'Bạn đã lưu tối đa '.UserAddress::MAX_PER_USER.' địa chỉ. Hãy xóa bớt địa chỉ không dùng.');
     }
 
     public function update(AddressRequest $request, UserAddress $address): RedirectResponse

@@ -73,6 +73,7 @@ class PaymentController extends Controller
         abort_unless(PaymentMethod::onlineGatewayMode() === 'fake', 404);   // không bao giờ bật ở production
         $data = $request->validate(['vnp_TxnRef' => ['required', 'string'], 'return_url' => ['required', 'url'], 'outcome' => ['required', 'in:success,fail']]);
         abort_unless($gateway instanceof VnpayGateway, 404);
+        abort_unless(str_starts_with($data['return_url'], url('/').'/'), 422, 'return_url phải thuộc chính site.');
         $payment = Payment::where('txn_ref', $data['vnp_TxnRef'])->firstOrFail();
         $ok = $data['outcome'] === 'success';
 

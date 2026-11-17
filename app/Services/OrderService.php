@@ -11,6 +11,7 @@ use App\Exceptions\PriceChangedException;
 use App\Models\Order;
 use App\Models\User;
 use App\Notifications\OrderCancelled;
+use App\Notifications\OrderCompleted;
 use App\Notifications\OrderShipped;
 use App\Notifications\ReturnInstructions;
 use App\Services\Orders\OrderStateWriter;
@@ -192,9 +193,11 @@ class OrderService
                 throw new BusinessException("Đơn {$o->code} không ở trạng thái đang giao.");
             }
             $this->payments->settleCod($o);
-
-            return $this->state->transition($o, OrderStatus::Completed, ActorType::Staff, $by->id, null,
+            $o = $this->state->transition($o, OrderStatus::Completed, ActorType::Staff, $by->id, null,
                 ['completed_at' => now()] + $this->payments->paymentAttributes($o, OrderStatus::Completed));
+            Notifier::send($o->user, new OrderCompleted($o));                // COD: mốc thu tiền; mọi đơn: mốc bắt đầu hạn đổi trả
+
+            return $o;
         });
     }
 

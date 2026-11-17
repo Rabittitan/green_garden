@@ -6,7 +6,9 @@ use App\Enums\ActorType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\MembershipTier;
+use App\Notifications\LatePaymentRefund;
 use App\Notifications\OrderCancelled;
+use App\Notifications\OrderCompleted;
 use App\Notifications\OrderShipped;
 use App\Notifications\PaymentReceived;
 use App\Notifications\RefundCompleted;
@@ -57,6 +59,35 @@ class NotificationTest extends TestCase
         $this->orders->confirm($cod, $this->admin());
         $this->orders->ship($cod, 'GHN', 'G-1', $this->admin());
         Notification::assertSentTo($this->customer(), OrderShipped::class, fn ($n) => $n->order->is($cod));
+    }
+
+    /** H8 (C9): COD giao xong = mốc thu tiền + bắt đầu hạn đổi trả -> phải có email. */
+    public function test_completed_cod_order_emails_cash_receipt_and_return_deadline(): void
+    {
+        $cod = $this->place();
+        $this->orders->confirm($cod, $this->admin());
+        $this->orders->ship($cod, 'GHN', 'G-2', $this->admin());
+        $this->orders->complete($cod, $this->admin());
+        Notification::assertSentTo($this->customer(), OrderCompleted::class, function ($n) use ($cod) {
+            $text = implode(' ', $n->toMail($this->customer())->introLines);
+
+            return $n->order->is($cod) && str_contains($text, '280.000đ tiền mặt') && str_contains($text, 'yêu cầu trả hàng');
+        });
+    }
+
+    /** H8 (C9): tiền về sau khi đơn đã hết hạn -> shop giữ tiền khách, phải báo sẽ hoàn. */
+    public function test_late_payment_on_cancelled_order_tells_customer_about_refund(): void
+    {
+        $order = $this->place(method: PaymentMethod::Vnpay);
+        $charge = $order->payments()->sole();
+        $this->travel(30)->minutes();
+        $this->orders->expireOverdue();
+        Notification::assertNotSentTo($this->customer(), LatePaymentRefund::class);
+
+        $this->ipn($charge);
+        Notification::assertSentTo($this->customer(), LatePaymentRefund::class, fn ($n) => $n->amount === 280000
+            && str_contains(implode(' ', $n->toMail($this->customer())->introLines), 'hoàn lại toàn bộ'));
+        Notification::assertNotSentTo($this->customer(), PaymentReceived::class);
     }
 
     public function test_return_instructions_only_when_customer_holds_the_plants(): void
@@ -123,7 +154,8 @@ class NotificationTest extends TestCase
         $order->forceFill(['shipping_carrier' => 'GHN', 'tracking_code' => 'X', 'cancel_reason' => 'Test'])->save();
         $payment = $order->payments()->sole();
         foreach ([new PaymentReceived($order), new OrderShipped($order), new OrderCancelled($order),
-            new RefundCompleted($order, $payment), new ReturnInstructions($order), new TierUpgraded(MembershipTier::first())] as $n) {
+            new RefundCompleted($order, $payment), new ReturnInstructions($order), new TierUpgraded(MembershipTier::first()),
+            new OrderCompleted($order), new LatePaymentRefund($order, 280000)] as $n) {
             $html = (string) $n->toMail($this->customer())->render();
             $this->assertStringContainsString('GreenLife', $html, get_class($n));
         }

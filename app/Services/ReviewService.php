@@ -143,6 +143,7 @@ class ReviewService
                 ->selectRaw('plant_id, SUM(rating) s, COUNT(*) c')->groupBy('plant_id')
                 ->toBase()->get()->each(fn ($r) => Plant::withTrashed()->whereKey($r->plant_id)
                 ->update(['rating_sum' => $r->s, 'rating_count' => $r->c]));
+            DB::update('UPDATE plant_reviews r SET helpful_count = (SELECT COUNT(*) FROM review_votes v WHERE v.plant_review_id = r.id)');
         });
     }
 }

@@ -10,6 +10,10 @@ return [
 
     'order_code_prefix' => 'GL',
 
+    // Proxy tin cậy (nginx/Cloudflare/load balancer) để lấy đúng IP khách + nhận ra HTTPS.
+    // VD: "10.0.0.0/8,172.16.0.0/12" hoặc "*" (chỉ khi app KHÔNG nhận kết nối trực tiếp từ internet). Trống = không tin proxy nào.
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
     'shipping' => [
         'base_fee' => (int) env('SHOP_SHIPPING_FEE', 30000),
         // Miễn phí ship khi (tiền hàng sau giảm) >= ngưỡng. Hạng thành viên có thể có ngưỡng riêng thấp hơn.

@@ -12,8 +12,10 @@ use App\Http\Requests\PlaceOrderRequest;
 use App\Models\UserAddress;
 use App\Services\CartService;
 use App\Services\OrderService;
+use App\Services\PaymentService;
 use App\Services\PricingService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -88,7 +90,7 @@ class CheckoutController extends Controller
         return back()->with('success', 'Đã bỏ mã giảm giá.');
     }
 
-    public function store(PlaceOrderRequest $request, OrderService $orders): RedirectResponse
+    public function store(PlaceOrderRequest $request, OrderService $orders, PaymentService $payments): RedirectResponse
     {
         if ($this->cart->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Giỏ hàng đang trống!');
@@ -123,7 +125,11 @@ class CheckoutController extends Controller
         }
 
         if ($order->status === OrderStatus::PendingPayment && $order->payment_method === PaymentMethod::Vnpay) {
-            return redirect()->route('orders.pay', $order);
+            try {
+                return redirect()->away($payments->checkoutUrl($order, route('payment.vnpay.return'), (string) $request->ip()));
+            } catch (BusinessException $e) {
+                return redirect()->route('orders.show', $order)->with('error', $e->getMessage());
+            }
         }
 
         return redirect()->route('orders.show', $order)->with('success', "Đặt hàng thành công! Mã đơn: {$order->code}.");
@@ -133,11 +139,16 @@ class CheckoutController extends Controller
     {
         $fields = $request->safe()->only(['recipient_name', 'phone', 'province', 'district', 'ward', 'address_line']);
         $exists = UserAddress::where('user_id', $userId)->where($fields)->exists();
-        if (! $exists) {
-            UserAddress::create($fields + [
-                'user_id' => $userId,
-                'is_default' => ! UserAddress::where('user_id', $userId)->where('is_default', true)->exists(),
-            ]);
+        // Sổ đầy thì thôi không lưu (đơn đã có snapshot địa chỉ, không mất gì)
+        if (! $exists && UserAddress::where('user_id', $userId)->count() < UserAddress::MAX_PER_USER) {
+            try {
+                UserAddress::create($fields + [
+                    'user_id' => $userId,
+                    'is_default' => ! UserAddress::where('user_id', $userId)->where('is_default', true)->exists(),
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // 2 đơn đầu tiên đặt cùng lúc cùng muốn làm "mặc định": đơn đã lưu xong, bỏ qua việc phụ này
+            }
         }
     }
 }
