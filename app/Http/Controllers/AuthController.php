@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+
+class AuthController extends Controller
+{
+    // Hiện form đăng nhập
+    public function showLogin()
+    {
+        return view('auth.login');
+    }
+
+    // Xử lý đăng nhập
+    public function login(Request $request)
+    {
+        // Lấy email và mật khẩu, bắt buộc phải nhập
+        $credentials = $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required',
+        ]);
+
+        // Auth::attempt tự so sánh email + mật khẩu (đã mã hóa) với bảng users
+        if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();                 // đổi session id để chống tấn công session fixation
+
+            if (Auth::user()->role === 'admin') {              // nếu là admin
+                return redirect()->route('admin.dashboard');   // vào trang quản trị
+            }
+            return redirect()->route('home');                  // khách thường thì về trang chủ
+        }
+
+        // Sai thông tin thì quay lại form, giữ lại email đã nhập
+        return back()->withErrors(['email' => 'Email hoặc mật khẩu không đúng!'])->withInput();
+    }
+
+    // Hiện form đăng ký
+    public function showRegister()
+    {
+        return view('auth.register');
+    }
+
+    // Xử lý đăng ký
+    public function register(Request $request)
+    {
+        // Kiểm tra dữ liệu: email không được trùng, mật khẩu >= 6 ký tự và phải nhập lại khớp (password_confirmation)
+        $data = $request->validate([
+            'name'     => 'required|max:100',
+            'email'    => 'required|email|unique:users,email',
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'phone'    => 'nullable|max:15',
+            'address'  => 'nullable|max:255',
+        ]);
+
+        $user = User::create([                                 // tạo tài khoản mới
+            'name'     => $data['name'],
+            'email'    => $data['email'],
+            'password' => Hash::make($data['password']),       // mã hóa mật khẩu, KHÔNG lưu mật khẩu thô
+            'phone'    => $data['phone'] ?? null,
+            'address'  => $data['address'] ?? null,
+            'role'     => 'customer',                          // đăng ký ngoài luôn là khách
+        ]);
+
+        try {
+            event(new Registered($user));                      // Laravel tự gửi mail xác thực (vì User implements MustVerifyEmail)
+        } catch (\Throwable $e) {
+            report($e);                                        // lỗi SMTP không được làm hỏng việc đăng ký; khách bấm "Gửi lại" sau
+        }
+
+        Auth::login($user);                                    // đăng nhập luôn cho tiện
+        $request->session()->regenerate();                     // đổi session id sau khi đăng nhập
+        return redirect()->route('verification.notice')
+            ->with('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+    }
+
+    // Đăng xuất
+    public function logout(Request $request)
+    {
+        Auth::logout();                                        // xóa trạng thái đăng nhập
+        $request->session()->invalidate();                     // hủy session cũ (giỏ hàng cũng mất)
+        $request->session()->regenerateToken();                // tạo CSRF token mới
+        return redirect()->route('home');                      // về trang chủ
+    }
+}
