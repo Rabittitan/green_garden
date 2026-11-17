@@ -47,16 +47,55 @@ class Order extends Model
         ];
     }
 
-    public function user()        { return $this->belongsTo(User::class); }
-    public function tier()        { return $this->belongsTo(MembershipTier::class, 'membership_tier_id'); }
-    public function coupon()      { return $this->belongsTo(Coupon::class)->withTrashed(); }
-    public function items()       { return $this->hasMany(OrderItem::class)->orderBy('id'); }
-    public function payments()    { return $this->hasMany(Payment::class)->orderBy('id'); }
-    public function charges()     { return $this->payments()->where('type', PaymentType::Charge->value); }
-    public function refunds()     { return $this->payments()->where('type', PaymentType::Refund->value); }
-    public function redemption()  { return $this->hasOne(CouponRedemption::class); }
-    public function histories()   { return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at')->orderBy('id'); }
-    public function stockMovements() { return $this->hasManyThrough(StockMovement::class, OrderItem::class); }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function tier()
+    {
+        return $this->belongsTo(MembershipTier::class, 'membership_tier_id');
+    }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class)->withTrashed();
+    }
+
+    public function items()
+    {
+        return $this->hasMany(OrderItem::class)->orderBy('id');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class)->orderBy('id');
+    }
+
+    public function charges()
+    {
+        return $this->payments()->where('type', PaymentType::Charge->value);
+    }
+
+    public function refunds()
+    {
+        return $this->payments()->where('type', PaymentType::Refund->value);
+    }
+
+    public function redemption()
+    {
+        return $this->hasOne(CouponRedemption::class);
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasManyThrough(StockMovement::class, OrderItem::class);
+    }
 
     /** Charge đang chờ (tối đa 1, DB đảm bảo). */
     public function pendingCharge(): ?Payment

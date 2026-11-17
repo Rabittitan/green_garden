@@ -17,9 +17,28 @@ class MembershipTierHistory extends Model
         return ['reason' => TierChangeReason::class, 'spend_total' => 'integer'];
     }
 
-    public function user()      { return $this->belongsTo(User::class); }
-    public function fromTier()  { return $this->belongsTo(MembershipTier::class, 'from_tier_id'); }
-    public function toTier()    { return $this->belongsTo(MembershipTier::class, 'to_tier_id'); }
-    public function order()     { return $this->belongsTo(Order::class); }
-    public function changedBy() { return $this->belongsTo(User::class, 'changed_by'); }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function fromTier()
+    {
+        return $this->belongsTo(MembershipTier::class, 'from_tier_id');
+    }
+
+    public function toTier()
+    {
+        return $this->belongsTo(MembershipTier::class, 'to_tier_id');
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function changedBy()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
+    }
 }

@@ -14,11 +14,25 @@ class Category extends Model
         return ['is_active' => 'boolean', 'sort_order' => 'integer'];
     }
 
-    public function plants()   { return $this->hasMany(Plant::class); }
-    public function parent()   { return $this->belongsTo(Category::class, 'parent_id'); }
-    public function children() { return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order'); }
+    public function plants()
+    {
+        return $this->hasMany(Plant::class);
+    }
 
-    public function scopeActive(Builder $q): Builder { return $q->where('is_active', true); }
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order');
+    }
+
+    public function scopeActive(Builder $q): Builder
+    {
+        return $q->where('is_active', true);
+    }
 
     /**
      * id của danh mục này + mọi danh mục con cháu (mã giảm giá theo danh mục áp cả danh mục con).

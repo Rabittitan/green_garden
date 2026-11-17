@@ -5,13 +5,13 @@ namespace App\Services;
 use App\Enums\GoodsReceiptStatus;
 use App\Enums\PurchaseRequestStatus;
 use App\Enums\StockMovementType;
+use App\Exceptions\BusinessException;
 use App\Models\GoodsReceipt;
 use App\Models\Plant;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use App\Exceptions\BusinessException;
 
 /** Yêu cầu nhập hàng -> duyệt -> phiếu nhập kho -> cộng kho. */
 class PurchaseService

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Payment;
-use App\Services\PaymentService;
 use App\Services\Payments\PaymentGateway;
+use App\Services\PaymentService;
 use Illuminate\Http\Request;
 
 /**

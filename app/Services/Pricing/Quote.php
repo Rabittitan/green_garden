@@ -27,10 +27,25 @@ final class Quote
         $this->assertInvariants();
     }
 
-    public function subtotal(): int        { return array_sum(array_map(fn (QuoteLine $l) => $l->subtotal(), $this->lines)); }
-    public function memberDiscount(): int  { return array_sum(array_map(fn (QuoteLine $l) => $l->memberDiscount, $this->lines)); }
-    public function couponDiscount(): int  { return array_sum(array_map(fn (QuoteLine $l) => $l->couponDiscount, $this->lines)); }
-    public function merchandiseTotal(): int { return $this->subtotal() - $this->memberDiscount() - $this->couponDiscount(); }
+    public function subtotal(): int
+    {
+        return array_sum(array_map(fn (QuoteLine $l) => $l->subtotal(), $this->lines));
+    }
+
+    public function memberDiscount(): int
+    {
+        return array_sum(array_map(fn (QuoteLine $l) => $l->memberDiscount, $this->lines));
+    }
+
+    public function couponDiscount(): int
+    {
+        return array_sum(array_map(fn (QuoteLine $l) => $l->couponDiscount, $this->lines));
+    }
+
+    public function merchandiseTotal(): int
+    {
+        return $this->subtotal() - $this->memberDiscount() - $this->couponDiscount();
+    }
 
     public function total(): int
     {

@@ -49,7 +49,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // Hàm nhỏ tạo link ảnh Unsplash cho gọn
-        $img = fn($id) => "https://images.unsplash.com/photo-$id?w=600&q=80";
+        $img = fn ($id) => "https://images.unsplash.com/photo-$id?w=600&q=80";
 
         // ===== 3. 15 cây cảnh: [category_id, tên, giá, tồn kho, ánh sáng, mệnh, ảnh, mô tả] =====
         $plants = [
@@ -92,19 +92,17 @@ class DatabaseSeeder extends Seeder
         $silverTier = DB::table('membership_tiers')->where('code', 'silver')->value('id');
         DB::table('coupons')->insert([
             ['code' => 'CHAOBAN', 'name' => 'Giảm 50.000đ đơn đầu tiên', 'type' => 'fixed', 'value' => 50000,
-             'max_discount_amount' => null, 'min_order_amount' => 300000, 'min_tier_id' => null, 'combinable_with_tier' => true,
-             'first_order_only' => true, 'created_at' => $now, 'updated_at' => $now],
+                'max_discount_amount' => null, 'min_order_amount' => 300000, 'min_tier_id' => null, 'combinable_with_tier' => true,
+                'first_order_only' => true, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'GIAM10', 'name' => 'Giảm 10% tối đa 100.000đ cho hạng Bạc trở lên', 'type' => 'percent', 'value' => 10,
-             'max_discount_amount' => 100000, 'min_order_amount' => 0, 'min_tier_id' => $silverTier, 'combinable_with_tier' => false,
-             'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
+                'max_discount_amount' => 100000, 'min_order_amount' => 0, 'min_tier_id' => $silverTier, 'combinable_with_tier' => false,
+                'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'FREESHIP', 'name' => 'Miễn phí vận chuyển', 'type' => 'free_shipping', 'value' => 0,
-             'max_discount_amount' => null, 'min_order_amount' => 150000, 'min_tier_id' => null, 'combinable_with_tier' => true,
-             'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
+                'max_discount_amount' => null, 'min_order_amount' => 150000, 'min_tier_id' => null, 'combinable_with_tier' => true,
+                'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
         ]);
 
         // ===== 5. Bài viết =====
         $this->call(ArticleSeeder::class);
     }
-
-    
 }

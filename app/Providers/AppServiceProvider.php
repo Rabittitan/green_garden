@@ -2,14 +2,11 @@
 
 namespace App\Providers;
 
-use Illuminate\Pagination\Paginator;
-use App\Services\CartService;
-use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\View;
+use App\Enums\PaymentMethod;
 use App\Models\Article;
 use App\Models\Plant;
 use App\Models\User;
-use App\Enums\PaymentMethod;
+use App\Services\CartService;
 use App\Services\Payments\DisabledGateway;
 use App\Services\Payments\FakeGateway;
 use App\Services\Payments\PaymentGateway;
@@ -17,6 +14,9 @@ use App\Services\Payments\VnpayGateway;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
             return match (PaymentMethod::onlineGatewayMode()) {
                 'vnpay' => new VnpayGateway((string) $cfg['tmn_code'], (string) $cfg['hash_secret'], (string) $cfg['url'], (string) $cfg['version']),
                 'fake' => new FakeGateway((string) config('app.key'), url('/thanh-toan/gia-lap')),
-                default => new DisabledGateway(),
+                default => new DisabledGateway,
             };
         });
     }

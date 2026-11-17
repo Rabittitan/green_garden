@@ -19,6 +19,7 @@ class EmailVerificationController extends Controller
             return redirect()->route('home');
 
         }
+
         return view('auth.verify-email'); // auth/verify-email.blade.php
     }
 

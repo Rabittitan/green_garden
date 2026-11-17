@@ -97,7 +97,7 @@ class ReviewService
             PlantReview::where('status', ReviewStatus::Approved->value)
                 ->selectRaw('plant_id, SUM(rating) s, COUNT(*) c')->groupBy('plant_id')
                 ->get()->each(fn ($r) => Plant::withTrashed()->whereKey($r->plant_id)
-                    ->update(['rating_sum' => $r->s, 'rating_count' => $r->c]));
+                ->update(['rating_sum' => $r->s, 'rating_count' => $r->c]));
         });
     }
 }

@@ -10,5 +10,8 @@ class ReviewImage extends Model
 
     protected $fillable = ['plant_review_id', 'path', 'sort_order'];
 
-    public function review() { return $this->belongsTo(PlantReview::class, 'plant_review_id'); }
+    public function review()
+    {
+        return $this->belongsTo(PlantReview::class, 'plant_review_id');
+    }
 }

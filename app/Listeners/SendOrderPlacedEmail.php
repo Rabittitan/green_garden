@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Mail;
 class SendOrderPlacedEmail implements ShouldQueue
 {
     public int $tries = 3;               // gửi lỗi thì thử lại tối đa 3 lần
+
     public array $backoff = [60, 300];   // lần 2 sau 1 phút, lần 3 sau 5 phút
 
     public function handle(OrderPlaced $event): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Events\OrderPlaced;
 use App\Exceptions\BusinessException;
@@ -22,6 +23,7 @@ use Illuminate\Support\Str;
 class CheckoutController extends Controller
 {
     private const COUPON_KEY = 'checkout.coupon';
+
     private const TOKEN_KEY = 'checkout.token';
 
     public function __construct(private CartService $cart, private PricingService $pricing) {}
@@ -118,7 +120,7 @@ class CheckoutController extends Controller
             }
         }
 
-        if ($order->status === \App\Enums\OrderStatus::PendingPayment && $order->payment_method === PaymentMethod::Vnpay) {
+        if ($order->status === OrderStatus::PendingPayment && $order->payment_method === PaymentMethod::Vnpay) {
             return redirect()->route('orders.pay', $order);
         }
 

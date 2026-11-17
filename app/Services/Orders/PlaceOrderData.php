@@ -8,8 +8,8 @@ use App\Enums\PaymentMethod;
 final class PlaceOrderData
 {
     /**
-     * @param array<int,int> $cart plant_id => quantity
-     * @param array{recipient_name:string, phone:string, province:string, district:string, ward:string, address_line:string} $shipping
+     * @param  array<int,int>  $cart  plant_id => quantity
+     * @param  array{recipient_name:string, phone:string, province:string, district:string, ward:string, address_line:string}  $shipping
      */
     public function __construct(
         public readonly array $cart,

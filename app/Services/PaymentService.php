@@ -33,9 +33,13 @@ use LogicException;
 class PaymentService
 {
     public const IPN_OK = '00';
+
     public const IPN_NOT_FOUND = '01';
+
     public const IPN_ALREADY_DONE = '02';
+
     public const IPN_BAD_AMOUNT = '04';
+
     public const IPN_BAD_SIGNATURE = '97';
 
     public function __construct(

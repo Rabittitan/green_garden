@@ -49,11 +49,30 @@ class Coupon extends Model
         return mb_strtoupper(trim($code));
     }
 
-    public function minTier()     { return $this->belongsTo(MembershipTier::class, 'min_tier_id'); }
-    public function plants()      { return $this->belongsToMany(Plant::class, 'coupon_plants'); }
-    public function categories()  { return $this->belongsToMany(Category::class, 'coupon_categories'); }
-    public function redemptions() { return $this->hasMany(CouponRedemption::class); }
-    public function creator()     { return $this->belongsTo(User::class, 'created_by'); }
+    public function minTier()
+    {
+        return $this->belongsTo(MembershipTier::class, 'min_tier_id');
+    }
+
+    public function plants()
+    {
+        return $this->belongsToMany(Plant::class, 'coupon_plants');
+    }
+
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'coupon_categories');
+    }
+
+    public function redemptions()
+    {
+        return $this->hasMany(CouponRedemption::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function scopeUsableNow(Builder $q): Builder
     {

@@ -309,7 +309,7 @@ class OrderService
      * Hàng tốt nhập lại kho; hàng hỏng ghi nhận rồi xuất hủy (sổ kho thấy đủ 2 bút toán).
      * Đã thu tiền -> tạo hoàn tiền (mặc định toàn bộ phần còn hoàn được; admin có thể nhập ít hơn, vd trừ phí ship khi lỗi do khách).
      *
-     * @param array<int, array{good:int, damaged:int}> $quantities order_item_id => số lượng
+     * @param  array<int, array{good:int, damaged:int}>  $quantities  order_item_id => số lượng
      */
     public function receiveReturn(Order $order, array $quantities, User $by, ?int $refundAmount = null, ?string $note = null): Order
     {

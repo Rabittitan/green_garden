@@ -22,12 +22,34 @@ class PlantReview extends Model
         ];
     }
 
-    public function plant()     { return $this->belongsTo(Plant::class)->withTrashed(); }
-    public function user()      { return $this->belongsTo(User::class); }
-    public function orderItem() { return $this->belongsTo(OrderItem::class); }
-    public function images()    { return $this->hasMany(ReviewImage::class)->orderBy('sort_order'); }
-    public function voters()    { return $this->belongsToMany(User::class, 'review_votes')->withPivot('created_at'); }
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class)->withTrashed();
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function orderItem()
+    {
+        return $this->belongsTo(OrderItem::class);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ReviewImage::class)->orderBy('sort_order');
+    }
+
+    public function voters()
+    {
+        return $this->belongsToMany(User::class, 'review_votes')->withPivot('created_at');
+    }
 
     /** Mọi đánh giá đều gắn dòng đơn đã hoàn thành (order_item_id NOT NULL), nên luôn là "Đã mua hàng". */
-    public function getIsVerifiedPurchaseAttribute(): bool { return true; }
+    public function getIsVerifiedPurchaseAttribute(): bool
+    {
+        return true;
+    }
 }

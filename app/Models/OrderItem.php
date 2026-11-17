@@ -18,10 +18,25 @@ class OrderItem extends Model
         ];
     }
 
-    public function order()          { return $this->belongsTo(Order::class); }
-    public function plant()          { return $this->belongsTo(Plant::class)->withTrashed(); }
-    public function review()         { return $this->hasOne(PlantReview::class); }
-    public function stockMovements() { return $this->hasMany(StockMovement::class); }
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class)->withTrashed();
+    }
+
+    public function review()
+    {
+        return $this->hasOne(PlantReview::class);
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 
     /** Thành tiền dòng sau giảm giá. */
     public function getLineTotalAttribute(): int

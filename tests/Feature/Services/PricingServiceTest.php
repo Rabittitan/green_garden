@@ -12,6 +12,7 @@ use App\Models\MembershipTier;
 use App\Models\Order;
 use App\Models\Plant;
 use App\Models\User;
+use App\Services\Pricing\Quote;
 use App\Services\PricingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -27,6 +28,7 @@ class PricingServiceTest extends TestCase
     use RefreshDatabase;
 
     private PricingService $pricing;
+
     private User $user;
 
     protected function setUp(): void
@@ -254,7 +256,7 @@ class PricingServiceTest extends TestCase
         $this->assertSame(60, $persisted);
     }
 
-    private function makeOrder(?\App\Services\Pricing\Quote $q = null): Order
+    private function makeOrder(?Quote $q = null): Order
     {
         $q ??= $this->pricing->quoteCart($this->user, [1 => 1]);
 

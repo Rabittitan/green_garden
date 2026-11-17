@@ -8,6 +8,7 @@ use App\Models\Plant;
 final class QuoteLine
 {
     public int $memberDiscount = 0;
+
     public int $couponDiscount = 0;
 
     public function __construct(

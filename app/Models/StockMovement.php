@@ -30,8 +30,23 @@ class StockMovement extends Model
         static::deleting(fn () => throw new LogicException('stock_movements là sổ chỉ-ghi-thêm, không được xóa.'));
     }
 
-    public function plant()            { return $this->belongsTo(Plant::class)->withTrashed(); }
-    public function orderItem()        { return $this->belongsTo(OrderItem::class); }
-    public function goodsReceiptItem() { return $this->belongsTo(GoodsReceiptItem::class); }
-    public function creator()          { return $this->belongsTo(User::class, 'created_by'); }
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class)->withTrashed();
+    }
+
+    public function orderItem()
+    {
+        return $this->belongsTo(OrderItem::class);
+    }
+
+    public function goodsReceiptItem()
+    {
+        return $this->belongsTo(GoodsReceiptItem::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

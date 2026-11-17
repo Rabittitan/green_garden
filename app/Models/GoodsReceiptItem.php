@@ -11,8 +11,23 @@ class GoodsReceiptItem extends Model
         'quantity_received', 'quantity_rejected', 'unit_cost', 'note',
     ];
 
-    public function receipt()             { return $this->belongsTo(GoodsReceipt::class, 'goods_receipt_id'); }
-    public function purchaseRequestItem() { return $this->belongsTo(PurchaseRequestItem::class); }
-    public function plant()               { return $this->belongsTo(Plant::class)->withTrashed(); }
-    public function stockMovements()      { return $this->hasMany(StockMovement::class); }
+    public function receipt()
+    {
+        return $this->belongsTo(GoodsReceipt::class, 'goods_receipt_id');
+    }
+
+    public function purchaseRequestItem()
+    {
+        return $this->belongsTo(PurchaseRequestItem::class);
+    }
+
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class)->withTrashed();
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 }

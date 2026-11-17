@@ -51,15 +51,53 @@ class User extends Authenticatable implements MustVerifyEmail
         });
     }
 
-    public function isAdmin(): bool      { return $this->role === UserRole::Admin; }
-    public function isBackOffice(): bool { return $this->role?->isBackOffice() ?? false; }
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Admin;
+    }
 
-    public function tier()              { return $this->belongsTo(MembershipTier::class, 'membership_tier_id'); }
-    public function tierHistories()     { return $this->hasMany(MembershipTierHistory::class)->latest('created_at')->latest('id'); }
-    public function addresses()         { return $this->hasMany(UserAddress::class)->orderByDesc('is_default')->latest('id'); }
-    public function defaultAddress()    { return $this->hasOne(UserAddress::class)->where('is_default', true); }
-    public function orders()            { return $this->hasMany(Order::class); }
-    public function reviews()           { return $this->hasMany(PlantReview::class); }
-    public function comments()          { return $this->hasMany(Comment::class); }
-    public function couponRedemptions() { return $this->hasMany(CouponRedemption::class); }
+    public function isBackOffice(): bool
+    {
+        return $this->role?->isBackOffice() ?? false;
+    }
+
+    public function tier()
+    {
+        return $this->belongsTo(MembershipTier::class, 'membership_tier_id');
+    }
+
+    public function tierHistories()
+    {
+        return $this->hasMany(MembershipTierHistory::class)->latest('created_at')->latest('id');
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(UserAddress::class)->orderByDesc('is_default')->latest('id');
+    }
+
+    public function defaultAddress()
+    {
+        return $this->hasOne(UserAddress::class)->where('is_default', true);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(PlantReview::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function couponRedemptions()
+    {
+        return $this->hasMany(CouponRedemption::class);
+    }
 }

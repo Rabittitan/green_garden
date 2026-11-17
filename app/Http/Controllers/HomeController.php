@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Article;
 use App\Models\Category;
 use App\Models\Plant;
@@ -16,8 +17,8 @@ class HomeController extends Controller
         // Lấy 8 cây mới nhất (latest = sắp xếp created_at giảm dần), kèm danh mục để tránh truy vấn lặp
         $newPlants = Plant::with('category')->active()->latest('id')->take(16)->get();
 
-
         $articles = Article::published()->latest('published_at')->take(3)->get();
+
         // Gửi dữ liệu sang view resources/views/home.blade.php
         return view('home', compact('categories', 'newPlants', 'articles'));
     }

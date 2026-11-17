@@ -14,9 +14,20 @@ class Article extends Model
         return ['published_at' => 'datetime'];
     }
 
-    public function author()   { return $this->belongsTo(User::class, 'author_id'); }
-    public function plants()   { return $this->belongsToMany(Plant::class); }   // cây được nhắc tới trong bài
-    public function comments() { return $this->morphMany(Comment::class, 'commentable'); }
+    public function author()
+    {
+        return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function plants()
+    {
+        return $this->belongsToMany(Plant::class);
+    }   // cây được nhắc tới trong bài
+
+    public function comments()
+    {
+        return $this->morphMany(Comment::class, 'commentable');
+    }
 
     /** Chỉ bài đã xuất bản và đã tới giờ đăng. */
     public function scopePublished(Builder $q): Builder

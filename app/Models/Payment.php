@@ -30,13 +30,38 @@ class Payment extends Model
         ];
     }
 
-    public function order()   { return $this->belongsTo(Order::class); }
-    public function parent()  { return $this->belongsTo(Payment::class, 'parent_payment_id'); }
-    public function refunds() { return $this->hasMany(Payment::class, 'parent_payment_id'); }
-    public function creator() { return $this->belongsTo(User::class, 'created_by'); }
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 
-    public function scopeSucceeded(Builder $q): Builder { return $q->where('status', PaymentState::Succeeded->value); }
-    public function scopePending(Builder $q): Builder   { return $q->where('status', PaymentState::Pending->value); }
+    public function parent()
+    {
+        return $this->belongsTo(Payment::class, 'parent_payment_id');
+    }
 
-    public function isCharge(): bool { return $this->type === PaymentType::Charge; }
+    public function refunds()
+    {
+        return $this->hasMany(Payment::class, 'parent_payment_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function scopeSucceeded(Builder $q): Builder
+    {
+        return $q->where('status', PaymentState::Succeeded->value);
+    }
+
+    public function scopePending(Builder $q): Builder
+    {
+        return $q->where('status', PaymentState::Pending->value);
+    }
+
+    public function isCharge(): bool
+    {
+        return $this->type === PaymentType::Charge;
+    }
 }

@@ -21,11 +21,20 @@ class MembershipTier extends Model
         ];
     }
 
-    public function users() { return $this->hasMany(User::class); }
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
 
-    public function scopeActive(Builder $q): Builder { return $q->where('is_active', true); }
+    public function scopeActive(Builder $q): Builder
+    {
+        return $q->where('is_active', true);
+    }
 
-    public function scopeOrdered(Builder $q): Builder { return $q->orderBy('rank'); }
+    public function scopeOrdered(Builder $q): Builder
+    {
+        return $q->orderBy('rank');
+    }
 
     /** Hạng cơ bản (rank 0) — mọi tài khoản mới nhận hạng này. */
     public static function base(): self

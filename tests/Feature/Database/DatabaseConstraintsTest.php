@@ -19,7 +19,9 @@ class DatabaseConstraintsTest extends TestCase
     use RefreshDatabase;
 
     public int $customer;
+
     public int $admin;
+
     public int $baseTier;
 
     protected function setUp(): void

@@ -37,7 +37,7 @@ class PricingService
     /**
      * Báo giá cho giỏ hàng trong session (xem trước): tự nạp cây, tự tra mã (không khóa).
      *
-     * @param array<int,int> $cart plant_id => quantity
+     * @param  array<int,int>  $cart  plant_id => quantity
      */
     public function quoteCart(User $user, array $cart, ?string $couponCode = null): Quote
     {

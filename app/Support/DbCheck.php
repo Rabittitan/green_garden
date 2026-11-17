@@ -28,7 +28,7 @@ class DbCheck
         $min = $isMaria ? '10.4.0' : '8.0.16';
 
         if (! isset($m[1]) || version_compare($m[1], $min, '<')) {
-            throw new RuntimeException("Cần ".($isMaria ? 'MariaDB' : 'MySQL')." >= {$min} (CHECK constraint), đang chạy {$version}.");
+            throw new RuntimeException('Cần '.($isMaria ? 'MariaDB' : 'MySQL')." >= {$min} (CHECK constraint), đang chạy {$version}.");
         }
     }
 
@@ -40,7 +40,7 @@ class DbCheck
     /**
      * Thêm nhiều CHECK cho một bảng trong MỘT câu ALTER (nhanh hơn, ít lần dựng lại bảng).
      *
-     * @param array<string,string> $checks tên => biểu thức
+     * @param  array<string,string>  $checks  tên => biểu thức
      */
     public static function addMany(string $table, array $checks): void
     {

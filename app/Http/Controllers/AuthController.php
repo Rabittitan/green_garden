@@ -22,7 +22,7 @@ class AuthController extends Controller
     {
         // Lấy email và mật khẩu, bắt buộc phải nhập
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -34,6 +34,7 @@ class AuthController extends Controller
             if (Auth::user()->isBackOffice()) {                // nhân viên / quản trị
                 return redirect()->route('admin.dashboard');
             }
+
             return redirect()->intended(route('home'));        // khách: quay lại trang đang xem trước khi đăng nhập
         }
 
@@ -52,20 +53,20 @@ class AuthController extends Controller
     {
         // Kiểm tra dữ liệu: email không được trùng, mật khẩu >= 6 ký tự và phải nhập lại khớp (password_confirmation)
         $data = $request->validate([
-            'name'     => 'required|max:100',
-            'email'    => 'required|email|unique:users,email',
+            'name' => 'required|max:100',
+            'email' => 'required|email|unique:users,email',
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
-            'phone'    => ['nullable', 'regex:/^(0|\+84)[0-9]{9,10}$/'],
+            'phone' => ['nullable', 'regex:/^(0|\+84)[0-9]{9,10}$/'],
         ], [
             'phone.regex' => 'Số điện thoại không hợp lệ (VD: 0901234567).',
         ]);
 
         // role / hạng không nằm trong $fillable: tài khoản mới luôn là khách, hạng cơ bản (Model tự gán + ghi lịch sử)
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
+            'name' => $data['name'],
+            'email' => $data['email'],
             'password' => Hash::make($data['password']),       // mã hóa mật khẩu, KHÔNG lưu mật khẩu thô
-            'phone'    => $data['phone'] ?? null,
+            'phone' => $data['phone'] ?? null,
         ]);
 
         try {
@@ -76,6 +77,7 @@ class AuthController extends Controller
 
         Auth::login($user);                                    // đăng nhập luôn cho tiện
         $request->session()->regenerate();                     // đổi session id sau khi đăng nhập
+
         return redirect()->route('verification.notice')
             ->with('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
     }
@@ -86,6 +88,7 @@ class AuthController extends Controller
         Auth::logout();                                        // xóa trạng thái đăng nhập
         $request->session()->invalidate();                     // hủy session cũ (giỏ hàng cũng mất)
         $request->session()->regenerateToken();                // tạo CSRF token mới
+
         return redirect()->route('home');                      // về trang chủ
     }
 }

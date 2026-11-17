@@ -59,22 +59,53 @@ class Plant extends Model
     }
 
     const ELEMENTS = ['kim' => 'Kim', 'moc' => 'Mộc', 'thuy' => 'Thủy', 'hoa' => 'Hỏa', 'tho' => 'Thổ'];
+
     const LIGHTS = ['ua_bong' => 'Ưa bóng', 'ua_sang' => 'Ưa sáng'];
 
-    public function category()        { return $this->belongsTo(Category::class); }
-    public function orderItems()      { return $this->hasMany(OrderItem::class); }
-    public function reviews()         { return $this->hasMany(PlantReview::class); }
-    public function approvedReviews() { return $this->reviews()->where('status', 'approved'); }
-    public function comments()        { return $this->morphMany(Comment::class, 'commentable'); }
-    public function articles()        { return $this->belongsToMany(Article::class); }
-    public function stockMovements()  { return $this->hasMany(StockMovement::class); }
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(PlantReview::class);
+    }
+
+    public function approvedReviews()
+    {
+        return $this->reviews()->where('status', 'approved');
+    }
+
+    public function comments()
+    {
+        return $this->morphMany(Comment::class, 'commentable');
+    }
+
+    public function articles()
+    {
+        return $this->belongsToMany(Article::class);
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 
     public function getRatingAvgAttribute(): float
     {
         return $this->rating_count ? round($this->rating_sum / $this->rating_count, 1) : 0.0;
     }
 
-    public function scopeActive(Builder $q): Builder { return $q->where('is_active', true); }
+    public function scopeActive(Builder $q): Builder
+    {
+        return $q->where('is_active', true);
+    }
 
     /** Cây cần nhập thêm: tồn <= ngưỡng riêng của từng cây. */
     public function scopeNeedsReorder(Builder $q): Builder

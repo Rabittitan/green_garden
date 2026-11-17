@@ -7,21 +7,24 @@
 
 use App\Enums\ActorType;
 use App\Enums\PaymentMethod;
+use App\Exceptions\BusinessException;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
-use App\Services\OrderService;
 use App\Services\Orders\PlaceOrderData;
-use App\Services\PaymentService;
+use App\Services\OrderService;
 use App\Services\Payments\PaymentGateway;
+use App\Services\PaymentService;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\DB;
 
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
 [, $startAt, $command] = $argv;
 $args = array_slice($argv, 3);
-\Illuminate\Support\Facades\DB::connection()->getPdo();          // kết nối sẵn trước vạch xuất phát
+DB::connection()->getPdo();          // kết nối sẵn trước vạch xuất phát
 while (microtime(true) < (float) $startAt) {
     usleep(1000);
 }
@@ -46,8 +49,8 @@ try {
         })(),
     };
     echo json_encode(['ok' => true, 'result' => $result]);
-} catch (\App\Exceptions\BusinessException $e) {
+} catch (BusinessException $e) {
     echo json_encode(['ok' => false, 'business' => true, 'error' => $e->getMessage()]);
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     echo json_encode(['ok' => false, 'business' => false, 'error' => get_class($e).': '.$e->getMessage()]);
 }

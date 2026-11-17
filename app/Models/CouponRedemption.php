@@ -14,7 +14,18 @@ class CouponRedemption extends Model
         return ['status' => RedemptionStatus::class, 'discount_amount' => 'integer', 'released_at' => 'datetime'];
     }
 
-    public function coupon() { return $this->belongsTo(Coupon::class)->withTrashed(); }
-    public function user()   { return $this->belongsTo(User::class); }
-    public function order()  { return $this->belongsTo(Order::class); }
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class)->withTrashed();
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 }

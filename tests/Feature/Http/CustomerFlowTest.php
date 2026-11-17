@@ -3,6 +3,7 @@
 namespace Tests\Feature\Http;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Mail\OrderPlacedMail;
 use App\Models\Order;
@@ -180,7 +181,7 @@ class CustomerFlowTest extends TestCase
 
     public function test_expired_order_is_cancelled_when_customer_opens_it(): void
     {
-        $order = $this->place(method: \App\Enums\PaymentMethod::Vnpay);
+        $order = $this->place(method: PaymentMethod::Vnpay);
         $this->travel(20)->minutes();
         $this->actingAs($this->customer())->get(route('orders.show', $order))->assertOk()->assertSee('Đã hủy');
         $this->get(route('orders.pay', $order))->assertRedirect(route('orders.show', $order));

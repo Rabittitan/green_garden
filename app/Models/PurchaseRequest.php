@@ -22,9 +22,28 @@ class PurchaseRequest extends Model
         ];
     }
 
-    public function supplier()      { return $this->belongsTo(Supplier::class)->withTrashed(); }
-    public function requester()     { return $this->belongsTo(User::class, 'requested_by'); }
-    public function approver()      { return $this->belongsTo(User::class, 'approved_by'); }
-    public function items()         { return $this->hasMany(PurchaseRequestItem::class); }
-    public function goodsReceipts() { return $this->hasMany(GoodsReceipt::class); }
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class)->withTrashed();
+    }
+
+    public function requester()
+    {
+        return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(PurchaseRequestItem::class);
+    }
+
+    public function goodsReceipts()
+    {
+        return $this->hasMany(GoodsReceipt::class);
+    }
 }

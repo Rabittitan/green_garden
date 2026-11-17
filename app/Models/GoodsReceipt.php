@@ -17,9 +17,28 @@ class GoodsReceipt extends Model
         return ['status' => GoodsReceiptStatus::class, 'received_at' => 'datetime'];
     }
 
-    public function purchaseRequest() { return $this->belongsTo(PurchaseRequest::class); }
-    public function supplier()        { return $this->belongsTo(Supplier::class)->withTrashed(); }
-    public function receiver()        { return $this->belongsTo(User::class, 'received_by'); }
-    public function items()           { return $this->hasMany(GoodsReceiptItem::class); }
-    public function stockMovements()  { return $this->hasManyThrough(StockMovement::class, GoodsReceiptItem::class); }
+    public function purchaseRequest()
+    {
+        return $this->belongsTo(PurchaseRequest::class);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class)->withTrashed();
+    }
+
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(GoodsReceiptItem::class);
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasManyThrough(StockMovement::class, GoodsReceiptItem::class);
+    }
 }

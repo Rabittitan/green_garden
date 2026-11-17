@@ -11,7 +11,7 @@ final class Allocator
 {
     /**
      * @param  array<int|string,int>  $weights  key => trọng số (>= 0)
-     * @return array<int|string,int>            key => phần được chia (đủ mọi key, kể cả 0)
+     * @return array<int|string,int> key => phần được chia (đủ mọi key, kể cả 0)
      */
     public static function allocate(int $amount, array $weights): array
     {

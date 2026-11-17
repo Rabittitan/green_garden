@@ -83,7 +83,7 @@ class CouponService
      * Ghi tiền giảm theo mã vào $line->couponDiscount (percent/fixed). Trả tổng tiền giảm.
      * Tính trên thành tiền SAU giảm theo hạng của các dòng thuộc phạm vi mã.
      *
-     * @param list<QuoteLine> $lines
+     * @param  list<QuoteLine>  $lines
      */
     public function applyToLines(Coupon $coupon, array $lines): int
     {

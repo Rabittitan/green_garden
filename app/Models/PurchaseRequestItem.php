@@ -11,8 +11,15 @@ class PurchaseRequestItem extends Model
         'estimated_unit_cost', 'stock_at_request', 'note',
     ];
 
-    public function request() { return $this->belongsTo(PurchaseRequest::class, 'purchase_request_id'); }
-    public function plant()   { return $this->belongsTo(Plant::class)->withTrashed(); }
+    public function request()
+    {
+        return $this->belongsTo(PurchaseRequest::class, 'purchase_request_id');
+    }
+
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class)->withTrashed();
+    }
 
     /** Số còn phải nhận thêm. */
     public function getRemainingAttribute(): int

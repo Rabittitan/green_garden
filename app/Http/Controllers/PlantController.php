@@ -31,7 +31,7 @@ class PlantController extends Controller
 
         // Lọc theo từ khóa tên cây (?keyword=kim)
         if ($request->filled('keyword')) {
-            $query->where('name', 'like', '%' . $request->keyword . '%');
+            $query->where('name', 'like', '%'.$request->keyword.'%');
         }
 
         // Lọc theo khoảng giá (?price=100-300)

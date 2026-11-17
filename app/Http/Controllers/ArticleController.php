@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
-use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
-   // Trang danh sách tin tức
+    // Trang danh sách tin tức
     public function index()
     {
         // Lấy bài mới nhất trước, 6 bài mỗi trang

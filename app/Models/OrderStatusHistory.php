@@ -18,6 +18,13 @@ class OrderStatusHistory extends Model
         return ['from_status' => OrderStatus::class, 'to_status' => OrderStatus::class, 'actor_type' => ActorType::class];
     }
 
-    public function order()     { return $this->belongsTo(Order::class); }
-    public function changedBy() { return $this->belongsTo(User::class, 'changed_by'); }
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function changedBy()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
+    }
 }

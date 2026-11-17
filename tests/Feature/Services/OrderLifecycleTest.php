@@ -7,7 +7,6 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentState;
 use App\Enums\PaymentStatus;
-use App\Enums\PaymentType;
 use App\Enums\RedemptionStatus;
 use App\Enums\StockMovementType;
 use App\Exceptions\BusinessException;
