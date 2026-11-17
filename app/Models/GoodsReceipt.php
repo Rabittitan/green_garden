@@ -21,5 +21,5 @@ class GoodsReceipt extends Model
     public function supplier()        { return $this->belongsTo(Supplier::class)->withTrashed(); }
     public function receiver()        { return $this->belongsTo(User::class, 'received_by'); }
     public function items()           { return $this->hasMany(GoodsReceiptItem::class); }
-    public function stockMovements()  { return $this->morphMany(StockMovement::class, 'reference'); }
+    public function stockMovements()  { return $this->hasManyThrough(StockMovement::class, GoodsReceiptItem::class); }
 }

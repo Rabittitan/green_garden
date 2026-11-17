@@ -18,8 +18,6 @@ class DatabaseConstraintsTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected bool $seed = true;
-
     public int $customer;
     public int $admin;
     public int $baseTier;

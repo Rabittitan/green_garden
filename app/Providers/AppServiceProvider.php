@@ -4,8 +4,6 @@ namespace App\Providers;
 
 use Illuminate\Pagination\Paginator; 
 use App\Models\Article;
-use App\Models\GoodsReceipt;
-use App\Models\Order;
 use App\Models\Plant;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -24,12 +22,11 @@ class AppServiceProvider extends ServiceProvider
     {
 
         Paginator::useBootstrapFive(); 
-        // Lưu 'plant' thay vì 'App\Models\Plant' trong các cột *_type (comments, stock_movements).
+        // Lưu 'plant' thay vì 'App\Models\Plant' trong comments.commentable_type.
+        // (Sổ kho đã dùng FK thật order_item_id / goods_receipt_item_id, không còn quan hệ đa hình.)
         Relation::enforceMorphMap([
             'plant' => Plant::class,
             'article' => Article::class,
-            'order' => Order::class,
-            'goods_receipt' => GoodsReceipt::class,
             'user' => User::class,
         ]);
 

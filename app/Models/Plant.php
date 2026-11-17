@@ -5,67 +5,70 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use LogicException;
 
+/**
+ * plants.stock là CACHE của sổ kho: chỉ InventoryService được đổi, bên trong Plant::writingLedger().
+ * Mọi đường khác (form admin, tinker, seeder qua Model...) đổi stock sẽ bị ném lỗi ngay,
+ * thay vì âm thầm ghi đè làm lệch kho như trước.
+ */
 class Plant extends Model
 {
     use SoftDeletes;
 
-    // rating_sum, rating_count KHÔNG cho gán hàng loạt: chỉ ReviewService thay đổi.
-    // 'stock' vẫn giữ để form admin và seeder hiện tại chạy được; mọi thay đổi stock
-    // không đi qua InventoryService sẽ được booted() tự ghi thành bút toán 'adjustment'.
+    // stock, cost_price, rating_* KHÔNG cho gán hàng loạt.
     protected $fillable = [
-        'category_id', 'name', 'slug', 'sku', 'price', 'cost_price', 'stock', 'reorder_point',
+        'category_id', 'sku', 'name', 'slug', 'price', 'reorder_point',
         'light', 'element', 'image', 'description', 'is_active',
     ];
 
-    /** InventoryService bật cờ này khi nó tự ghi sổ kho, để không ghi trùng. */
-    public static bool $ledgerHandled = false;
+    private static int $ledgerDepth = 0;
+
+    /** Chạy $fn trong ngữ cảnh được phép đổi stock / cost_price (chỉ InventoryService dùng). */
+    public static function writingLedger(callable $fn): mixed
+    {
+        static::$ledgerDepth++;
+        try {
+            return $fn();
+        } finally {
+            static::$ledgerDepth--;
+        }
+    }
 
     protected static function booted(): void
     {
-        static::created(function (Plant $plant) {
-            if (! static::$ledgerHandled && $plant->stock > 0) {
-                $plant->logAdjustment($plant->stock, 'Tồn đầu khi tạo cây');
+        static::creating(function (Plant $plant) {
+            if (static::$ledgerDepth === 0 && (int) $plant->stock !== 0) {
+                throw new LogicException('Tạo cây với tồn đầu phải qua InventoryService::opening().');
             }
         });
 
-        static::updated(function (Plant $plant) {
-            if (! static::$ledgerHandled && $plant->wasChanged('stock')) {
-                $delta = $plant->stock - $plant->getOriginal('stock');
-                $plant->logAdjustment($delta, 'Sửa tồn kho trực tiếp');
+        static::updating(function (Plant $plant) {
+            if (static::$ledgerDepth === 0 && $plant->isDirty(['stock', 'cost_price'])) {
+                throw new LogicException('Không được sửa trực tiếp tồn kho / giá vốn. Dùng InventoryService (kiểm kê, nhập hàng).');
             }
         });
-    }
-
-    private function logAdjustment(int $delta, string $note): void
-    {
-        if ($delta === 0) {
-            return;
-        }
-        StockMovement::create([
-            'plant_id' => $this->id, 'type' => 'adjustment', 'quantity' => $delta,
-            'stock_after' => $this->stock, 'unit_cost' => $this->cost_price ?: null,
-            'created_by' => auth()->id(), 'note' => $note,
-        ]);
     }
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean', 'price' => 'integer', 'cost_price' => 'integer', 'stock' => 'integer',
+            'reorder_point' => 'integer', 'rating_sum' => 'integer', 'rating_count' => 'integer',
+        ];
     }
 
     const ELEMENTS = ['kim' => 'Kim', 'moc' => 'Mộc', 'thuy' => 'Thủy', 'hoa' => 'Hỏa', 'tho' => 'Thổ'];
     const LIGHTS = ['ua_bong' => 'Ưa bóng', 'ua_sang' => 'Ưa sáng'];
 
-    public function category()      { return $this->belongsTo(Category::class); }
-    public function orderItems()    { return $this->hasMany(OrderItem::class); }
-    public function reviews()       { return $this->hasMany(PlantReview::class); }
+    public function category()        { return $this->belongsTo(Category::class); }
+    public function orderItems()      { return $this->hasMany(OrderItem::class); }
+    public function reviews()         { return $this->hasMany(PlantReview::class); }
     public function approvedReviews() { return $this->reviews()->where('status', 'approved'); }
-    public function comments()      { return $this->morphMany(Comment::class, 'commentable'); }
-    public function articles()      { return $this->belongsToMany(Article::class); }
-    public function stockMovements() { return $this->hasMany(StockMovement::class); }
+    public function comments()        { return $this->morphMany(Comment::class, 'commentable'); }
+    public function articles()        { return $this->belongsToMany(Article::class); }
+    public function stockMovements()  { return $this->hasMany(StockMovement::class); }
 
-    /** Điểm trung bình, tính từ tổng để không bị lệch do làm tròn. */
     public function getRatingAvgAttribute(): float
     {
         return $this->rating_count ? round($this->rating_sum / $this->rating_count, 1) : 0.0;

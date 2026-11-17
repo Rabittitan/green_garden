@@ -4,12 +4,9 @@ namespace App\Models;
 
 use App\Enums\PurchaseRequestStatus;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PurchaseRequest extends Model
 {
-    use SoftDeletes;
-
     protected $fillable = [
         'code', 'supplier_id', 'requested_by', 'status', 'priority', 'reason', 'needed_by',
         'estimated_total', 'approved_by', 'approved_at', 'rejected_reason', 'submitted_at',

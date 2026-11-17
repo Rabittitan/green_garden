@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RedemptionStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class CouponRedemption extends Model
@@ -10,7 +11,7 @@ class CouponRedemption extends Model
 
     protected function casts(): array
     {
-        return ['released_at' => 'datetime'];
+        return ['status' => RedemptionStatus::class, 'discount_amount' => 'integer', 'released_at' => 'datetime'];
     }
 
     public function coupon() { return $this->belongsTo(Coupon::class)->withTrashed(); }

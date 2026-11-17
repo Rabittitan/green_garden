@@ -14,4 +14,5 @@ class GoodsReceiptItem extends Model
     public function receipt()             { return $this->belongsTo(GoodsReceipt::class, 'goods_receipt_id'); }
     public function purchaseRequestItem() { return $this->belongsTo(PurchaseRequestItem::class); }
     public function plant()               { return $this->belongsTo(Plant::class)->withTrashed(); }
+    public function stockMovements()      { return $this->hasMany(StockMovement::class); }
 }

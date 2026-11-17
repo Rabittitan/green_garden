@@ -28,6 +28,6 @@ class PlantReview extends Model
     public function images()    { return $this->hasMany(ReviewImage::class)->orderBy('sort_order'); }
     public function voters()    { return $this->belongsToMany(User::class, 'review_votes')->withPivot('created_at'); }
 
-    /** Huy hiệu "Đã mua hàng". */
-    public function getIsVerifiedPurchaseAttribute(): bool { return $this->order_item_id !== null; }
+    /** Mọi đánh giá đều gắn dòng đơn đã hoàn thành (order_item_id NOT NULL), nên luôn là "Đã mua hàng". */
+    public function getIsVerifiedPurchaseAttribute(): bool { return true; }
 }
