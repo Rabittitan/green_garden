@@ -81,7 +81,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/don-hang', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/don-hang/{order:code}', [OrderController::class, 'show'])->name('orders.show');
-    Route::get('/don-hang/{order:code}/thanh-toan', [OrderController::class, 'pay'])->name('orders.pay')->middleware('throttle:20,1');
+    Route::post('/don-hang/{order:code}/thanh-toan', [OrderController::class, 'pay'])->name('orders.pay')->middleware('throttle:20,1');
     Route::post('/don-hang/{order:code}/huy', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('/don-hang/{order:code}/tra-hang', [OrderController::class, 'requestReturn'])->name('orders.return');
 

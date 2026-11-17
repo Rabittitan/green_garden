@@ -130,11 +130,11 @@ class CustomerFlowTest extends TestCase
     public function test_vnpay_flow_through_fake_gateway(): void
     {
         $this->openCheckout($this->customer());
-        $this->post(route('checkout.store'), $this->checkoutPayload(['payment_method' => 'vnpay']));
+        // Đặt đơn VNPay -> chuyển thẳng sang cổng (không qua link GET)
+        $gatewayUrl = $this->post(route('checkout.store'), $this->checkoutPayload(['payment_method' => 'vnpay']))
+            ->assertRedirect()->headers->get('Location');
         $order = Order::sole();
         $this->assertSame(OrderStatus::PendingPayment, $order->status);
-
-        $gatewayUrl = $this->get(route('orders.pay', $order))->assertRedirect()->headers->get('Location');
         $this->assertStringContainsString('/thanh-toan/gia-lap?', $gatewayUrl);
         $this->get($gatewayUrl)->assertOk()->assertSee('280.000đ');
 
@@ -153,12 +153,22 @@ class CustomerFlowTest extends TestCase
         $this->openCheckout($this->customer());
         $this->post(route('checkout.store'), $this->checkoutPayload(['payment_method' => 'vnpay']));
         $order = Order::sole();
-        parse_str(parse_url($this->get(route('orders.pay', $order))->headers->get('Location'), PHP_URL_QUERY), $q);
+        parse_str(parse_url($this->post(route('orders.pay', $order))->headers->get('Location'), PHP_URL_QUERY), $q);
         $this->post(route('payment.fake.submit'), ['vnp_TxnRef' => $q['vnp_TxnRef'], 'return_url' => $q['vnp_ReturnUrl'], 'outcome' => 'fail']);
         $this->assertSame(OrderStatus::PendingPayment, $order->refresh()->status);
 
-        $retry = $this->get(route('orders.pay', $order))->headers->get('Location');
+        $retry = $this->post(route('orders.pay', $order))->headers->get('Location');
         $this->assertStringContainsString('vnp_TxnRef='.$order->code.'-2', $retry);
+    }
+
+    public function test_opening_a_payment_requires_post_with_csrf(): void
+    {
+        $order = $this->place(method: PaymentMethod::Vnpay);
+        $before = $order->payments()->count();
+        // GET (link prefetch, ảnh nhúng ở site khác...) không được mở giao dịch hay đổi trạng thái đơn
+        $this->actingAs($this->customer())->get('/don-hang/'.$order->code.'/thanh-toan')->assertStatus(405);
+        $this->assertSame($before, $order->payments()->count());
+        $this->get(route('orders.show', $order))->assertSee('name="_token"', false)->assertSee(route('orders.pay', $order), false);
     }
 
     public function test_ipn_endpoint_answers_vnpay_json(): void
@@ -184,7 +194,7 @@ class CustomerFlowTest extends TestCase
         $order = $this->place(method: PaymentMethod::Vnpay);
         $this->travel(20)->minutes();
         $this->actingAs($this->customer())->get(route('orders.show', $order))->assertOk()->assertSee('Đã hủy');
-        $this->get(route('orders.pay', $order))->assertRedirect(route('orders.show', $order));
+        $this->post(route('orders.pay', $order))->assertRedirect(route('orders.show', $order));
     }
 
     public function test_membership_page_and_address_book(): void

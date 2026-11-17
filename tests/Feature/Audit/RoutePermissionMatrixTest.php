@@ -112,7 +112,7 @@ class RoutePermissionMatrixTest extends TestCase
         $order = Order::findOrFail($fx['order']);
         $other = User::factory()->create();
         $cases = [
-            ['GET', route('orders.show', $order)], ['GET', route('orders.pay', $order)],
+            ['GET', route('orders.show', $order)], ['POST', route('orders.pay', $order)],
             ['POST', route('orders.cancel', $order), ['reason' => 'x']], ['POST', route('orders.return', $order), ['reason' => 'x']],
             ['PUT', route('addresses.update', $fx['address']), $this->shipping()],
             ['POST', route('addresses.default', $fx['address'])], ['DELETE', route('addresses.destroy', $fx['address'])],

@@ -14,7 +14,11 @@
         <i class="fa fa-hourglass-half"></i> Đơn đang được giữ hàng tới <strong>@vndt($order->payment_expires_at)</strong>.
         Quá hạn chưa thanh toán, đơn sẽ tự hủy.
         @can('pay', $order)
-            <a href="{{ route('orders.pay', $order) }}" class="btn btn-sm btn-warning ms-2"><i class="fa fa-credit-card"></i> Thanh toán @money($order->total)</a>
+            {{-- POST + CSRF: mở giao dịch thanh toán là thao tác ghi, không để link GET (prefetch / site khác nhúng) kích hoạt --}}
+            <form method="POST" action="{{ route('orders.pay', $order) }}" class="d-inline">
+                @csrf
+                <button class="btn btn-sm btn-warning ms-2"><i class="fa fa-credit-card"></i> Thanh toán @money($order->total)</button>
+            </form>
         @endcan
     </div>
     @if($order->payment_method === \App\Enums\PaymentMethod::BankTransfer)

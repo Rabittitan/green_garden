@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentWebhookLog;
 use App\Models\User;
+use App\Notifications\LatePaymentRefund;
 use App\Notifications\PaymentReceived;
 use App\Notifications\RefundCompleted;
 use App\Services\Orders\OrderStateWriter;
@@ -193,6 +194,7 @@ class PaymentService
             // Tiền về SAU khi đơn đã hủy (hết hạn): không mở lại đơn (hàng có thể đã bán), hoàn tiền cho khách
             $this->createRefund($order, $charge->amount, $by, 'Thanh toán đến sau khi đơn đã hủy - hoàn tiền tự động');
             $this->recalc($order);
+            Notifier::send($order->user, new LatePaymentRefund($order, $charge->amount));   // khách mất tiền mà không được báo = khiếu nại
             Log::warning('Thanh toán đến sau khi đơn đã hủy', ['order' => $order->code, 'txn_ref' => $charge->txn_ref]);
         } else {
             $this->recalc($order);

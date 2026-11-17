@@ -1,0 +1,85 @@
+# H8 — Báo cáo nghiệm thu GreenLife Shop
+
+**Ngày:** 17/11/2026 · **Nhánh:** `claude/sweet-archimedes-sb7rwp` · **Môi trường chuẩn:** PHP 8.4 + MySQL 8.0 (CI GitHub Actions) · Laravel 12.71
+
+## Kết luận
+
+**Đạt cả 9 tiêu chí C1–C9.** Trong lúc nghiệm thu tìm thêm **5 lỗi**: 4 lỗi trong code và 1 lỗi trong script kiểm thử. Cả 5 đã sửa, mỗi lỗi có test **đỏ trên code cũ → xanh sau khi sửa**. Các phần **chưa kiểm được** trong môi trường này được liệt kê riêng ở cuối, chưa có phần nào được tính là "đạt".
+
+| Chỉ số | Kết quả |
+|---|---|
+| Test tự động (MySQL thật) | **370 test qua**, 34.661 assertion, ~100 giây |
+| Larastan level 6 | 0 lỗi |
+| Pint (định dạng) | sạch |
+| `composer audit` | 0 lỗ hổng |
+| Kịch bản trình duyệt 3 vai trò | **12/12 bước đạt**; không có lỗi JS, lỗi 5xx hay vi phạm CSP |
+| `shop:reconcile` sau kịch bản trình duyệt | **8/8 ✓** (3 đơn, 5 giao dịch, 21 bút toán kho) |
+
+---
+
+## Đối chiếu từng tiêu chí
+
+| Mã | Tiêu chí | Bằng chứng | Kết quả |
+|---|---|---|---|
+| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 370 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
+| **C2** | Toàn vẹn dữ liệu | `shop:reconcile` (8 bất biến: kho = sổ kho, tiền thu/hoàn = payments, giảm giá dòng = đơn, lượt mã, điểm đánh giá, lượt hữu ích, đơn quá hạn, chi tiêu hạng) chạy ở 3 chỗ: trong ma trận trạng thái (sau mỗi ô), trên CI (DB mới + seed), và sau kịch bản trình duyệt. Schema không đổi kể từ khi chốt | ✅ |
+| **C3** | Đồng thời | 11 kịch bản đua bằng **tiến trình PHP thật**, gồm: tranh cây cuối, bấm đúp nhiều tab, IPN đua với hết hạn, hủy đua với đặt mới, mã chứng từ, nhập kho đua với đặt hàng, đánh giá trùng, nhân viên hủy đua với IPN, giao đua với hủy, 2 admin cùng xác nhận hoàn tiền, 3 admin cùng xác nhận đơn. Kết quả: không tồn âm, không thu tiền 2 lần, không deadlock | ✅ |
+| **C4** | Luồng khép kín | `OrderStateMatrixTest`: 12 hành động × 9 trạng thái = 108 ô. Ô được phép phải chạy xong và đối soát sạch; ô bị cấm phải không để lại tác dụng phụ. Mọi trạng thái đều tới được, và mọi trạng thái chưa kết thúc đều có lối ra. Kịch bản trình duyệt đi qua đủ các nút bấm thật của cả 3 vai trò | ✅ |
+| **C5** | Phân quyền & bảo mật | Phân quyền: `RoutePermissionMatrixTest` tự đọc **62 route admin** và thử từng route với 4 vai trò; 404 và 403 không làm lộ id có tồn tại hay không. **Mới ở H8:** `AcceptanceCrawlTest` mở **mọi route GET × 4 vai trò** và chứng minh không route GET nào ghi DB. Test này đã được kiểm ngược: cài thử một lệnh ghi DB vào trang chủ thì test đỏ. IPN sai chữ ký không thay đổi gì. Khi `APP_DEBUG=false`, trang lỗi không lộ chi tiết. Có header bảo mật, CSP, giới hạn tần suất đăng nhập, chặn open redirect | ✅ |
+| **C6** | Hiệu năng | `QueryBudgetTest`: 19 trang chính, mỗi trang ≤ 15 câu SQL, và số câu **không tăng** khi dữ liệu tăng. Ngoài production bật `preventLazyLoading` (cả bộ test không vướng lần nào). Mọi trang danh sách có thể phình đều đã phân trang; các danh sách không phân trang đều có giới hạn: 4 hạng, giỏ hàng, danh mục, và **sổ địa chỉ (mới đặt trần 10 ở H8)** | ✅ |
+| **C7** | Vận hành | `docs/H7-van-hanh.md` + `deploy/`: cron `schedule:run`, queue worker (supervisor), sao lưu/khôi phục kèm diễn tập, deploy/rollback, checklist `.env`, IPN VNPay. Mọi callback thanh toán được ghi vào `payment_webhook_logs` (chữ ký, mã kết quả, IP thật) | ✅ (*) |
+| **C8** | Chất lượng code | Pint sạch · Larastan level 6: 0 lỗi · CI GitHub (Test + Larastan) xanh, chặn merge khi đỏ · `composer audit` trong CI (đã bắt được 7 lỗ hổng Symfony ở H7) | ✅ |
+| **C9** | Trải nghiệm | Crawler: **không trang nào trả 500**, với mọi route GET × 4 vai trò. Trang lỗi 403/404/419/429/500/503 bằng tiếng Việt. Email ở **mọi mốc tiền**: đặt hàng, đã thanh toán, **giao thành công/đã thu COD (mới)**, hủy (kèm số tiền sẽ hoàn), **tiền đến sau khi đơn đã hủy (mới)**, đã hoàn tiền; cùng với hướng dẫn trả hàng và lên hạng. Email chỉ gửi sau khi commit, gửi lỗi không làm hỏng giao dịch | ✅ |
+
+(*) Phần tài liệu và script đã xong và đã kiểm cú pháp. Chưa chạy được trên máy chủ thật (xem mục cuối).
+
+---
+
+## Lỗi tìm ra trong H8 (đã sửa)
+
+| # | Tiêu chí | Lỗi | Sửa | Test |
+|---|---|---|---|---|
+| 1 | C5 | `GET /don-hang/{mã}/thanh-toan` **ghi DB**: tạo giao dịch thanh toán, có thể chuyển đơn sang hết hạn. Trình duyệt prefetch link, hoặc site khác nhúng link, đều có thể kích hoạt | Đổi thành **POST + CSRF**. Nút trên trang đơn đổi thành form. Đặt đơn VNPay xong thì chuyển **thẳng** sang cổng thanh toán | `test_opening_a_payment_requires_post_with_csrf` (đỏ trên code cũ: 302 thay vì 405) |
+| 2 | C6 | Sổ địa chỉ **không giới hạn**, và hiện ra cả ở trang đặt hàng | Trần 10 địa chỉ/khách; sổ đầy thì đặt hàng vẫn được nhưng không lưu thêm | `H8FindingsTest` (đỏ trên code cũ) |
+| 3 | C3 | Thêm địa chỉ **không khóa theo user**: 2 lần thêm đồng thời có thể cùng thành "mặc định", đụng UNIQUE và gây lỗi 500. Checkout lưu địa chỉ cũng gặp rủi ro tương tự, dù đơn đã đặt thành công | Khóa dòng user khi thêm; lưu địa chỉ ở checkout chuyển thành việc phụ, đụng UNIQUE thì bỏ qua | `H8FindingsTest` |
+| 4 | C9 | **Tiền đến sau khi đơn đã hủy** (IPN trễ, chuyển khoản muộn): hệ thống thu tiền và tạo yêu cầu hoàn đúng, nhưng **khách không được báo gì** | Email `LatePaymentRefund`: đã nhận X, đơn đã hủy, sẽ hoàn toàn bộ | `test_late_payment_on_cancelled_order_tells_customer_about_refund` (đỏ khi gỡ dòng gửi) |
+| 5 | C9 | **Giao COD thành công** (shipper thu tiền mặt) không có email; đây cũng là lúc bắt đầu hạn đổi trả 7 ngày | Email `OrderCompleted`: số tiền mặt đã trả và hạn yêu cầu trả hàng | `test_completed_cod_order_emails_cash_receipt_and_return_deadline` |
+| 6 | Kiểm thử | Script trình duyệt `roles.e2e.js` **không chạy được** theo đúng lệnh ghi trong file, vì `package.json` khai báo `"type": "module"`. Ở H5 script được chạy từ một bản sao nằm ngoài repo nên lỗi không lộ ra | Đổi tên thành `roles.e2e.cjs`; thêm chế độ `E2E_STUB_CDN=1` để vẫn kiểm được CSP trên máy không có internet | Chạy 12/12 bước đạt |
+
+## Ngoại lệ đã xem xét và chấp nhận
+
+- **GET có ghi DB, đã ghi rõ trong `AcceptanceCrawlTest`:**
+  - Link xác thực email (ký số, chuẩn Laravel).
+  - IPN VNPay: VNPay chỉ gọi bằng GET; có chữ ký và xử lý idempotent.
+  - Mở trang đơn **đã quá hạn thanh toán** thì đơn tự hủy. Đây đúng là việc cron vẫn làm mỗi phút, không ai lợi dụng được để làm gì khác.
+- **Quy tắc giữ nguyên:** đơn VNPay bỏ dở vẫn giữ lượt dùng mã "đơn đầu tiên" cho tới khi đơn hết hạn (B9). Mục đích là chống lạm dụng; thông báo lỗi có ghi rõ.
+
+## Chưa kiểm được trong môi trường này (không tính là đạt)
+
+| Hạng mục | Lý do | Cách kiểm khi triển khai |
+|---|---|---|
+| VNPay sandbox thật | Không có mã merchant/khóa; sandbox không truy cập được từ máy này | `docs/H7-van-hanh.md` mục 4: 3 kịch bản (thành công, khách hủy, quá 15 phút), sau mỗi kịch bản xem `payment_webhook_logs` và chạy `shop:reconcile` |
+| Script `deploy/`, nginx, supervisor, cron | Không có máy chủ thật | Chạy `deploy.sh` trên staging; diễn tập `restore-db.sh` |
+| Tải CSS/JS/font/ảnh từ CDN thật | Máy này bị chặn internet; kịch bản trình duyệt dùng CDN giả (CSP vẫn được kiểm, và đã kiểm ngược: CSP sai thì bắt được) | Chạy `roles.e2e.cjs` **không** có `E2E_STUB_CDN` trên máy có internet |
+| Gửi email qua SMTP thật | Test dùng mail giả | Đặt hàng thử trên staging với SMTP thật |
+| Kịch bản trình duyệt trong CI | Hiện chạy tay (cần server + dữ liệu mẫu) | Có thể thêm job CI riêng nếu cần |
+| PHP 8.4 ở máy dev | Máy này chỉ có PHP 8.3; kết quả chuẩn là của CI chạy PHP 8.4 | Đã có trên CI |
+
+## Để giai đoạn sau (đã thống nhất từ kế hoạch v2)
+
+Trả một phần đơn hàng · API hoàn tiền tự động của VNPay · cổng MoMo · hóa đơn VAT · nhiều kho.
+
+## Tóm tắt các giai đoạn
+
+| Giai đoạn | Nội dung |
+|---|---|
+| G1–G7 | Thiết kế lại DB (MySQL, CHECK constraint, sổ kho, máy trạng thái), bán hàng, thanh toán, voucher, hạng thành viên, kho |
+| H0 | CI GitHub (MySQL 8), Pint, Larastan, ngân sách câu SQL |
+| H1 | Sửa B1–B3, B6–B8 (hạ hạng thủ công bị tự nâng lại, mail thiếu tên, hạ ngưỡng hạng, doanh thu thuần, trùng mã phiếu, log phình) |
+| H2 | Email ở các mốc đơn/tiền, hướng dẫn trả hàng |
+| H3 | Nhập hàng: nhà cung cấp → đề xuất (4 mắt) → phiếu nhập |
+| H4 | Đánh giá & hỏi đáp |
+| H5 | Rà luồng toàn diện: ma trận trạng thái, ma trận quyền, gây lỗi giữa chừng, đua song song, trình duyệt; Larastan 498 → 0 lỗi |
+| H6 | Bảo mật & hiệu năng: CSP/header, giới hạn đăng nhập, trang lỗi tiếng Việt, chặn N+1 |
+| H7 | Vận hành: múi giờ DB, proxy tin cậy, chặn seed ở production, sổ tay vận hành, script deploy/sao lưu, vá lỗ hổng Symfony, sửa yêu cầu PHP ≥ 8.4.1 |
+| H8 | Nghiệm thu C1–C9 (báo cáo này) |

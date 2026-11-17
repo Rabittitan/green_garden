@@ -33,7 +33,7 @@ Tài nguyên của khách (đơn, địa chỉ, bình luận): người khác �
 Tranh cây cuối · bấm đúp nhiều tab · IPN vs hết hạn · hủy vs đặt mới · mã chứng từ · nhập kho vs đặt hàng ·
 gửi đánh giá trùng · **nhân viên hủy vs IPN** · **giao vs hủy** · **2 admin xác nhận hoàn tiền** · **3 admin xác nhận đơn**.
 
-## 5. Trình duyệt 3 vai trò — `tests/Browser/roles.e2e.js`
+## 5. Trình duyệt 3 vai trò — `tests/Browser/roles.e2e.cjs`
 Khách (COD, VNPay, hủy, đánh giá, hỏi đáp, mã giảm giá) · nhân viên (xử lý đơn, duyệt đánh giá, lập yêu cầu nhập,
 nhập kho, không vào được chức năng quản trị) · quản trị (duyệt nhập, hoàn tiền, tạo mã). Kết thúc `shop:reconcile` 8/8 ✓.
 
