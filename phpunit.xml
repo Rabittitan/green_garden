@@ -22,8 +22,11 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
-        <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
-        <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <!-- Test chạy trên MySQL thật (CHECK, cột sinh, khóa dòng không giả lập được bằng SQLite).
+             Tạo trước 1 lần: CREATE DATABASE green_life_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+             KHÔNG trỏ vào green_life: RefreshDatabase sẽ xóa sạch dữ liệu. -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="green_life_test"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

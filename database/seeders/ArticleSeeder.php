@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Article;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ArticleSeeder extends Seeder
 {
@@ -52,8 +53,9 @@ class ArticleSeeder extends Seeder
         ];
 
         foreach ($articles as $a) {
-            Article::create([
-                'title' => $a[0], 'summary' => $a[1], 'content' => $a[2], 'image' => $a[3],
+            DB::table('articles')->insert([
+                'title' => $a[0], 'slug' => Str::slug($a[0]), 'summary' => $a[1], 'content' => $a[2], 'image' => $a[3],
+                'status' => 'published', 'published_at' => now(), 'created_at' => now(), 'updated_at' => now(),
             ]);
         }
     }

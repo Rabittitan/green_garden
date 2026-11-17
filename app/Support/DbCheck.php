@@ -3,44 +3,55 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
- * Thêm CHECK constraint ở tầng database.
+ * Tiện ích ràng buộc tầng database cho migration.
  *
- * Schema Builder của Laravel không hỗ trợ CHECK, nên ta dùng câu SQL thô.
- * SQLite không cho thêm CHECK bằng ALTER TABLE, vì vậy khi chạy SQLite (môi trường dev)
- * hàm này bỏ qua. Lúc đó ràng buộc vẫn được đảm bảo bằng validation và Enum ở tầng ứng dụng.
- * Trên MySQL 8.0.16+, MariaDB 10.2+ và PostgreSQL, CHECK được áp dụng thật.
+ * Dự án CHỈ hỗ trợ MySQL >= 8.0.16 hoặc MariaDB >= 10.4 vì schema dựa vào:
+ *  - CHECK constraint (MySQL < 8.0.16 đọc cú pháp nhưng BỎ QUA, rất nguy hiểm)
+ *  - cột sinh STORED có UNIQUE (chặn 2 giao dịch thanh toán thành công cho 1 đơn...)
+ * Gặp engine khác thì dừng migrate ngay thay vì chạy âm thầm thiếu ràng buộc.
  */
 class DbCheck
 {
-    public static function add(string $table, string $name, string $expression): void
+    public static function assertSupportedEngine(): void
     {
         $driver = DB::connection()->getDriverName();
-
-        if (! in_array($driver, ['mysql', 'mariadb', 'pgsql'], true)) {
-            return;
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+            throw new RuntimeException("GreenLife chỉ hỗ trợ MySQL/MariaDB, đang dùng driver [{$driver}].");
         }
 
-        DB::statement("ALTER TABLE {$table} ADD CONSTRAINT {$name} CHECK ({$expression})");
+        $version = (string) DB::selectOne('SELECT VERSION() AS v')->v;
+        $isMaria = stripos($version, 'mariadb') !== false;
+        preg_match('/^(\d+\.\d+\.\d+)/', $version, $m);
+        $min = $isMaria ? '10.4.0' : '8.0.16';
+
+        if (! isset($m[1]) || version_compare($m[1], $min, '<')) {
+            throw new RuntimeException("Cần ".($isMaria ? 'MariaDB' : 'MySQL')." >= {$min} (CHECK constraint), đang chạy {$version}.");
+        }
     }
 
-    public static function drop(string $table, string $name): void
+    public static function add(string $table, string $name, string $expression): void
     {
-        $driver = DB::connection()->getDriverName();
-
-        match ($driver) {
-            'mysql' => DB::statement("ALTER TABLE {$table} DROP CHECK {$name}"),
-            'mariadb', 'pgsql' => DB::statement("ALTER TABLE {$table} DROP CONSTRAINT {$name}"),
-            default => null,
-        };
+        DB::statement("ALTER TABLE `{$table}` ADD CONSTRAINT `{$name}` CHECK ({$expression})");
     }
 
     /**
-     * Sinh biểu thức "col IN ('a','b')".
-     * Lưu ý: migration nên truyền mảng giá trị viết cứng, KHÔNG đọc từ Enum,
-     * vì migration là lịch sử và không được đổi nghĩa khi Enum thay đổi về sau.
+     * Thêm nhiều CHECK cho một bảng trong MỘT câu ALTER (nhanh hơn, ít lần dựng lại bảng).
+     *
+     * @param array<string,string> $checks tên => biểu thức
      */
+    public static function addMany(string $table, array $checks): void
+    {
+        $parts = [];
+        foreach ($checks as $name => $expression) {
+            $parts[] = "ADD CONSTRAINT `{$name}` CHECK ({$expression})";
+        }
+        DB::statement("ALTER TABLE `{$table}` ".implode(', ', $parts));
+    }
+
+    /** Sinh biểu thức "col IN ('a','b')". Migration truyền mảng viết cứng, KHÔNG đọc từ Enum. */
     public static function in(string $column, array $values): string
     {
         $quoted = implode(',', array_map(fn ($v) => "'".str_replace("'", "''", $v)."'", $values));
