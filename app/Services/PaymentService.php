@@ -231,6 +231,10 @@ class PaymentService
     {
         return DB::transaction(function () use ($order, $amount, $by, $note) {
             $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->status === OrderStatus::Returning) {
+                // Hàng đang trên đường về, chưa kiểm được tình trạng: hoàn tiền tại bước "Nhận hàng hoàn về kho"
+                throw new BusinessException('Đơn đang hoàn về: hãy hoàn tiền khi nhận hàng hoàn về kho.');
+            }
             $refund = $this->createRefund($order, $amount, $by->id, $note);
             $this->recalc($order);
 

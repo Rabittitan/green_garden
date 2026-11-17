@@ -36,20 +36,29 @@ class MembershipService
 
         $count = 0;
         foreach ($due as $row) {
-            $count += DB::transaction(function () use ($row) {
-                $user = User::whereKey($row->user_id)->lockForUpdate()->firstOrFail();
-                $order = Order::whereKey($row->id)->lockForUpdate()->firstOrFail();
-                if ($order->status !== OrderStatus::Completed || $order->spend_recorded_at !== null || $order->isWithinReturnWindow()) {
-                    return 0;                                               // đã bị xử lý / trả hàng trong lúc chờ
-                }
-                $order->update(['spend_recorded_at' => now()]);
-                $this->recalculate($user, $order);
-
-                return 1;
-            }, 3);
+            try {                                                           // mỗi đơn độc lập: 1 đơn lỗi không chặn cả lô
+                $count += $this->recordOne($row->id, $row->user_id);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return $count;
+    }
+
+    private function recordOne(int $orderId, int $userId): int
+    {
+        return DB::transaction(function () use ($orderId, $userId) {
+            $user = User::whereKey($userId)->lockForUpdate()->firstOrFail();      // khóa users trước orders
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
+            if ($order->status !== OrderStatus::Completed || $order->spend_recorded_at !== null || $order->isWithinReturnWindow()) {
+                return 0;                                               // đã bị xử lý / trả hàng trong lúc chờ
+            }
+            $order->update(['spend_recorded_at' => now()]);
+            $this->recalculate($user, $order);
+
+            return 1;
+        }, 3);
     }
 
     /** Tính lại tổng chi tiêu (vd sau khi hoàn tiền một đơn đã chốt). Không bao giờ hạ hạng. */
@@ -118,7 +127,11 @@ class MembershipService
         User::where('role', 'customer')->orderBy('id')->select('id', 'membership_tier_id')
             ->chunkById(200, function ($users) use (&$upgraded) {
                 foreach ($users as $u) {
-                    $upgraded += $this->refreshUser($u->id)->membership_tier_id !== $u->membership_tier_id ? 1 : 0;
+                    try {
+                        $upgraded += $this->refreshUser($u->id)->membership_tier_id !== $u->membership_tier_id ? 1 : 0;
+                    } catch (\Throwable $e) {
+                        report($e);
+                    }
                 }
             });
 

@@ -41,6 +41,9 @@ try {
         'cancel' => app(OrderService::class)->cancel(Order::findOrFail((int) $args[0]), ActorType::Staff,
             User::where('role', 'admin')->firstOrFail(), 'Hủy song song')->id,
         'expire' => app(OrderService::class)->expireOverdue(),
+        'confirm' => app(OrderService::class)->confirm(Order::findOrFail((int) $args[0]), User::where('role', 'admin')->firstOrFail())->status->value,
+        'ship' => app(OrderService::class)->ship(Order::findOrFail((int) $args[0]), 'GHN', 'RACE', User::where('role', 'admin')->firstOrFail())->status->value,
+        'confirm-refund' => app(PaymentService::class)->confirmRefund(Payment::findOrFail((int) $args[0]), User::where('role', 'admin')->firstOrFail(), 'RF-'.getmypid())->status->value,
         'complete-receipt' => (function () use ($args) {
             app(PurchaseService::class)->completeReceipt(GoodsReceipt::findOrFail((int) $args[0]), null);
 

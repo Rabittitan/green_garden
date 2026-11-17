@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Concurrency;
 
+use App\Enums\ActorType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -12,6 +13,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\OrderService;
 use App\Services\PurchaseService;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
@@ -32,6 +34,16 @@ class ConcurrencyTest extends TestCase
     {
         parent::setUp();
         Artisan::call('migrate:fresh', ['--seed' => true, '--force' => true]);
+    }
+
+    /**
+     * Test này COMMIT dữ liệu thật (tiến trình khác mới thấy được). Báo cho RefreshDatabase của lớp test
+     * kế tiếp dựng lại DB sạch, nếu không lớp sau sẽ chạy trên dữ liệu thừa (vd tồn kho 29 thay vì 30).
+     */
+    public static function tearDownAfterClass(): void
+    {
+        RefreshDatabaseState::$migrated = false;
+        parent::tearDownAfterClass();
     }
 
     /**
@@ -159,5 +171,55 @@ class ConcurrencyTest extends TestCase
         $results = $this->race(array_fill(0, 4, ['review', (string) $this->customer()->id, '1']));
         $this->assertSame(1, collect($results)->pluck('result')->unique()->count());
         $this->assertSame(1, PlantReview::count());
+    }
+
+    /** Nhân viên hủy đơn đúng lúc VNPay báo đã trả tiền: luôn kết thúc ở "đã hủy + chờ hoàn tiền", kho trả về đủ. */
+    public function test_staff_cancel_racing_ipn_always_ends_cancelled_with_refund(): void
+    {
+        for ($round = 0; $round < 3; $round++) {
+            $order = $this->place(cart: [1 => 1], method: PaymentMethod::Vnpay);
+            $this->race([['ipn', $order->payments()->sole()->txn_ref], ['cancel', (string) $order->id]]);
+            $order->refresh();
+            $this->assertSame([OrderStatus::Cancelled, PaymentStatus::RefundPending], [$order->status, $order->payment_status]);
+        }
+        $this->assertSame(30, $this->stock(1));
+        $this->assertLedgerConsistent();
+    }
+
+    /** "Giao" và "Hủy" cùng lúc trên 1 đơn: đúng 1 bên thắng, kho đúng theo bên thắng. */
+    public function test_ship_racing_cancel_has_exactly_one_winner(): void
+    {
+        $order = $this->place(cart: [1 => 2]);
+        app(OrderService::class)->confirm($order, $this->admin());
+        $results = $this->race([['ship', (string) $order->id], ['cancel', (string) $order->id]]);
+
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $order->refresh();
+        $this->assertContains($order->status, [OrderStatus::Shipping, OrderStatus::Cancelled]);
+        $this->assertSame($order->status === OrderStatus::Cancelled ? 30 : 28, $this->stock(1));
+        $this->assertLedgerConsistent();
+    }
+
+    /** 2 admin cùng xác nhận đã hoàn 1 khoản: chỉ ghi nhận 1 lần, không hoàn trùng. */
+    public function test_double_refund_confirmation_is_recorded_once(): void
+    {
+        $order = $this->place(method: PaymentMethod::Vnpay);
+        $this->ipn($order->payments()->sole());
+        app(OrderService::class)->cancel($order->refresh(), ActorType::Staff, $this->admin(), 'x');
+        $refund = $order->refunds()->sole();
+
+        $results = $this->race(array_fill(0, 3, ['confirm-refund', (string) $refund->id]));
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $order->refresh();
+        $this->assertSame([280000, PaymentStatus::Refunded], [$order->refunded_amount, $order->payment_status]);
+    }
+
+    /** 3 admin cùng bấm "Xác nhận": 1 lần thành công, lịch sử chỉ có 1 dòng. */
+    public function test_triple_confirm_writes_one_history_row(): void
+    {
+        $order = $this->place();
+        $results = $this->race(array_fill(0, 3, ['confirm', (string) $order->id]));
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $this->assertSame(1, $order->histories()->where('to_status', 'confirmed')->count());
     }
 }
