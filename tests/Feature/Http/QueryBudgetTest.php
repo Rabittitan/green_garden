@@ -48,6 +48,9 @@ class QueryBudgetTest extends TestCase
             'sổ kho' => ['admin', 'admin.inventory.show'],
             'khách hàng' => ['admin', 'admin.customers.index'],
             'mã giảm giá' => ['admin', 'admin.coupons.index'],
+            'yêu cầu nhập' => ['admin', 'admin.purchase-requests.index'],
+            'phiếu nhập kho' => ['admin', 'admin.goods-receipts.index'],
+            'nhà cung cấp' => ['admin', 'admin.suppliers.index'],
         ];
     }
 

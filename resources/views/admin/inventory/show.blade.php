@@ -43,7 +43,7 @@
                 <td class="text-end">@money($m->unit_cost)</td>
                 <td>
                     @if($m->orderItem) <a href="{{ route('admin.orders.show', $m->orderItem->order) }}">{{ $m->orderItem->order->code }}</a>
-                    @elseif($m->goodsReceiptItem) Phiếu nhập {{ $m->goodsReceiptItem->receipt->code }} @endif
+                    @elseif($m->goodsReceiptItem) <a href="{{ route('admin.goods-receipts.show', $m->goodsReceiptItem->receipt) }}">{{ $m->goodsReceiptItem->receipt->code }}</a> @endif
                 </td>
                 <td>{{ $m->creator?->name }} {{ $m->note ? '· '.$m->note : '' }}</td>
             </tr>

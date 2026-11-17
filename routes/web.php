@@ -4,9 +4,12 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GoodsReceiptController as AdminGoodsReceiptController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
+use App\Http\Controllers\Admin\PurchaseRequestController as AdminPurchaseRequestController;
+use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TierController as AdminTierController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
@@ -112,7 +115,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('/inventory/{plant}/count', [AdminInventoryController::class, 'count'])->name('inventory.count');
     Route::post('/inventory/{plant}/damage', [AdminInventoryController::class, 'damage'])->name('inventory.damage');
 
+    // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho
+    Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);
+    Route::post('/purchase-requests/from-low-stock', [AdminPurchaseRequestController::class, 'fromLowStock'])->name('purchase-requests.from-low-stock');
+    Route::resource('purchase-requests', AdminPurchaseRequestController::class)->except(['destroy']);
+    Route::post('/purchase-requests/{purchase_request}/transition', [AdminPurchaseRequestController::class, 'transition'])->name('purchase-requests.transition');
+    Route::post('/purchase-requests/{purchase_request}/order', [AdminPurchaseRequestController::class, 'order'])->name('purchase-requests.order');
+    Route::resource('goods-receipts', AdminGoodsReceiptController::class)->only(['index', 'create', 'store', 'show']);
+    Route::post('/goods-receipts/{goods_receipt}/complete', [AdminGoodsReceiptController::class, 'complete'])->name('goods-receipts.complete');
+    Route::post('/goods-receipts/{goods_receipt}/cancel', [AdminGoodsReceiptController::class, 'cancel'])->name('goods-receipts.cancel');
+
     Route::middleware('admin:admin')->group(function () {
+        Route::post('/purchase-requests/{purchase_request}/approve', [AdminPurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
+        Route::post('/purchase-requests/{purchase_request}/reject', [AdminPurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
         Route::post('/orders/{order}/confirm-transfer', [AdminOrderController::class, 'confirmTransfer'])->name('orders.confirm-transfer');
         Route::post('/orders/{order}/refunds', [AdminOrderController::class, 'requestRefund'])->name('orders.refunds.store');
         Route::post('/payments/{payment}/confirm-refund', [AdminOrderController::class, 'confirmRefund'])->name('payments.confirm-refund');

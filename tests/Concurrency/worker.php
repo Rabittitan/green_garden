@@ -8,6 +8,7 @@
 use App\Enums\ActorType;
 use App\Enums\PaymentMethod;
 use App\Exceptions\BusinessException;
+use App\Models\GoodsReceipt;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
@@ -39,6 +40,11 @@ try {
         'cancel' => app(OrderService::class)->cancel(Order::findOrFail((int) $args[0]), ActorType::Staff,
             User::where('role', 'admin')->firstOrFail(), 'Hủy song song')->id,
         'expire' => app(OrderService::class)->expireOverdue(),
+        'complete-receipt' => (function () use ($args) {
+            app(PurchaseService::class)->completeReceipt(GoodsReceipt::findOrFail((int) $args[0]), null);
+
+            return 'ok';
+        })(),
         'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::where('role', 'admin')->firstOrFail())?->code,
         'ipn' => (function () use ($args) {
             $p = Payment::where('txn_ref', $args[0])->firstOrFail();

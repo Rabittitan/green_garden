@@ -5,8 +5,11 @@ namespace Tests\Feature\Concurrency;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\PurchaseRequestStatus;
 use App\Models\Order;
+use App\Models\Supplier;
 use App\Models\User;
+use App\Services\PurchaseService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
@@ -118,5 +121,27 @@ class ConcurrencyTest extends TestCase
 
         $codes = collect($results)->pluck('result');
         $this->assertSame(5, $codes->filter()->unique()->count(), 'Mã yêu cầu nhập bị trùng: '.$codes->implode(', '));
+    }
+
+    /** Nhập kho chạy song song với đặt hàng trên cùng cây: không deadlock, kho khớp sổ. */
+    public function test_goods_receipt_and_orders_on_same_plant(): void
+    {
+        $purchases = app(PurchaseService::class);
+        $staff = User::factory()->staff()->create();
+        $pr = $purchases->createRequest($staff, [1 => ['quantity' => 20, 'estimated_unit_cost' => 100000]]);
+        $purchases->transition($pr, PurchaseRequestStatus::Submitted, $staff);
+        $purchases->approve($pr, $this->admin());
+        $receipt = $purchases->createReceipt($staff, Supplier::firstOrFail(), $pr->refresh(), [1 => ['quantity_received' => 20, 'unit_cost' => 120000]]);
+        $users = User::factory()->count(4)->create();
+
+        $jobs = [['complete-receipt', (string) $receipt->id]];
+        foreach ($users as $u) {
+            $jobs[] = ['place', (string) $u->id, json_encode([1 => 1, 3 => 1]), (string) Str::uuid()];
+        }
+        $results = $this->race($jobs);
+
+        $this->assertSame(5, collect($results)->where('ok', true)->count());
+        $this->assertSame(30 + 20 - 4, $this->stock(1));
+        $this->assertLedgerConsistent();
     }
 }

@@ -102,7 +102,15 @@ class DatabaseSeeder extends Seeder
                 'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
         ]);
 
-        // ===== 5. Bài viết =====
+        // ===== 5. Nhà cung cấp mẫu =====
+        DB::table('suppliers')->insert([
+            ['code' => 'NCC-001', 'name' => 'Vườn ươm Đà Lạt Xanh', 'contact_name' => 'Anh Minh', 'phone' => '0911000001',
+                'address' => 'Đà Lạt, Lâm Đồng', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'NCC-002', 'name' => 'Nhà vườn Củ Chi', 'contact_name' => 'Chị Lan', 'phone' => '0911000002',
+                'address' => 'Củ Chi, TP.HCM', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+        ]);
+
+        // ===== 6. Bài viết =====
         $this->call(ArticleSeeder::class);
     }
 }
