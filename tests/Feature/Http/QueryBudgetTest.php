@@ -3,6 +3,7 @@
 namespace Tests\Feature\Http;
 
 use App\Enums\PaymentMethod;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +55,7 @@ class QueryBudgetTest extends TestCase
     public function test_page_stays_within_query_budget_and_does_not_grow_with_data(string $role, string $route): void
     {
         $measure = function () use ($role, $route) {
-            $order = \App\Models\Order::latest('id')->first();
+            $order = Order::latest('id')->first();
             $params = match ($route) {
                 'orders.show', 'admin.orders.show' => [$order],
                 'admin.inventory.show' => [1],

@@ -15,6 +15,7 @@ use App\Services\Orders\PlaceOrderData;
 use App\Services\OrderService;
 use App\Services\Payments\PaymentGateway;
 use App\Services\PaymentService;
+use App\Services\PurchaseService;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 
@@ -38,6 +39,7 @@ try {
         'cancel' => app(OrderService::class)->cancel(Order::findOrFail((int) $args[0]), ActorType::Staff,
             User::where('role', 'admin')->firstOrFail(), 'Hủy song song')->id,
         'expire' => app(OrderService::class)->expireOverdue(),
+        'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::where('role', 'admin')->firstOrFail())?->code,
         'ipn' => (function () use ($args) {
             $p = Payment::where('txn_ref', $args[0])->firstOrFail();
             parse_str(app(PaymentGateway::class)->sign([

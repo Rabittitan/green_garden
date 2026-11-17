@@ -94,9 +94,33 @@ class MembershipService
         $user->forceFill(['lifetime_spend' => $spend])->save();
 
         $target = MembershipTier::forSpend($spend);
-        if ($target->isHigherThan($user->tier)) {
-            $this->changeTier($user, $target, TierChangeReason::Upgrade, $trigger?->id, null, null);
+        if (! $target->isHigherThan($user->tier)) {
+            return;
         }
+
+        // Tôn trọng lần đổi hạng thủ công gần nhất: chỉ tự nâng khi chi tiêu VƯỢT sang ngưỡng cao hơn
+        // ngưỡng khách đã đạt tại thời điểm admin đổi tay (vd hạ hạng do gian lận không bị tự nâng lại ngay).
+        $manual = MembershipTierHistory::where('user_id', $user->id)
+            ->where('reason', TierChangeReason::Manual->value)->latest('id')->first();
+        if ($manual && ! $target->isHigherThan(MembershipTier::forSpend($manual->spend_total))) {
+            return;
+        }
+
+        $this->changeTier($user, $target, TierChangeReason::Upgrade, $trigger?->id, null, null);
+    }
+
+    /** Tính lại cho mọi khách (sau khi đổi ngưỡng hạng). Trả số khách được nâng hạng. */
+    public function recalculateAll(): int
+    {
+        $upgraded = 0;
+        User::where('role', 'customer')->orderBy('id')->select('id', 'membership_tier_id')
+            ->chunkById(200, function ($users) use (&$upgraded) {
+                foreach ($users as $u) {
+                    $upgraded += $this->refreshUser($u->id)->membership_tier_id !== $u->membership_tier_id ? 1 : 0;
+                }
+            });
+
+        return $upgraded;
     }
 
     private function changeTier(User $user, MembershipTier $to, TierChangeReason $reason, ?int $orderId, ?int $by, ?string $note): void

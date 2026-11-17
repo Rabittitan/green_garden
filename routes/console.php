@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\PaymentWebhookLog;
 use App\Services\MembershipService;
 use App\Services\OrderService;
 use Illuminate\Foundation\Inspiring;
@@ -24,6 +25,15 @@ Artisan::command('orders:expire-unpaid', function (OrderService $orders) {
 Artisan::command('membership:record-spend', function (MembershipService $membership) {
     $this->info('Đã chốt chi tiêu cho '.$membership->recordDueSpend(1000).' đơn.');
 })->purpose('Cộng các đơn đã qua hạn đổi trả vào tổng chi tiêu, tự lên hạng');
+
+Artisan::command('membership:recalculate-all', function (MembershipService $membership) {
+    $this->info('Đã nâng hạng '.$membership->recalculateAll().' khách.');
+})->purpose('Tính lại tổng chi tiêu + hạng cho mọi khách (sau khi đổi ngưỡng hạng)');
+
+Artisan::command('payments:prune-webhook-logs {--days=180}', function () {
+    $n = PaymentWebhookLog::where('created_at', '<', now()->subDays((int) $this->option('days')))->delete();
+    $this->info("Đã xóa {$n} log callback thanh toán cũ.");
+})->purpose('Dọn log callback thanh toán cũ');
 
 Artisan::command('shop:reconcile', function () {
     $checks = [
@@ -54,4 +64,5 @@ Artisan::command('shop:reconcile', function () {
 
 Schedule::command('orders:expire-unpaid')->everyMinute()->withoutOverlapping();
 Schedule::command('membership:record-spend')->hourly()->withoutOverlapping();
+Schedule::command('payments:prune-webhook-logs')->dailyAt('03:23')->timezone('Asia/Ho_Chi_Minh');
 Schedule::command('shop:reconcile')->dailyAt('02:17')->timezone('Asia/Ho_Chi_Minh');

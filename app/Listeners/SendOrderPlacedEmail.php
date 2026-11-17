@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\OrderPlaced;
 use App\Mail\OrderPlacedMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -27,7 +28,7 @@ class SendOrderPlacedEmail implements ShouldQueue
     {
         $order = $event->order->loadMissing(['user', 'items.plant']);
 
-        Mail::to($order->user->email, $order->customer_name)->send(new OrderPlacedMail($order));
+        Mail::to(new Address($order->user->email, $order->recipient_name))->send(new OrderPlacedMail($order));
     }
 
     public function failed(OrderPlaced $event, \Throwable $e): void

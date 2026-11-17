@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MembershipTier;
+use App\Services\MembershipService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Cấu hình hạng: ngưỡng chi tiêu, % giảm, trần giảm, ngưỡng miễn ship.
  * code / rank cố định. Ngưỡng phải tăng dần theo rank; hạng cơ bản luôn = 0.
- * Đổi ngưỡng KHÔNG hạ hạng ai (hạng chỉ đi lên); khách đủ ngưỡng mới sẽ lên ở lần chốt chi tiêu kế tiếp.
+ * Đổi ngưỡng KHÔNG hạ hạng ai (hạng chỉ đi lên); khách đủ ngưỡng mới được nâng ngay sau khi lưu.
  */
 class TierController extends Controller
 {
@@ -52,6 +53,9 @@ class TierController extends Controller
             }
         });
 
-        return back()->with('success', 'Đã lưu cấu hình hạng thành viên.');
+        // Ngưỡng thấp đi -> khách đủ điều kiện được nâng ngay (hạng không bao giờ tự hạ)
+        $upgraded = app(MembershipService::class)->recalculateAll();
+
+        return back()->with('success', 'Đã lưu cấu hình hạng thành viên.'.($upgraded ? " {$upgraded} khách được nâng hạng." : ''));
     }
 }

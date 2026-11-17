@@ -110,4 +110,13 @@ class ConcurrencyTest extends TestCase
         $this->assertSame(26, $this->stock(1));                            // 30 - 4 đơn mới
         $this->assertLedgerConsistent();
     }
+
+    /** B7: nhiều người cùng tạo yêu cầu nhập hàng -> mã chứng từ không trùng, không lỗi hệ thống. */
+    public function test_document_codes_are_unique_under_concurrency(): void
+    {
+        $results = $this->race(array_fill(0, 5, ['draft-pr']));
+
+        $codes = collect($results)->pluck('result');
+        $this->assertSame(5, $codes->filter()->unique()->count(), 'Mã yêu cầu nhập bị trùng: '.$codes->implode(', '));
+    }
 }

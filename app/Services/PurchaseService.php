@@ -11,6 +11,7 @@ use App\Models\Plant;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /** Yêu cầu nhập hàng -> duyệt -> phiếu nhập kho -> cộng kho. */
@@ -27,12 +28,12 @@ class PurchaseService
         }
 
         return DB::transaction(function () use ($user, $plants, $targetMultiplier) {
-            $pr = PurchaseRequest::create([
-                'code' => $this->nextCode('YCN', 'purchase_requests'),
+            $pr = $this->createWithCode('YCN', 'purchase_requests', fn (string $code) => PurchaseRequest::create([
+                'code' => $code,
                 'requested_by' => $user->id,
                 'status' => PurchaseRequestStatus::Draft,
                 'reason' => 'Tự động đề xuất từ cây dưới ngưỡng tồn kho',
-            ]);
+            ]));
             $total = 0;
             foreach ($plants as $p) {
                 $qty = max(1, $p->reorder_point * $targetMultiplier - $p->stock);
@@ -45,7 +46,7 @@ class PurchaseService
             $pr->update(['estimated_total' => $total]);
 
             return $pr;
-        });
+        }, 3);
     }
 
     public function transition(PurchaseRequest $pr, PurchaseRequestStatus $to, User $by, ?string $reason = null): void
@@ -113,11 +114,34 @@ class PurchaseService
         }, 3);
     }
 
-    /** Mã chứng từ dạng YCN-2611-0001, đánh số lại theo tháng. */
+    /**
+     * Tạo chứng từ với mã tăng dần dạng YCN-2611-0001 (đánh số lại theo tháng, giờ VN).
+     * Hai giao dịch song song có thể đọc cùng số lớn nhất -> trùng UNIQUE: thử lại với số kế tiếp.
+     * (MySQL chỉ rollback câu INSERT lỗi, transaction bên ngoài vẫn tiếp tục.)
+     *
+     * @template T of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  callable(string): T  $create
+     * @return T
+     */
+    public function createWithCode(string $prefix, string $table, callable $create)
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return $create($this->nextCode($prefix, $table));
+            } catch (UniqueConstraintViolationException $e) {
+                if ($attempt >= 10 || ! str_contains($e->getMessage(), "{$table}_code_unique")) {
+                    throw $e;
+                }
+                usleep(random_int(1000, 20000));
+            }
+        }
+    }
+
     public function nextCode(string $prefix, string $table): string
     {
-        $base = $prefix.'-'.now()->format('ym').'-';
-        $last = DB::table($table)->where('code', 'like', $base.'%')->lockForUpdate()->max('code');
+        $base = $prefix.'-'.now(config('shop.display_timezone'))->format('ym').'-';
+        $last = DB::table($table)->where('code', 'like', $base.'%')->max('code');
         $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
 
         return $base.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);

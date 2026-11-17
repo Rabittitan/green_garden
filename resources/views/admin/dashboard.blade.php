@@ -7,7 +7,7 @@
 <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card text-white bg-success h-100"><div class="card-body">
         <div>Doanh thu hàng hóa</div><div class="fs-4 fw-bold">@money($revenue)</div>
-        <small>đơn hoàn thành, sau giảm giá, không gồm ship</small>
+        <small>đơn hoàn thành, sau giảm giá và hoàn tiền, không gồm ship</small>
     </div></div></div>
     <div class="col-md-3"><div class="card text-white bg-primary h-100"><div class="card-body">
         <div>Lợi nhuận gộp</div><div class="fs-4 fw-bold">@money($revenue - $cogs)</div>

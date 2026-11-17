@@ -17,8 +17,10 @@ class DashboardController extends Controller
         $completed = Order::status(OrderStatus::Completed);
 
         return view('admin.dashboard', [
-            // Doanh thu hàng hóa: tiền hàng sau mọi giảm giá của đơn đã hoàn thành (không gồm phí ship)
-            'revenue' => (int) (clone $completed)->sum(DB::raw('subtotal - member_discount - coupon_discount')),
+            // Doanh thu hàng hóa thuần: tiền hàng sau mọi giảm giá của đơn đã hoàn thành (không gồm phí ship),
+            // trừ phần đã hoàn của chính các đơn đó (khiếu nại cây chết...), không âm
+            'revenue' => (int) (clone $completed)->sum(DB::raw('GREATEST(0, CAST(subtotal AS SIGNED) - CAST(member_discount AS SIGNED)'
+                .' - CAST(coupon_discount AS SIGNED) - CAST(refunded_amount AS SIGNED))')),
             'refunded' => (int) Order::sum('refunded_amount'),
             // Tiền thực thu = đã thu - đã hoàn (mọi đơn)
             'cashIn' => (int) Order::sum(DB::raw('CAST(paid_amount AS SIGNED) - CAST(refunded_amount AS SIGNED)')),
