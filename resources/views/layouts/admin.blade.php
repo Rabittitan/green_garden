@@ -35,6 +35,8 @@
                 ['admin.purchase-requests.index', 'admin.purchase-requests.*', 'fa-clipboard-list', 'Yêu cầu nhập', true],
                 ['admin.goods-receipts.index', 'admin.goods-receipts.*', 'fa-truck-ramp-box', 'Phiếu nhập kho', true],
                 ['admin.suppliers.index', 'admin.suppliers.*', 'fa-handshake', 'Nhà cung cấp', true],
+                ['admin.reviews.index', 'admin.reviews.*', 'fa-star', 'Đánh giá', true],
+                ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp', true],
                 ['admin.coupons.index', 'admin.coupons.*', 'fa-ticket', 'Mã giảm giá', $isAdmin],
                 ['admin.customers.index', 'admin.customers.*', 'fa-users', 'Khách hàng', $isAdmin],
                 ['admin.tiers.index', 'admin.tiers.*', 'fa-crown', 'Hạng thành viên', $isAdmin],

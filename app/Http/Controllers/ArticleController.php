@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CommentStatus;
 use App\Models\Article;
 
 class ArticleController extends Controller
@@ -25,6 +26,10 @@ class ArticleController extends Controller
         // Lấy 3 bài khác (trừ bài đang xem) để gợi ý đọc tiếp
         $others = Article::published()->where('id', '!=', $article->id)->latest('published_at')->take(3)->get();
 
-        return view('news.show', compact('article', 'others'));
+        $comments = $article->comments()->whereNull('parent_id')->where('status', CommentStatus::Published->value)
+            ->with(['user', 'replies' => fn ($q) => $q->where('status', CommentStatus::Published->value)->with('user')])
+            ->orderByDesc('id')->simplePaginate(10)->withQueryString();
+
+        return view('news.show', compact('article', 'others', 'comments'));
     }
 }

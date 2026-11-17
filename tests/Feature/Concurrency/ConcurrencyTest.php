@@ -7,8 +7,10 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PurchaseRequestStatus;
 use App\Models\Order;
+use App\Models\PlantReview;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\OrderService;
 use App\Services\PurchaseService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
@@ -143,5 +145,19 @@ class ConcurrencyTest extends TestCase
         $this->assertSame(5, collect($results)->where('ok', true)->count());
         $this->assertSame(30 + 20 - 4, $this->stock(1));
         $this->assertLedgerConsistent();
+    }
+
+    /** Bấm "Gửi đánh giá" nhiều lần cùng lúc: đúng 1 đánh giá, không lỗi UNIQUE (lỗi cũ trong ReviewService). */
+    public function test_double_review_submit_creates_one_review(): void
+    {
+        $orders = app(OrderService::class);
+        $o = $this->place();
+        $orders->confirm($o, $this->admin());
+        $orders->ship($o, 'GHN', 'C1', $this->admin());
+        $orders->complete($o, $this->admin());
+
+        $results = $this->race(array_fill(0, 4, ['review', (string) $this->customer()->id, '1']));
+        $this->assertSame(1, collect($results)->pluck('result')->unique()->count());
+        $this->assertSame(1, PlantReview::count());
     }
 }

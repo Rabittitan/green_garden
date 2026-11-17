@@ -3,8 +3,14 @@
 namespace Tests\Feature\Http;
 
 use App\Enums\PaymentMethod;
+use App\Enums\ReviewStatus;
+use App\Models\Article;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Plant;
+use App\Models\PlantReview;
 use App\Models\User;
+use App\Services\CommentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -37,6 +43,8 @@ class QueryBudgetTest extends TestCase
         return [
             'trang chủ' => ['guest', 'home'],
             'danh sách cây' => ['guest', 'plants.index'],
+            'chi tiết cây (đánh giá + hỏi đáp)' => ['customer', 'plants.show'],
+            'bài viết (bình luận)' => ['guest', 'news.show'],
             'giỏ hàng' => ['customer', 'cart.index'],
             'đặt hàng' => ['customer', 'checkout.form'],
             'đơn của tôi' => ['customer', 'orders.index'],
@@ -51,6 +59,8 @@ class QueryBudgetTest extends TestCase
             'yêu cầu nhập' => ['admin', 'admin.purchase-requests.index'],
             'phiếu nhập kho' => ['admin', 'admin.goods-receipts.index'],
             'nhà cung cấp' => ['admin', 'admin.suppliers.index'],
+            'kiểm duyệt đánh giá' => ['admin', 'admin.reviews.index'],
+            'hỏi đáp' => ['admin', 'admin.comments.index'],
         ];
     }
 
@@ -61,7 +71,7 @@ class QueryBudgetTest extends TestCase
             $order = Order::latest('id')->first();
             $params = match ($route) {
                 'orders.show', 'admin.orders.show' => [$order],
-                'admin.inventory.show' => [1],
+                'admin.inventory.show', 'plants.show', 'news.show' => [1],
                 default => [],
             };
             $user = match ($role) {
@@ -78,15 +88,31 @@ class QueryBudgetTest extends TestCase
         };
 
         $this->place(cart: [1 => 1, 3 => 1], method: PaymentMethod::Vnpay);
+        $this->addContent();                                                  // có sẵn 1 lượt dữ liệu: đo đúng N+1, không đo "có/không có dữ liệu"
         $small = $measure();
 
         foreach (User::factory()->count(5)->create() as $u) {               // thêm dữ liệu: số câu không được tăng
             $this->place($u, [1 => 1, 3 => 1, 5 => 1]);
         }
         $this->place(cart: [1 => 1, 3 => 1, 5 => 2, 12 => 1], method: PaymentMethod::Vnpay);
+        $this->addContent();
         $large = $measure();
 
         $this->assertLessThanOrEqual(self::BUDGET, $large, "Trang {$route}: {$large} câu SQL (giới hạn ".self::BUDGET.')');
         $this->assertLessThanOrEqual($small + 2, $large, "Trang {$route}: số câu tăng theo dữ liệu ({$small} -> {$large}), nghi N+1");
+    }
+
+    /** Thêm hỏi đáp (có shop trả lời), bình luận bài viết, đánh giá đã duyệt cho mọi khách chưa có. */
+    private function addContent(): void
+    {
+        $comments = app(CommentService::class);
+        foreach (User::where('role', 'customer')->whereDoesntHave('comments')->get() as $u) {
+            $q = $comments->post($u, Plant::find(1), 'Câu hỏi của '.$u->name);
+            $comments->post($this->admin(), Plant::find(1), 'Shop trả lời', $q);
+            $comments->post($u, Article::find(1), 'Bình luận của '.$u->name);
+            $r = new PlantReview(['plant_id' => 1, 'user_id' => $u->id, 'order_item_id' => OrderItem::first()->id, 'rating' => 5]);
+            $r->status = ReviewStatus::Approved;
+            $r->save();
+        }
     }
 }

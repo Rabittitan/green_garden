@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -9,12 +10,14 @@ use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
 use App\Http\Controllers\Admin\PurchaseRequestController as AdminPurchaseRequestController;
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TierController as AdminTierController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MembershipController;
@@ -22,6 +25,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 // ===== KHÁCH VÃNG LAI =====
@@ -85,6 +89,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/thanh-toan/vnpay/ket-qua', [PaymentController::class, 'vnpayReturn'])->name('payment.vnpay.return');
 });
 
+// ===== ĐÁNH GIÁ + HỎI ĐÁP (đăng nhập; chống spam bằng throttle) =====
+Route::middleware(['auth', 'throttle:20,1'])->group(function () {
+    Route::post('/cay-canh/{id}/danh-gia', [ReviewController::class, 'store'])->whereNumber('id')->name('reviews.store');
+    Route::delete('/danh-gia/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::post('/danh-gia/{review}/huu-ich', [ReviewController::class, 'vote'])->name('reviews.vote');
+    Route::post('/cay-canh/{id}/hoi-dap', [CommentController::class, 'storeForPlant'])->whereNumber('id')->name('comments.plant');
+    Route::post('/tin-tuc/{id}/binh-luan', [CommentController::class, 'storeForArticle'])->whereNumber('id')->name('comments.article');
+    Route::delete('/binh-luan/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+});
+
 // ===== ĐẶT HÀNG: đăng nhập + đã xác thực email =====
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dat-hang', [CheckoutController::class, 'form'])->name('checkout.form');
@@ -114,6 +128,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/inventory/{plant}', [AdminInventoryController::class, 'show'])->name('inventory.show');
     Route::post('/inventory/{plant}/count', [AdminInventoryController::class, 'count'])->name('inventory.count');
     Route::post('/inventory/{plant}/damage', [AdminInventoryController::class, 'damage'])->name('inventory.damage');
+
+    // Đánh giá + hỏi đáp
+    Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
+    Route::post('/reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->name('reviews.moderate');
+    Route::post('/reviews/{review}/reply', [AdminReviewController::class, 'reply'])->name('reviews.reply');
+    Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::get('/comments', [AdminCommentController::class, 'index'])->name('comments.index');
+    Route::post('/comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
+    Route::post('/comments/{comment}/toggle', [AdminCommentController::class, 'toggle'])->name('comments.toggle');
 
     // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho
     Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);

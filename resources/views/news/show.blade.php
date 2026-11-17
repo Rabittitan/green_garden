@@ -26,4 +26,7 @@
         @endforeach
     </div>
 @endif
+<div class="row justify-content-center mt-4"><div class="col-lg-9">
+    @include('partials.comments', ['comments' => $comments, 'postRoute' => route('comments.article', $article->id), 'title' => 'Bình luận', 'placeholder' => 'Chia sẻ ý kiến hoặc kinh nghiệm của bạn...'])
+</div></div>
 @endsection

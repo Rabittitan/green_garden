@@ -43,6 +43,10 @@ Artisan::command('shop:reconcile', function () {
         'Tiền đã thu / đã hoàn lệch payments' => "SELECT o.id FROM orders o WHERE o.paid_amount <> (SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.order_id = o.id AND p.type = 'charge' AND p.status = 'succeeded')
                                       OR o.refunded_amount <> (SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.order_id = o.id AND p.type = 'refund' AND p.status = 'succeeded')",
         'Lượt dùng mã lệch' => "SELECT c.id FROM coupons c WHERE c.used_count <> (SELECT COUNT(*) FROM coupon_redemptions r WHERE r.coupon_id = c.id AND r.status = 'applied')",
+        'Điểm đánh giá lệch' => "SELECT p.id FROM plants p LEFT JOIN (SELECT plant_id, SUM(rating) s, COUNT(*) c FROM plant_reviews
+                                      WHERE status = 'approved' AND deleted_at IS NULL GROUP BY plant_id) r ON r.plant_id = p.id
+                                      WHERE p.rating_sum <> COALESCE(r.s, 0) OR p.rating_count <> COALESCE(r.c, 0)",
+        'Lượt "hữu ích" lệch' => 'SELECT r.id FROM plant_reviews r WHERE r.helpful_count <> (SELECT COUNT(*) FROM review_votes v WHERE v.plant_review_id = r.id)',
         'Đơn chờ thanh toán quá hạn > 10 phút' => "SELECT id FROM orders WHERE status = 'pending_payment' AND payment_expires_at < NOW() - INTERVAL 10 MINUTE",
         'Tổng chi tiêu khách lệch' => 'SELECT u.id FROM users u WHERE u.lifetime_spend <> (SELECT COALESCE(SUM(GREATEST(0, CAST(o.paid_amount AS SIGNED) - CAST(o.refunded_amount AS SIGNED)
                                       - (CAST(o.shipping_fee AS SIGNED) - CAST(o.shipping_discount AS SIGNED)))),0) FROM orders o WHERE o.user_id = u.id AND o.spend_recorded_at IS NOT NULL)',

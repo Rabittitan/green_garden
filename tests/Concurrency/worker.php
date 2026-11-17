@@ -17,6 +17,7 @@ use App\Services\OrderService;
 use App\Services\Payments\PaymentGateway;
 use App\Services\PaymentService;
 use App\Services\PurchaseService;
+use App\Services\ReviewService;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 
@@ -45,6 +46,7 @@ try {
 
             return 'ok';
         })(),
+        'review' => app(ReviewService::class)->submit(User::findOrFail((int) $args[0]), (int) $args[1], 5, null, 'Song song')->id,
         'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::where('role', 'admin')->firstOrFail())?->code,
         'ipn' => (function () use ($args) {
             $p = Payment::where('txn_ref', $args[0])->firstOrFail();
