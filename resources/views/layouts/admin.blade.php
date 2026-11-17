@@ -26,12 +26,18 @@
                 <i class="fa-solid fa-seedling"></i> GreenLife Admin
             </div>
             {{-- request()->routeIs(...) để tô sáng menu đang mở --}}
-            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                <i class="fa fa-chart-line me-2"></i> Thống kê</a>
-            <a href="{{ route('admin.plants.index') }}" class="{{ request()->routeIs('admin.plants.*') ? 'active' : '' }}">
-                <i class="fa fa-leaf me-2"></i> Quản lý cây cảnh</a>
-            <a href="{{ route('admin.orders.index') }}" class="{{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
-                <i class="fa fa-receipt me-2"></i> Quản lý đơn hàng</a>
+            @php $isAdmin = auth()->user()->role === \App\Enums\UserRole::Admin; @endphp
+            @foreach(array_filter([
+                ['admin.dashboard', 'admin.dashboard', 'fa-chart-line', 'Thống kê', true],
+                ['admin.orders.index', 'admin.orders.*', 'fa-receipt', 'Đơn hàng', true],
+                ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh', true],
+                ['admin.inventory.index', 'admin.inventory.*', 'fa-warehouse', 'Kho', true],
+                ['admin.coupons.index', 'admin.coupons.*', 'fa-ticket', 'Mã giảm giá', $isAdmin],
+                ['admin.customers.index', 'admin.customers.*', 'fa-users', 'Khách hàng', $isAdmin],
+                ['admin.tiers.index', 'admin.tiers.*', 'fa-crown', 'Hạng thành viên', $isAdmin],
+            ], fn ($m) => $m[4]) as [$route, $pattern, $icon, $label])
+                <a href="{{ route($route) }}" class="{{ request()->routeIs($pattern) ? 'active' : '' }}"><i class="fa {{ $icon }} me-2"></i> {{ $label }}</a>
+            @endforeach
             <hr class="border-success">
             <a href="{{ route('home') }}"><i class="fa fa-store me-2"></i> Xem cửa hàng</a>
             <form action="{{ route('logout') }}" method="POST">
@@ -50,6 +56,13 @@
             @if(session('error'))
                 <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
                     <button class="btn-close" data-bs-dismiss="alert"></button></div>
+            @endif
+            @if(session('warning'))
+                <div class="alert alert-warning alert-dismissible fade show">{{ session('warning') }}
+                    <button class="btn-close" data-bs-dismiss="alert"></button></div>
+            @endif
+            @if($errors->any())
+                <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
             @endif
 
             @yield('content')

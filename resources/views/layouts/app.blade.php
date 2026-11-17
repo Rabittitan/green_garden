@@ -49,7 +49,7 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('cart.index') }}">
                         <i class="fa fa-shopping-cart"></i> Giỏ hàng
-                        <span class="badge bg-warning text-dark">{{ count(session('cart', [])) }}</span>
+                        <span class="badge bg-warning text-dark">{{ $cartCount ?? 0 }}</span>
                     </a>
                 </li>
 
@@ -57,13 +57,18 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="fa fa-user"></i> {{ auth()->user()->name }}
+                            @if(auth()->user()->tier && auth()->user()->tier->rank > 0)
+                                <span class="badge bg-warning text-dark">{{ auth()->user()->tier->name }}</span>
+                            @endif
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            @if(auth()->user()->role === 'admin')
+                            @if(auth()->user()->isBackOffice())
                                 <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Trang quản trị</a></li>
                             @endif
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fa fa-id-card me-1"></i> Hồ sơ của tôi</a></li>
-                            <li><a class="dropdown-item" href="{{ route('orders.history') }}"><i class="fa fa-receipt me-1"></i> Đơn hàng của tôi</a></li>
+                            <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="fa fa-receipt me-1"></i> Đơn hàng của tôi</a></li>
+                            <li><a class="dropdown-item" href="{{ route('account.membership') }}"><i class="fa fa-crown me-1"></i> Hạng thành viên</a></li>
+                            <li><a class="dropdown-item" href="{{ route('addresses.index') }}"><i class="fa fa-location-dot me-1"></i> Sổ địa chỉ</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{{ route('logout') }}" method="POST">
@@ -102,6 +107,10 @@
     @endif
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show"><i class="fa fa-triangle-exclamation"></i> {{ session('error') }}
+            <button class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show"><i class="fa fa-circle-info"></i> {{ session('warning') }}
             <button class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 </div>

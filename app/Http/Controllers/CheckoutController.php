@@ -2,76 +2,138 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentMethod;
 use App\Events\OrderPlaced;
-use App\Models\Order;
+use App\Exceptions\BusinessException;
+use App\Exceptions\CouponNotApplicableException;
+use App\Exceptions\PriceChangedException;
+use App\Http\Requests\PlaceOrderRequest;
+use App\Models\UserAddress;
+use App\Services\CartService;
 use App\Services\OrderService;
+use App\Services\PricingService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use RuntimeException;
+use Illuminate\Support\Str;
 
+/**
+ * Xem lại đơn (báo giá) -> áp mã -> đặt hàng.
+ * Con số khách thấy (expected_total) được gửi kèm khi đặt; giá đổi thì không tạo đơn.
+ */
 class CheckoutController extends Controller
 {
-    // Hiển thị form đặt hàng
-    public function form()
-    {
-        $cart = session('cart', []);                           // lấy giỏ hàng từ session
-        if (empty($cart)) {                                    // nếu giỏ trống
-            return redirect()->route('cart.index')->with('error', 'Giỏ hàng đang trống!'); // đẩy về trang giỏ
-        }
-        $total = 0;                                            // khởi tạo tổng tiền
-        foreach ($cart as $item) {                             // duyệt giỏ
-            $total += $item['price'] * $item['quantity'];      // cộng dồn tiền
-        }
-        return view('checkout.form', compact('cart', 'total')); // hiện form đặt hàng
-    }
+    private const COUPON_KEY = 'checkout.coupon';
+    private const TOKEN_KEY = 'checkout.token';
 
-    // Xử lý đặt hàng: toàn bộ nghiệp vụ nằm trong OrderService
-    public function store(Request $request, OrderService $orders)
-    {
-        $data = $request->validate([
-            'customer_name' => 'required|max:100',
-            'phone'         => ['required', 'regex:/^(0|\+84)[0-9]{9,10}$/'],
-            'address'       => 'required|max:255',
-            'note'          => 'nullable|max:1000',
-            'coupon_code'   => 'nullable|string|max:40',
-        ]);
+    public function __construct(private CartService $cart, private PricingService $pricing) {}
 
+    public function form(Request $request)
+    {
+        foreach ($this->cart->reconcile() as $notice) {
+            session()->now('warning', $notice);
+        }
+        if ($this->cart->isEmpty()) {
+            return redirect()->route('cart.index')->with('error', 'Giỏ hàng đang trống!');
+        }
+
+        $user = $request->user()->load('tier');
+        $couponCode = session(self::COUPON_KEY);
         try {
-            $order = $orders->place(Auth::user(), session('cart', []), $data, $data['coupon_code'] ?? null);
-        } catch (RuntimeException $e) {                        // lỗi nghiệp vụ: hết hàng, mã sai... -> hiện cho khách
+            $quote = $this->pricing->quoteCart($user, $this->cart->items(), $couponCode);
+        } catch (CouponNotApplicableException $e) {
+            session()->forget(self::COUPON_KEY);                     // mã hết hiệu lực -> bỏ mã, báo khách
+            session()->now('error', $e->getMessage().' Mã đã được gỡ khỏi đơn.');
+            $quote = $this->pricing->quoteCart($user, $this->cart->items());
+        } catch (BusinessException $e) {
             return redirect()->route('cart.index')->with('error', $e->getMessage());
-        } catch (\Throwable $e) {                              // lỗi hệ thống: ghi log, KHÔNG lộ chi tiết ra ngoài
-            report($e);
-            return redirect()->route('cart.index')->with('error', 'Có lỗi xảy ra, vui lòng thử lại sau.');
         }
 
-        session()->forget('cart');
+        if (! session()->has(self::TOKEN_KEY)) {
+            session([self::TOKEN_KEY => (string) Str::uuid()]);
+        }
 
-        // Đơn đã lưu xong (transaction đã commit) mới phát event -> Listener gửi mail xác nhận.
-        // Lỗi gửi mail KHÔNG được làm khách tưởng đặt hàng thất bại.
+        return view('checkout.form', [
+            'quote' => $quote,
+            'user' => $user,
+            'addresses' => $user->addresses()->get(),
+            'methods' => PaymentMethod::available(),
+            'token' => session(self::TOKEN_KEY),
+            'nextTier' => $user->tier->next(),
+        ]);
+    }
+
+    public function applyCoupon(Request $request)
+    {
+        $data = $request->validate(['coupon_code' => ['required', 'string', 'max:40']]);
         try {
-            OrderPlaced::dispatch($order);
-        } catch (\Throwable $e) {
-            report($e);
+            $quote = $this->pricing->quoteCart($request->user(), $this->cart->items(), $data['coupon_code']);
+        } catch (BusinessException $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
+        if ($quote->coupon === null) {                                // mã không cộng dồn, ưu đãi hạng lợi hơn
+            return back()->with('warning', $quote->notices[0] ?? 'Mã không được áp dụng.');
+        }
+        session([self::COUPON_KEY => $quote->coupon->code]);
+
+        return back()->with('success', "Đã áp dụng mã {$quote->coupon->code}: giảm ".number_format($quote->couponBenefit(), 0, ',', '.').'đ.');
+    }
+
+    public function removeCoupon()
+    {
+        session()->forget(self::COUPON_KEY);
+
+        return back()->with('success', 'Đã bỏ mã giảm giá.');
+    }
+
+    public function store(PlaceOrderRequest $request, OrderService $orders)
+    {
+        if ($this->cart->isEmpty()) {
+            return redirect()->route('cart.index')->with('error', 'Giỏ hàng đang trống!');
+        }
+        $user = $request->user();
+
+        try {
+            $order = $orders->place($user, $request->toData($this->cart->items(), session(self::COUPON_KEY)));
+        } catch (PriceChangedException $e) {
+            return redirect()->route('checkout.form')->with('error', $e->getMessage())->withInput();
+        } catch (CouponNotApplicableException $e) {
+            session()->forget(self::COUPON_KEY);
+
+            return redirect()->route('checkout.form')->with('error', $e->getMessage().' Mã đã được gỡ, vui lòng kiểm tra lại đơn.')->withInput();
+        } catch (BusinessException $e) {
+            return redirect()->route('checkout.form')->with('error', $e->getMessage())->withInput();
         }
 
-        return redirect()->route('orders.show', $order->id)->with('success', 'Đặt hàng thành công! Mã đơn: '.$order->code.'. Email xác nhận đã được gửi tới '.Auth::user()->email.'.');
+        $isNew = $order->wasRecentlyCreated;
+        $this->cart->clear();
+        session()->forget([self::COUPON_KEY, self::TOKEN_KEY]);
+
+        if ($isNew) {
+            if ($request->boolean('save_address') || ! $user->addresses()->exists()) {
+                $this->rememberAddress($user->id, $request);
+            }
+            try {
+                OrderPlaced::dispatch($order);                         // lỗi gửi mail không làm hỏng đơn
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        if ($order->status === \App\Enums\OrderStatus::PendingPayment && $order->payment_method === PaymentMethod::Vnpay) {
+            return redirect()->route('orders.pay', $order);
+        }
+
+        return redirect()->route('orders.show', $order)->with('success', "Đặt hàng thành công! Mã đơn: {$order->code}.");
     }
 
-    // Lịch sử đơn hàng của khách đang đăng nhập
-    public function history()
+    private function rememberAddress(int $userId, PlaceOrderRequest $request): void
     {
-        $orders = Order::where('user_id', Auth::id())          // chỉ lấy đơn của chính khách này
-            ->latest()->paginate(10);                          // mới nhất trước, 10 đơn/trang
-        return view('orders.history', compact('orders'));
-    }
-
-    // Chi tiết 1 đơn hàng
-    public function show($id)
-    {
-        $order = Order::where('user_id', Auth::id())           // chỉ cho xem đơn của chính mình (chống xem trộm đơn người khác)
-            ->with('items.plant')                              // nạp luôn chi tiết đơn và thông tin cây
-            ->findOrFail($id);                                 // không thấy thì 404
-        return view('orders.show', compact('order'));
+        $fields = $request->safe()->only(['recipient_name', 'phone', 'province', 'district', 'ward', 'address_line']);
+        $exists = UserAddress::where('user_id', $userId)->where($fields)->exists();
+        if (! $exists) {
+            UserAddress::create($fields + [
+                'user_id' => $userId,
+                'is_default' => ! UserAddress::where('user_id', $userId)->where('is_default', true)->exists(),
+            ]);
+        }
     }
 }

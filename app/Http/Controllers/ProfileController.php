@@ -18,12 +18,13 @@ class ProfileController extends Controller
         $user = $request->user();
  
         // Thống kê nhỏ cho cột bên trái
+        $user->load('tier');
         $stats = [
             'orders'    => $user->orders()->count(),
             'completed' => $user->orders()->where('status', 'completed')->count(),
-            'spent'     => $user->orders()->where('status', 'completed')->sum('total'),
+            'spent'     => $user->lifetime_spend,                       // tổng chi tiêu đã chốt (dùng xét hạng)
         ];
-        $latestOrders = $user->orders()->latest()->take(5)->get();
+        $latestOrders = $user->orders()->latest('id')->take(5)->get();
  
         return view('profile.edit', compact('user', 'stats', 'latestOrders'));
     }
@@ -37,7 +38,6 @@ class ProfileController extends Controller
             'name'    => 'required|string|max:100',
             'email'   => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone'   => ['nullable', 'regex:/^(0|\+84)[0-9]{9,10}$/'],
-            'address' => 'nullable|string|max:255',
         ], [
             'phone.regex' => 'Số điện thoại không hợp lệ (VD: 0901234567).',
         ]);

@@ -12,7 +12,7 @@ class PlantController extends Controller
     public function index(Request $request)
     {
         // Bắt đầu câu truy vấn, nạp sẵn danh mục
-        $query = Plant::with('category');
+        $query = Plant::with('category')->active();             // chỉ cây đang bán
 
         // Lọc theo danh mục (nếu URL có ?category=2)
         if ($request->filled('category')) {
@@ -56,7 +56,7 @@ class PlantController extends Controller
         $plants = $query->latest()->paginate(9)->withQueryString();
 
         // Lấy danh mục để vẽ ô lọc bên trái
-        $categories = Category::all();
+        $categories = Category::active()->orderBy('sort_order')->get();
 
         // Gửi sang view
         return view('plants.index', compact('plants', 'categories'));
@@ -66,10 +66,10 @@ class PlantController extends Controller
     public function show($id)
     {
         // Tìm cây theo id, không thấy thì tự trả về trang 404
-        $plant = Plant::with('category')->findOrFail($id);
+        $plant = Plant::with('category')->active()->findOrFail($id);   // cây ngừng bán -> 404
 
         // Lấy 4 cây cùng mệnh (trừ chính nó) để gợi ý "Cây cùng mệnh"
-        $related = Plant::where('element', $plant->element)
+        $related = Plant::active()->where('element', $plant->element)
             ->where('id', '!=', $plant->id)
             ->take(4)->get();
 

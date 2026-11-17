@@ -2,50 +2,140 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+use App\Enums\ActorType;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentState;
+use App\Enums\PaymentStatus;
+use App\Enums\PaymentType;
+use App\Exceptions\BusinessException;
+use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Services\OrderService;
+use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use RuntimeException;
 
+/** Xử lý đơn: mỗi nút chỉ hiện khi máy trạng thái cho phép; mọi nghiệp vụ nằm ở Service. */
 class OrderController extends Controller
 {
-    // Danh sách đơn hàng (có lọc theo trạng thái ?status=pending)
+    public function __construct(private OrderService $orders, private PaymentService $payments) {}
+
     public function index(Request $request)
     {
-        $query = Order::with('user');                                   // nạp kèm thông tin khách
+        $filters = $request->validate([
+            'status' => ['nullable', Rule::enum(OrderStatus::class)],
+            'payment_status' => ['nullable', Rule::enum(PaymentStatus::class)],
+            'q' => ['nullable', 'string', 'max:50'],
+        ]);
+        $orders = Order::with('user')
+            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
+            ->when($filters['payment_status'] ?? null, fn ($q, $v) => $q->where('payment_status', $v))
+            ->when($filters['q'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w->where('code', 'like', "%{$v}%")
+                ->orWhere('phone', 'like', "%{$v}%")->orWhere('recipient_name', 'like', "%{$v}%")))
+            ->latest('id')->paginate(15)->withQueryString();
 
-        if ($request->filled('status')) {                               // nếu admin chọn lọc trạng thái
-            $query->where('status', $request->status);
-        }
+        $counts = Order::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status');
 
-        $orders = $query->latest()->paginate(10)->withQueryString();    // mới nhất trước, 10 đơn/trang
-        return view('admin.orders.index', compact('orders'));
+        return view('admin.orders.index', compact('orders', 'counts'));
     }
 
-    // Chi tiết 1 đơn
-    public function show($id)
+    public function show(Order $order)
     {
-        $order = Order::with(['user', 'items.plant'])->findOrFail($id); // nạp khách + chi tiết + cây
-        return view('admin.orders.show', compact('order'));
+        $this->orders->expireIfOverdue($order);
+        $order->refresh()->load(['user.tier', 'items.plant', 'payments.creator', 'histories.changedBy', 'redemption']);
+
+        return view('admin.orders.show', [
+            'order' => $order,
+            'refundable' => $this->payments->refundableAmount($order),
+            'pendingRefunds' => $order->payments->where('type', PaymentType::Refund)->where('status', PaymentState::Pending),
+        ]);
     }
 
-    // Đổi trạng thái đơn (kể cả HỦY ĐƠN -> hoàn kho + trả lượt mã giảm giá)
-    public function updateStatus(Request $request, $id, OrderService $orders)
+    public function confirm(Request $request, Order $order)
+    {
+        return $this->run(fn () => $this->orders->confirm($order, $request->user()), 'Đã xác nhận đơn.');
+    }
+
+    public function ship(Request $request, Order $order)
+    {
+        $data = $request->validate(['shipping_carrier' => ['required', 'string', 'max:30'], 'tracking_code' => ['required', 'string', 'max:50']],
+            [], ['shipping_carrier' => 'đơn vị vận chuyển', 'tracking_code' => 'mã vận đơn']);
+
+        return $this->run(fn () => $this->orders->ship($order, $data['shipping_carrier'], $data['tracking_code'], $request->user()), 'Đã giao cho đơn vị vận chuyển.');
+    }
+
+    public function complete(Request $request, Order $order)
+    {
+        return $this->run(fn () => $this->orders->complete($order, $request->user()), 'Đơn đã hoàn thành.');
+    }
+
+    public function cancel(Request $request, Order $order)
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:255']], [], ['reason' => 'lý do hủy']);
+
+        return $this->run(fn () => $this->orders->cancel($order, ActorType::Staff, $request->user(), $data['reason']), 'Đã hủy đơn, hàng đã được trả về kho.');
+    }
+
+    public function returning(Request $request, Order $order)
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:255']], [], ['reason' => 'lý do hoàn hàng']);
+
+        return $this->run(fn () => $this->orders->markReturning($order, ActorType::Staff, $request->user(), $data['reason']), 'Đơn chuyển sang đang hoàn về.');
+    }
+
+    public function cancelReturn(Request $request, Order $order)
+    {
+        $data = $request->validate(['note' => ['required', 'string', 'max:200']], [], ['note' => 'ghi chú']);
+
+        return $this->run(fn () => $this->orders->cancelReturn($order, $request->user(), $data['note']), 'Đã hủy yêu cầu trả hàng, đơn trở lại Hoàn thành.');
+    }
+
+    public function receiveReturn(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status' => ['required', Rule::enum(OrderStatus::class)],
-            'note'   => 'nullable|max:255',
+            'items' => ['required', 'array'],
+            'items.*.good' => ['required', 'integer', 'min:0'],
+            'items.*.damaged' => ['required', 'integer', 'min:0'],
+            'refund_amount' => ['nullable', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
+        return $this->run(fn () => $this->orders->receiveReturn($order, $data['items'], $request->user(),
+            isset($data['refund_amount']) ? (int) $data['refund_amount'] : null, $data['note'] ?? null), 'Đã nhận hàng hoàn về kho.');
+    }
+
+    public function confirmTransfer(Request $request, Order $order)
+    {
+        $data = $request->validate(['amount' => ['required', 'integer', 'min:1'], 'bank_ref' => ['required', 'string', 'max:60']],
+            [], ['amount' => 'số tiền nhận được', 'bank_ref' => 'mã giao dịch ngân hàng']);
+
+        return $this->run(fn () => $this->payments->confirmBankTransfer($order, (int) $data['amount'], $data['bank_ref'], $request->user()), 'Đã xác nhận nhận tiền chuyển khoản.');
+    }
+
+    public function requestRefund(Request $request, Order $order)
+    {
+        $data = $request->validate(['amount' => ['required', 'integer', 'min:1'], 'note' => ['required', 'string', 'max:200']],
+            [], ['amount' => 'số tiền hoàn', 'note' => 'lý do hoàn tiền']);
+
+        return $this->run(fn () => $this->payments->requestRefund($order, (int) $data['amount'], $request->user(), $data['note']), 'Đã tạo yêu cầu hoàn tiền.');
+    }
+
+    public function confirmRefund(Request $request, Payment $payment)
+    {
+        $data = $request->validate(['provider_ref' => ['required', 'string', 'max:60']], [], ['provider_ref' => 'mã giao dịch hoàn tiền']);
+
+        return $this->run(fn () => $this->payments->confirmRefund($payment, $request->user(), $data['provider_ref']), 'Đã xác nhận hoàn tiền cho khách.');
+    }
+
+    private function run(callable $action, string $success)
+    {
         try {
-            $order = $orders->changeStatus(Order::findOrFail($id), OrderStatus::from($data['status']), $request->user(), $data['note'] ?? null);
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            $action();
+        } catch (BusinessException $e) {
+            return back()->with('error', $e->getMessage())->withInput();
         }
 
-        return back()->with('success', 'Đã cập nhật trạng thái đơn #'.$order->id.' thành "'.Order::STATUSES[$order->status].'".');
+        return back()->with('success', $success);
     }
 }

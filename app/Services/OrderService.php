@@ -41,6 +41,9 @@ class OrderService
         if ($data->cart === []) {
             throw new BusinessException('Giỏ hàng đang trống!');
         }
+        if (! $data->paymentMethod->isAvailable()) {
+            throw new BusinessException('Phương thức thanh toán này hiện không khả dụng.');
+        }
 
         try {
             return DB::transaction(function () use ($user, $data) {
@@ -176,6 +179,9 @@ class OrderService
     public function complete(Order $order, User $by): Order
     {
         return $this->locked($order, function (Order $o) use ($by) {
+            if ($o->status !== OrderStatus::Shipping) {                     // Returning -> Completed là "hủy trả hàng", không phải giao thành công
+                throw new BusinessException("Đơn {$o->code} không ở trạng thái đang giao.");
+            }
             $this->payments->settleCod($o);
 
             return $this->state->transition($o, OrderStatus::Completed, ActorType::Staff, $by->id, null,
@@ -283,6 +289,18 @@ class OrderService
             }
 
             return $this->state->transition($o, OrderStatus::Returning, $actor, $by?->id, $reason);
+        });
+    }
+
+    /** Khách đổi ý không trả nữa (hàng chưa gửi về): đơn đã nhận quay lại "Hoàn thành". Chỉ áp cho đơn đi từ Hoàn thành. */
+    public function cancelReturn(Order $order, User $by, string $note): Order
+    {
+        return $this->locked($order, function (Order $o) use ($by, $note) {
+            if ($o->status !== OrderStatus::Returning || $o->completed_at === null) {
+                throw new BusinessException("Đơn {$o->code} không có yêu cầu trả hàng nào có thể hủy (đơn giao thất bại phải nhận hàng hoàn về kho).");
+            }
+
+            return $this->state->transition($o, OrderStatus::Completed, ActorType::Staff, $by->id, "Hủy yêu cầu trả hàng: {$note}");
         });
     }
 

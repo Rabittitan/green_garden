@@ -54,7 +54,7 @@ enum OrderStatus: string
             self::Confirmed => [self::Shipping, self::Cancelled],
             self::Shipping => [self::Completed, self::Returning],
             self::Completed => [self::Returning],
-            self::Returning => [self::Returned],
+            self::Returning => [self::Returned, self::Completed],   // Completed: khách hủy yêu cầu trả hàng
             self::Returned, self::Cancelled => [],
         };
     }

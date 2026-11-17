@@ -2,73 +2,64 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\BusinessException;
 use App\Models\Plant;
+use App\Services\CartService;
 use Illuminate\Http\Request;
 
+/** Giỏ hàng (session). Giá hiển thị luôn lấy từ DB. */
 class CartController extends Controller
 {
-    // Xem giỏ hàng
+    public function __construct(private CartService $cart) {}
+
     public function index()
     {
-        $cart = session('cart', []);              // lấy giỏ từ session, chưa có thì là mảng rỗng
-        $total = 0;                               // tổng tiền ban đầu bằng 0
-        foreach ($cart as $item) {                // duyệt từng món trong giỏ
-            $total += $item['price'] * $item['quantity']; // cộng dồn: giá x số lượng
+        foreach ($this->cart->reconcile() as $notice) {
+            session()->now('warning', $notice);
         }
-        return view('cart.index', compact('cart', 'total')); // gửi sang view giỏ hàng
+        $items = $this->cart->items();
+        $plants = Plant::whereIn('id', array_keys($items))->get()->keyBy('id');
+        $lines = collect($items)->map(fn ($qty, $id) => ['plant' => $plants[$id], 'quantity' => $qty, 'total' => $plants[$id]->price * $qty]);
+
+        return view('cart.index', ['lines' => $lines, 'subtotal' => $lines->sum('total')]);
     }
 
-    // Thêm cây vào giỏ
-    public function add(Request $request, $id)
+    public function add(Request $request, int $id)
     {
-        $plant = Plant::findOrFail($id);                       // tìm cây trong DB, không có thì 404
-        $cart = session('cart', []);                           // lấy giỏ hiện tại
-        $qty = max(1, (int) $request->input('quantity', 1));   // số lượng muốn thêm, tối thiểu là 1
-        $current = isset($cart[$id]) ? $cart[$id]['quantity'] : 0; // số lượng cây này đang có sẵn trong giỏ
-
-        if ($current + $qty > $plant->stock) {                 // nếu tổng vượt quá tồn kho
-            return back()->with('error', "Chỉ còn {$plant->stock} cây \"{$plant->name}\" trong kho!"); // báo lỗi và quay lại
+        $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:1', 'max:999']]);
+        $plant = Plant::findOrFail($id);
+        try {
+            $this->cart->add($plant, (int) ($data['quantity'] ?? 1));
+        } catch (BusinessException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        if (isset($cart[$id])) {                               // nếu cây đã có trong giỏ
-            $cart[$id]['quantity'] += $qty;                    // thì cộng thêm số lượng
-        } else {                                               // nếu chưa có
-            $cart[$id] = ['name' => $plant->name, 'price' => $plant->price, 'image' => $plant->image, 'quantity' => $qty]; // thêm mới
-        }
-
-        session(['cart' => $cart]);                            // lưu giỏ ngược lại vào session
-        return back()->with('success', "Đã thêm \"{$plant->name}\" vào giỏ hàng!"); // quay lại kèm thông báo
+        return back()->with('success', "Đã thêm \"{$plant->name}\" vào giỏ hàng!");
     }
 
-    // Tăng / giảm số lượng (nút + và - trong giỏ)
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $cart = session('cart', []);                           // lấy giỏ hiện tại
-        if (isset($cart[$id])) {                               // chỉ xử lý nếu cây có trong giỏ
-            if ($request->action === 'increase') {             // bấm nút +
-                $stock = Plant::find($id)->stock;              // lấy tồn kho thật từ DB
-                if ($cart[$id]['quantity'] < $stock) {         // còn hàng thì mới cho tăng
-                    $cart[$id]['quantity']++;                  // tăng 1
-                } else {
-                    return back()->with('error', 'Đã đạt số lượng tối đa trong kho!'); // hết hàng thì báo lỗi
-                }
-            } else {                                           // bấm nút -
-                $cart[$id]['quantity']--;                      // giảm 1
-                if ($cart[$id]['quantity'] <= 0) {             // nếu giảm về 0
-                    unset($cart[$id]);                         // thì xóa luôn khỏi giỏ
-                }
-            }
+        $data = $request->validate(['quantity' => ['nullable', 'integer', 'min:0', 'max:999'], 'action' => ['nullable', 'in:increase,decrease']]);
+        $plant = Plant::withTrashed()->findOrFail($id);
+        $current = $this->cart->items()[$id] ?? 0;
+        $qty = match ($data['action'] ?? null) {
+            'increase' => $current + 1,
+            'decrease' => $current - 1,
+            default => (int) ($data['quantity'] ?? $current),
+        };
+        try {
+            $this->cart->setQuantity($plant, $qty);
+        } catch (BusinessException $e) {
+            return back()->with('error', $e->getMessage());
         }
-        session(['cart' => $cart]);                            // lưu lại giỏ
-        return back();                                         // quay lại trang giỏ hàng
+
+        return back();
     }
 
-    // Xóa 1 cây khỏi giỏ
-    public function remove($id)
+    public function remove(int $id)
     {
-        $cart = session('cart', []);                           // lấy giỏ hiện tại
-        unset($cart[$id]);                                     // xóa cây có key = id
-        session(['cart' => $cart]);                            // lưu lại giỏ
-        return back()->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng.'); // quay lại kèm thông báo
+        $this->cart->remove($id);
+
+        return back()->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng.');
     }
 }

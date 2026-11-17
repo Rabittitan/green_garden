@@ -14,7 +14,7 @@ class OrderStatusTest extends TestCase
         'confirmed' => ['shipping', 'cancelled'],
         'shipping' => ['completed', 'returning'],
         'completed' => ['returning'],
-        'returning' => ['returned'],
+        'returning' => ['returned', 'completed'],
         'returned' => [],
         'cancelled' => [],
     ];

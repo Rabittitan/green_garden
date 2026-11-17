@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -10,38 +12,25 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    // Trang thống kê
     public function index()
     {
-        // Tổng doanh thu = cộng tổng tiền của các đơn ĐÃ HOÀN THÀNH (đơn hủy/đang xử lý chưa tính)
-        $totalRevenue = Order::where('status', 'completed')->sum('total');
+        $completed = Order::status(OrderStatus::Completed);
 
-        // Tổng số đơn hàng (tất cả trạng thái)
-        $totalOrders = Order::count();
-
-        // Số đơn đang chờ xử lý (để admin biết còn việc cần làm)
-        $pendingOrders = Order::where('status', 'pending')->count();
-
-        // Tổng số loại cây đang bán
-        $totalPlants = Plant::count();
-
-        // Top 5 cây bán chạy: gom nhóm theo cây, cộng tổng số lượng bán, chỉ tính đơn hoàn thành
-        $topPlants = OrderItem::select('plant_id', DB::raw('SUM(quantity) as sold')) // chọn id cây và tổng số lượng bán (đặt tên là sold)
-            ->whereHas('order', function ($q) {                // chỉ lấy dòng thuộc đơn
-                $q->where('status', 'completed');              // đã hoàn thành
-            })
-            ->groupBy('plant_id')                              // gom nhóm theo từng cây
-            ->orderByDesc('sold')                              // bán nhiều nhất lên đầu
-            ->with('plant')                                    // nạp thông tin cây để hiện tên, ảnh
-            ->take(5)                                          // lấy 5 cây
-            ->get();
-
-        // Cây sắp hết hàng (tồn kho <= 5) để nhắc admin nhập thêm
-        $lowStock = Plant::where('stock', '<=', 5)->orderBy('stock')->get();
-
-        // 5 đơn mới nhất
-        $latestOrders = Order::latest()->take(5)->get();
-
-        return view('admin.dashboard', compact('totalRevenue', 'totalOrders', 'pendingOrders', 'totalPlants', 'topPlants', 'lowStock', 'latestOrders'));
+        return view('admin.dashboard', [
+            // Doanh thu hàng hóa: tiền hàng sau mọi giảm giá của đơn đã hoàn thành (không gồm phí ship)
+            'revenue' => (int) (clone $completed)->sum(DB::raw('subtotal - member_discount - coupon_discount')),
+            'refunded' => (int) Order::sum('refunded_amount'),
+            // Tiền thực thu = đã thu - đã hoàn (mọi đơn)
+            'cashIn' => (int) Order::sum(DB::raw('CAST(paid_amount AS SIGNED) - CAST(refunded_amount AS SIGNED)')),
+            'cogs' => (int) OrderItem::whereHas('order', fn ($q) => $q->where('status', OrderStatus::Completed->value))
+                ->sum(DB::raw('unit_cost * quantity')),
+            'counts' => Order::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),
+            'needRefund' => Order::where('payment_status', PaymentStatus::RefundPending->value)->count(),
+            'topPlants' => OrderItem::select('plant_id', 'plant_name', DB::raw('SUM(quantity) as sold'))
+                ->whereHas('order', fn ($q) => $q->where('status', OrderStatus::Completed->value))
+                ->groupBy('plant_id', 'plant_name')->orderByDesc('sold')->take(5)->get(),
+            'lowStock' => Plant::active()->needsReorder()->orderBy('stock')->take(10)->get(),
+            'latestOrders' => Order::latest('id')->take(8)->get(),
+        ]);
     }
 }
