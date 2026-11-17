@@ -11,7 +11,7 @@ class ArticleSeeder extends Seeder
     public function run(): void
     {
         // Hàm nhỏ tạo link ảnh Unsplash cho gọn
-        $img = fn($id) => "https://images.unsplash.com/photo-$id?w=800&q=80";
+        $img = fn ($id) => "https://images.unsplash.com/photo-$id?w=800&q=80";
 
         $articles = [
             [

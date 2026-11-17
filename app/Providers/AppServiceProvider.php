@@ -2,34 +2,55 @@
 
 namespace App\Providers;
 
-use Illuminate\Pagination\Paginator; 
+use App\Enums\PaymentMethod;
 use App\Models\Article;
-use App\Models\GoodsReceipt;
-use App\Models\Order;
 use App\Models\Plant;
 use App\Models\User;
+use App\Services\CartService;
+use App\Services\Payments\DisabledGateway;
+use App\Services\Payments\FakeGateway;
+use App\Services\Payments\PaymentGateway;
+use App\Services\Payments\VnpayGateway;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Cổng thanh toán online: 'vnpay' (sandbox / thật), 'fake' (CHỈ local/testing), còn lại: tắt hẳn
+        $this->app->bind(PaymentGateway::class, function () {
+            $cfg = config('shop.vnpay');
+
+            return match (PaymentMethod::onlineGatewayMode()) {
+                'vnpay' => new VnpayGateway((string) $cfg['tmn_code'], (string) $cfg['hash_secret'], (string) $cfg['url'], (string) $cfg['version']),
+                'fake' => new FakeGateway((string) config('app.key'), url('/thanh-toan/gia-lap')),
+                default => new DisabledGateway,
+            };
+        });
     }
 
     public function boot(): void
     {
 
-        Paginator::useBootstrapFive(); 
-        // Lưu 'plant' thay vì 'App\Models\Plant' trong các cột *_type (comments, stock_movements).
+        Paginator::useBootstrapFive();
+
+        // @money($v) -> 250.000đ   |   @vndt($date) -> giờ Việt Nam
+        Blade::directive('money', fn ($e) => "<?php echo e(\\App\\Support\\Format::money({$e})); ?>");
+        Blade::directive('vndt', fn ($e) => "<?php echo e(\\App\\Support\\Format::datetime({$e})); ?>");
+
+        // Số loại cây trong giỏ cho thanh menu
+        View::composer('layouts.app', fn ($view) => $view->with('cartCount', app(CartService::class)->count()));
+        // Lưu 'plant' thay vì 'App\Models\Plant' trong comments.commentable_type.
+        // (Sổ kho đã dùng FK thật order_item_id / goods_receipt_item_id, không còn quan hệ đa hình.)
         Relation::enforceMorphMap([
             'plant' => Plant::class,
             'article' => Article::class,
-            'order' => Order::class,
-            'goods_receipt' => GoodsReceipt::class,
             'user' => User::class,
         ]);
 

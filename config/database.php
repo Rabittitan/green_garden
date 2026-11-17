@@ -56,6 +56,9 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
+            // READ COMMITTED: tránh gap lock (nguồn deadlock giữa đặt hàng và hủy đơn).
+            // Tính đúng đắn dựa vào khóa dòng tường minh (lockForUpdate) theo thứ tự cố định, không dựa vào snapshot.
+            'isolation_level' => env('DB_ISOLATION_LEVEL', 'READ COMMITTED'),
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
@@ -76,6 +79,9 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
+            // READ COMMITTED: tránh gap lock (nguồn deadlock giữa đặt hàng và hủy đơn).
+            // Tính đúng đắn dựa vào khóa dòng tường minh (lockForUpdate) theo thứ tự cố định, không dựa vào snapshot.
+            'isolation_level' => env('DB_ISOLATION_LEVEL', 'READ COMMITTED'),
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),

@@ -1,6 +1,6 @@
 @php
     $money = fn ($v) => number_format((int) $v, 0, ',', '.').'đ';
-    $code = $order->code ?? '#'.$order->id;
+    $code = $order->code;
 @endphp
 <!DOCTYPE html>
 <html lang="vi">
@@ -19,9 +19,14 @@
     <tr><td style="padding:24px">
         <h2 style="margin:0 0 8px;color:#2e7d32;font-size:20px">Đặt hàng thành công!</h2>
         <p style="margin:0 0 16px;line-height:1.6">
-            Xin chào <strong>{{ $order->customer_name }}</strong>,<br>
+            Xin chào <strong>{{ $order->recipient_name }}</strong>,<br>
             Cảm ơn bạn đã mua cây tại GreenGarden. Đơn hàng <strong>{{ $code }}</strong> đã được ghi nhận
-            lúc {{ $order->created_at->format('H:i d/m/Y') }} và đang chờ shop xác nhận.
+            lúc {{ \App\Support\Format::datetime($order->placed_at, 'H:i d/m/Y') }}.
+            @if($order->status === \App\Enums\OrderStatus::PendingPayment)
+                Vui lòng thanh toán trước {{ \App\Support\Format::datetime($order->payment_expires_at, 'H:i d/m/Y') }}, quá hạn đơn sẽ tự hủy.
+            @else
+                Đơn đang chờ shop xác nhận.
+            @endif
         </p>
 
         {{-- Chi tiết sản phẩm --}}
@@ -31,24 +36,27 @@
             </tr>
             @foreach($order->items as $item)
                 <tr style="border-bottom:1px solid #eee">
-                    <td>{{ $item->plant_name ?? $item->plant?->name }}</td>
+                    <td>{{ $item->plant_name }}</td>
                     <td align="center">{{ $item->quantity }}</td>
-                    <td align="right">{{ $money($item->price) }}</td>
-                    <td align="right">{{ $money($item->price * $item->quantity) }}</td>
+                    <td align="right">{{ $money($item->unit_price) }}</td>
+                    <td align="right">{{ $money($item->unit_price * $item->quantity) }}</td>
                 </tr>
             @endforeach
         </table>
 
-        {{-- Tổng tiền: các cột subtotal/discount/shipping có ở DB v2, nếu chưa có thì chỉ hiện tổng --}}
         <table width="100%" cellpadding="4" cellspacing="0" style="font-size:14px;margin-top:8px">
-            @if(isset($order->subtotal) && $order->subtotal > 0)
-                <tr><td align="right">Tạm tính:</td><td align="right" width="140">{{ $money($order->subtotal) }}</td></tr>
-                @if($order->discount_amount > 0)
-                    <tr><td align="right">Giảm giá{{ $order->coupon_code ? ' ('.$order->coupon_code.')' : '' }}:</td>
-                        <td align="right" style="color:#c62828">-{{ $money($order->discount_amount) }}</td></tr>
-                @endif
-                <tr><td align="right">Phí vận chuyển:</td>
-                    <td align="right">{{ $order->shipping_fee > 0 ? $money($order->shipping_fee) : 'Miễn phí' }}</td></tr>
+            <tr><td align="right">Tạm tính:</td><td align="right" width="140">{{ $money($order->subtotal) }}</td></tr>
+            @if($order->member_discount > 0)
+                <tr><td align="right">Ưu đãi hạng thành viên ({{ $order->member_discount_percent }}%):</td>
+                    <td align="right" style="color:#c62828">-{{ $money($order->member_discount) }}</td></tr>
+            @endif
+            @if($order->coupon_discount > 0)
+                <tr><td align="right">Mã {{ $order->coupon_code }}:</td><td align="right" style="color:#c62828">-{{ $money($order->coupon_discount) }}</td></tr>
+            @endif
+            <tr><td align="right">Phí vận chuyển:</td>
+                <td align="right">{{ $order->shipping_fee > 0 ? $money($order->shipping_fee) : 'Miễn phí' }}</td></tr>
+            @if($order->shipping_discount > 0)
+                <tr><td align="right">Giảm phí ship:</td><td align="right" style="color:#c62828">-{{ $money($order->shipping_discount) }}</td></tr>
             @endif
             <tr><td align="right" style="font-size:16px;font-weight:bold">Tổng thanh toán:</td>
                 <td align="right" style="font-size:18px;font-weight:bold;color:#2e7d32">{{ $money($order->total) }}</td></tr>
@@ -57,15 +65,15 @@
         {{-- Thông tin giao hàng --}}
         <div style="margin-top:20px;padding:12px 16px;background:#f8faf8;border-left:4px solid #2e7d32;font-size:14px;line-height:1.7">
             <strong>Thông tin giao hàng</strong><br>
-            Người nhận: {{ $order->customer_name }}<br>
+            Người nhận: {{ $order->recipient_name }}<br>
             Số điện thoại: {{ $order->phone }}<br>
-            Địa chỉ: {{ $order->address }}<br>
+            Địa chỉ: {{ $order->full_address }}<br>
             @if($order->note) Ghi chú: {{ $order->note }}<br> @endif
-            Thanh toán: Thanh toán khi nhận hàng (COD)
+            Thanh toán: {{ $order->payment_method->label() }}
         </div>
 
         <p style="text-align:center;margin:24px 0 8px">
-            <a href="{{ route('orders.show', $order->id) }}"
+            <a href="{{ route('orders.show', $order) }}"
                style="background:#2e7d32;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;display:inline-block;font-weight:bold">
                 Xem chi tiết đơn hàng
             </a>

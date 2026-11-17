@@ -27,6 +27,25 @@ enum PurchaseRequestStatus: string
         };
     }
 
+    public function color(): string
+    {
+        return match ($this) {
+            self::Draft => 'secondary',
+            self::Submitted => 'warning',
+            self::Approved, self::Ordered => 'info',
+            self::PartiallyReceived => 'primary',
+            self::Received => 'success',
+            self::Rejected, self::Cancelled => 'danger',
+        };
+    }
+
+    /** Đang chờ hàng về: được lập / hoàn tất phiếu nhập cho yêu cầu này. */
+    public function isReceivable(): bool
+    {
+        return in_array($this, [self::Approved, self::Ordered, self::PartiallyReceived], true);
+    }
+
+    /** Chuyển trạng thái THỦ CÔNG (các trạng thái "đã nhận" do phiếu nhập tự đặt, không qua đây). */
     public function canTransitionTo(self $to): bool
     {
         return in_array($to, match ($this) {
@@ -34,7 +53,7 @@ enum PurchaseRequestStatus: string
             self::Submitted => [self::Approved, self::Rejected, self::Draft],
             self::Approved => [self::Ordered, self::Cancelled],
             self::Ordered => [self::PartiallyReceived, self::Received, self::Cancelled],
-            self::PartiallyReceived => [self::Received],
+            self::PartiallyReceived => [self::Received],   // đóng yêu cầu: chấp nhận NCC giao thiếu
             self::Rejected, self::Received, self::Cancelled => [],
         }, true);
     }

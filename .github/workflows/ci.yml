@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: Test (PHP 8.4 + MySQL 8)
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: green_life_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, bcmath
+          coverage: none
+      - name: Cài thư viện
+        run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Chuẩn bị .env
+        run: cp .env.example .env && php artisan key:generate
+      - name: Kiểm tra định dạng (Pint)
+        run: vendor/bin/pint --test
+      - name: Chạy test (gồm test đồng thời nhiều tiến trình)
+        run: php artisan test
+      - name: Migrate + seed + đối soát trên DB sạch
+        env:
+          DB_DATABASE: green_life_test
+        run: |
+          php artisan migrate:fresh --seed --force
+          php artisan shop:reconcile
+
+  static-analysis:
+    name: Larastan level 6
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: cp .env.example .env && php artisan key:generate
+      - name: Phân tích tĩnh (chặn merge nếu có lỗi)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G

@@ -49,7 +49,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // Hàm nhỏ tạo link ảnh Unsplash cho gọn
-        $img = fn($id) => "https://images.unsplash.com/photo-$id?w=600&q=80";
+        $img = fn ($id) => "https://images.unsplash.com/photo-$id?w=600&q=80";
 
         // ===== 3. 15 cây cảnh: [category_id, tên, giá, tồn kho, ánh sáng, mệnh, ảnh, mô tả] =====
         $plants = [
@@ -80,31 +80,35 @@ class DatabaseSeeder extends Seeder
                 'light' => $p[4], 'element' => $p[5], 'image' => $p[6], 'description' => $p[7],
                 'created_at' => $now, 'updated_at' => $now,
             ]);
-            if ($p[3] > 0) {
-                DB::table('stock_movements')->insert([
-                    'plant_id' => $plantId, 'type' => 'opening', 'quantity' => $p[3], 'stock_after' => $p[3],
-                    'unit_cost' => $costPrice, 'note' => 'Tồn đầu kỳ', 'created_at' => $now,
-                ]);
-            }
+            DB::table('stock_movements')->insert([                      // mọi cây mẫu đều có tồn đầu > 0
+                'plant_id' => $plantId, 'type' => 'opening', 'quantity' => $p[3], 'stock_after' => $p[3],
+                'unit_cost' => $costPrice, 'note' => 'Tồn đầu kỳ', 'created_at' => $now,
+            ]);
         }
 
         // ===== 4. Mã giảm giá mẫu =====
         $silverTier = DB::table('membership_tiers')->where('code', 'silver')->value('id');
         DB::table('coupons')->insert([
             ['code' => 'CHAOBAN', 'name' => 'Giảm 50.000đ đơn đầu tiên', 'type' => 'fixed', 'value' => 50000,
-             'max_discount_amount' => null, 'min_order_amount' => 300000, 'min_tier_id' => null, 'combinable_with_tier' => true,
-             'first_order_only' => true, 'created_at' => $now, 'updated_at' => $now],
+                'max_discount_amount' => null, 'min_order_amount' => 300000, 'min_tier_id' => null, 'combinable_with_tier' => true,
+                'first_order_only' => true, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'GIAM10', 'name' => 'Giảm 10% tối đa 100.000đ cho hạng Bạc trở lên', 'type' => 'percent', 'value' => 10,
-             'max_discount_amount' => 100000, 'min_order_amount' => 0, 'min_tier_id' => $silverTier, 'combinable_with_tier' => false,
-             'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
+                'max_discount_amount' => 100000, 'min_order_amount' => 0, 'min_tier_id' => $silverTier, 'combinable_with_tier' => false,
+                'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
             ['code' => 'FREESHIP', 'name' => 'Miễn phí vận chuyển', 'type' => 'free_shipping', 'value' => 0,
-             'max_discount_amount' => null, 'min_order_amount' => 150000, 'min_tier_id' => null, 'combinable_with_tier' => true,
-             'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
+                'max_discount_amount' => null, 'min_order_amount' => 150000, 'min_tier_id' => null, 'combinable_with_tier' => true,
+                'first_order_only' => false, 'created_at' => $now, 'updated_at' => $now],
         ]);
 
-        // ===== 5. Bài viết =====
+        // ===== 5. Nhà cung cấp mẫu =====
+        DB::table('suppliers')->insert([
+            ['code' => 'NCC-001', 'name' => 'Vườn ươm Đà Lạt Xanh', 'contact_name' => 'Anh Minh', 'phone' => '0911000001',
+                'address' => 'Đà Lạt, Lâm Đồng', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'NCC-002', 'name' => 'Nhà vườn Củ Chi', 'contact_name' => 'Chị Lan', 'phone' => '0911000002',
+                'address' => 'Củ Chi, TP.HCM', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+        ]);
+
+        // ===== 6. Bài viết =====
         $this->call(ArticleSeeder::class);
     }
-
-    
 }

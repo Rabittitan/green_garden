@@ -27,13 +27,14 @@
                     </form>
                 @endif
 
-                <div class="text-muted small mt-2">Thành viên từ {{ $user->created_at->format('d/m/Y') }}</div>
+                <div class="text-muted small mt-2">Thành viên từ @vndt($user->created_at)</div>
+                <a href="{{ route('account.membership') }}" class="badge bg-warning text-dark text-decoration-none mt-2"><i class="fa fa-crown"></i> Hạng {{ $user->tier->name }}</a>
             </div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item d-flex justify-content-between"><span>Tổng số đơn</span><strong>{{ $stats['orders'] }}</strong></li>
                 <li class="list-group-item d-flex justify-content-between"><span>Đơn hoàn thành</span><strong>{{ $stats['completed'] }}</strong></li>
-                <li class="list-group-item d-flex justify-content-between"><span>Đã chi tiêu</span>
-                    <strong class="text-green">{{ number_format($stats['spent'], 0, ',', '.') }}đ</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Tổng chi tiêu (xét hạng)</span>
+                    <strong class="text-green">@money($stats['spent'])</strong></li>
             </ul>
         </div>
 
@@ -41,19 +42,18 @@
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white fw-bold d-flex justify-content-between">
                 <span>Đơn gần đây</span>
-                <a href="{{ route('orders.history') }}" class="small text-green text-decoration-none">Xem tất cả</a>
+                <a href="{{ route('orders.index') }}" class="small text-green text-decoration-none">Xem tất cả</a>
             </div>
             <ul class="list-group list-group-flush">
                 @forelse($latestOrders as $order)
-                    @php $color = ['pending'=>'warning','shipping'=>'info','completed'=>'success','cancelled'=>'danger'][$order->status] ?? 'secondary'; @endphp
-                    <a href="{{ route('orders.show', $order->id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <a href="{{ route('orders.show', $order) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                         <span>
-                            <strong>{{ $order->code ?? '#'.$order->id }}</strong><br>
-                            <small class="text-muted">{{ $order->created_at->format('d/m/Y') }}</small>
+                            <strong>{{ $order->code }}</strong><br>
+                            <small class="text-muted">@vndt($order->placed_at)</small>
                         </span>
                         <span class="text-end">
-                            <span class="badge bg-{{ $color }}">{{ \App\Models\Order::STATUSES[$order->status] }}</span><br>
-                            <small>{{ number_format($order->total, 0, ',', '.') }}đ</small>
+                            <span class="badge bg-{{ $order->status->color() }}">{{ $order->status->label() }}</span><br>
+                            <small>@money($order->total)</small>
                         </span>
                     </a>
                 @empty
@@ -93,10 +93,8 @@
                             @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Địa chỉ giao hàng mặc định</label>
-                            <input type="text" name="address" value="{{ old('address', $user->address) }}"
-                                   class="form-control @error('address') is-invalid @enderror">
-                            @error('address') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            <label class="form-label">Địa chỉ giao hàng</label>
+                            <div><a href="{{ route('addresses.index') }}" class="btn btn-outline-green"><i class="fa fa-location-dot"></i> Quản lý sổ địa chỉ</a></div>
                         </div>
                     </div>
                     <button class="btn btn-green"><i class="fa fa-floppy-disk"></i> Lưu thay đổi</button>

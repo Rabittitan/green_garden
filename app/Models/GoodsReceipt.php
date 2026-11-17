@@ -4,7 +4,25 @@ namespace App\Models;
 
 use App\Enums\GoodsReceiptStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $code
+ * @property int|null $purchase_request_id
+ * @property int $supplier_id
+ * @property GoodsReceiptStatus $status
+ * @property string|null $supplier_invoice_no
+ * @property int $total_cost
+ * @property int $received_by
+ * @property Carbon|null $received_at
+ * @property string|null $note
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class GoodsReceipt extends Model
 {
     protected $fillable = [
@@ -17,9 +35,33 @@ class GoodsReceipt extends Model
         return ['status' => GoodsReceiptStatus::class, 'received_at' => 'datetime'];
     }
 
-    public function purchaseRequest() { return $this->belongsTo(PurchaseRequest::class); }
-    public function supplier()        { return $this->belongsTo(Supplier::class)->withTrashed(); }
-    public function receiver()        { return $this->belongsTo(User::class, 'received_by'); }
-    public function items()           { return $this->hasMany(GoodsReceiptItem::class); }
-    public function stockMovements()  { return $this->morphMany(StockMovement::class, 'reference'); }
+    /** @return BelongsTo<PurchaseRequest, $this> */
+    public function purchaseRequest(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseRequest::class);
+    }
+
+    /** @return BelongsTo<Supplier, $this> */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function receiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
+    /** @return HasMany<GoodsReceiptItem, $this> */
+    public function items(): HasMany
+    {
+        return $this->hasMany(GoodsReceiptItem::class);
+    }
+
+    /** @return HasManyThrough<StockMovement, GoodsReceiptItem, $this> */
+    public function stockMovements(): HasManyThrough
+    {
+        return $this->hasManyThrough(StockMovement::class, GoodsReceiptItem::class);
+    }
 }

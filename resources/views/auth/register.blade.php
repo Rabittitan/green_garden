@@ -35,10 +35,7 @@
                         <label class="form-label">Số điện thoại</label>
                         <input type="text" name="phone" value="{{ old('phone') }}" class="form-control">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Địa chỉ</label>
-                        <input type="text" name="address" value="{{ old('address') }}" class="form-control">
-                    </div>
+                    
                     <button class="btn btn-green w-100">Đăng ký</button>
                 </form>
             </div>

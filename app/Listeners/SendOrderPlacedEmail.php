@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\OrderPlaced;
 use App\Mail\OrderPlacedMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -20,13 +21,15 @@ use Illuminate\Support\Facades\Mail;
 class SendOrderPlacedEmail implements ShouldQueue
 {
     public int $tries = 3;               // gửi lỗi thì thử lại tối đa 3 lần
+
+    /** @var list<int> */
     public array $backoff = [60, 300];   // lần 2 sau 1 phút, lần 3 sau 5 phút
 
     public function handle(OrderPlaced $event): void
     {
         $order = $event->order->loadMissing(['user', 'items.plant']);
 
-        Mail::to($order->user->email, $order->customer_name)->send(new OrderPlacedMail($order));
+        Mail::to(new Address($order->user->email, $order->recipient_name))->send(new OrderPlacedMail($order));
     }
 
     public function failed(OrderPlaced $event, \Throwable $e): void

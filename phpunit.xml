@@ -28,6 +28,8 @@
         <env name="DB_CONNECTION" value="mysql"/>
         <env name="DB_DATABASE" value="green_life_test"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="PAYMENT_GATEWAY" value="fake"/>
+        <env name="SHOP_BANK_ACCOUNT_NO" value="0123456789"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
