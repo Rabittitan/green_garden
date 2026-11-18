@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Services\Pricing\QuoteLine;
 use App\Support\Allocator;
+use App\Support\Format;
 
 /**
  * Phiếu giảm giá.
@@ -71,7 +72,7 @@ class CouponService
 
         $subtotal = array_sum(array_map(fn (QuoteLine $l) => $l->subtotal(), $lines));
         if ($subtotal < $coupon->min_order_amount) {
-            throw new CouponNotApplicableException('Đơn hàng chưa đạt giá trị tối thiểu '.number_format($coupon->min_order_amount, 0, ',', '.').'đ để dùng mã.');
+            throw new CouponNotApplicableException('Đơn hàng chưa đạt giá trị tối thiểu '.Format::money($coupon->min_order_amount).' để dùng mã.');
         }
 
         if ($coupon->type !== CouponType::FreeShipping && $this->eligibleLines($coupon, $lines) === []) {

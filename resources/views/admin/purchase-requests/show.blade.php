@@ -5,7 +5,7 @@
 @use('App\Enums\PurchaseRequestStatus', 'PR')
 @php
     $me = auth()->user();
-    $isAdmin = $me->role === \App\Enums\UserRole::Admin;
+    $isAdmin = $me->isAdmin();
     $canDecide = $isAdmin && $pr->status === PR::Submitted && $pr->requested_by !== $me->id;
 @endphp
 <a href="{{ route('admin.purchase-requests.index') }}" class="text-green text-decoration-none"><i class="fa fa-arrow-left"></i> Yêu cầu nhập</a>

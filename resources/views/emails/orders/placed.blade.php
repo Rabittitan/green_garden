@@ -1,5 +1,5 @@
 @php
-    $money = fn ($v) => number_format((int) $v, 0, ',', '.').'đ';
+    $money = fn ($v) => \App\Support\Format::money($v);
     $code = $order->code;
 @endphp
 <!DOCTYPE html>
