@@ -22,7 +22,7 @@ class TierController extends Controller
         return view('admin.tiers.index', ['tiers' => MembershipTier::ordered()->withCount('users')->get()]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, MembershipService $membership): RedirectResponse
     {
         $tiers = MembershipTier::ordered()->get();
         $rules = [];
@@ -56,7 +56,7 @@ class TierController extends Controller
         });
 
         // Ngưỡng thấp đi -> khách đủ điều kiện được nâng ngay (hạng không bao giờ tự hạ)
-        $upgraded = app(MembershipService::class)->recalculateAll();
+        $upgraded = $membership->recalculateAll();
 
         return back()->with('success', 'Đã lưu cấu hình hạng thành viên.'.($upgraded ? " {$upgraded} khách được nâng hạng." : ''));
     }

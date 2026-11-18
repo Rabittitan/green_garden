@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
-use App\Enums\PaymentState;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use Illuminate\Database\Eloquent\Builder;
@@ -156,7 +155,7 @@ class Order extends Model
     /** Charge đang chờ (tối đa 1, DB đảm bảo). */
     public function pendingCharge(): ?Payment
     {
-        return $this->charges()->where('status', PaymentState::Pending->value)->first();
+        return $this->charges()->pending()->first();
     }
 
     // ---------------------------------------------------------------- số tiền

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
 use App\Models\MembershipTier;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class MembershipController extends Controller
     {
         $user = $request->user()->load('tier');
         $next = $user->tier->next();
-        $pendingSpend = $user->orders()->where('status', 'completed')->whereNull('spend_recorded_at')->get()->sum('spend_contribution');
+        $pendingSpend = $user->orders()->where('status', OrderStatus::Completed->value)->whereNull('spend_recorded_at')->get()->sum('spend_contribution');
 
         return view('account.membership', [
             'user' => $user,

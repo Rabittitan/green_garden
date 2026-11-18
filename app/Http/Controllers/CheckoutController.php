@@ -14,6 +14,7 @@ use App\Services\CartService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use App\Services\PricingService;
+use App\Support\Format;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
@@ -80,7 +81,7 @@ class CheckoutController extends Controller
         }
         session([self::COUPON_KEY => $quote->coupon->code]);
 
-        return back()->with('success', "Đã áp dụng mã {$quote->coupon->code}: giảm ".number_format($quote->couponBenefit(), 0, ',', '.').'đ.');
+        return back()->with('success', "Đã áp dụng mã {$quote->coupon->code}: giảm ".Format::money($quote->couponBenefit()).'.');
     }
 
     public function removeCoupon(): RedirectResponse

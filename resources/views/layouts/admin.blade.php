@@ -26,7 +26,7 @@
                 <i class="fa-solid fa-seedling"></i> GreenLife Admin
             </div>
             {{-- request()->routeIs(...) để tô sáng menu đang mở --}}
-            @php $isAdmin = auth()->user()->role === \App\Enums\UserRole::Admin; @endphp
+            @php $isAdmin = auth()->user()->isAdmin(); @endphp
             @foreach(array_filter([
                 ['admin.dashboard', 'admin.dashboard', 'fa-chart-line', 'Thống kê', true],
                 ['admin.orders.index', 'admin.orders.*', 'fa-receipt', 'Đơn hàng', true],

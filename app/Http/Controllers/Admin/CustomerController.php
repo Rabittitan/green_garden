@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\UserRole;
 use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Models\MembershipTier;
@@ -16,7 +17,7 @@ class CustomerController extends Controller
 {
     public function index(Request $request): View
     {
-        $customers = User::where('role', 'customer')->with('tier')->withCount('orders')
+        $customers = User::where('role', UserRole::Customer->value)->with('tier')->withCount('orders')
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', '%'.$request->q.'%')
                 ->orWhere('email', 'like', '%'.$request->q.'%')->orWhere('phone', 'like', '%'.$request->q.'%')))
             ->when($request->filled('tier'), fn ($q) => $q->where('membership_tier_id', $request->integer('tier')))

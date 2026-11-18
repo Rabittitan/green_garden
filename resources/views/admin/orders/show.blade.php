@@ -4,7 +4,7 @@
 @section('content')
 @use('App\Enums\OrderStatus', 'S')
 @use('App\Enums\PaymentMethod', 'PM')
-@php $isAdmin = auth()->user()->role === \App\Enums\UserRole::Admin; @endphp
+@php $isAdmin = auth()->user()->isAdmin(); @endphp
 <a href="{{ route('admin.orders.index') }}" class="text-green text-decoration-none"><i class="fa fa-arrow-left"></i> Danh sách đơn</a>
 <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
     <h4 class="fw-bold mb-0">Đơn {{ $order->code }}
