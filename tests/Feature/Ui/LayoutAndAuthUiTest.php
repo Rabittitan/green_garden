@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Ui;
 
+use App\Models\Plant;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\BuildsOrders;
 use Tests\TestCase;
 
@@ -60,6 +62,28 @@ class LayoutAndAuthUiTest extends TestCase
         }
         $this->assertStringNotContainsString('Trang quản trị', $html);
         $this->assertStringContainsString('Trang quản trị', $this->actingAs($this->admin())->get(route('home'))->getContent());
+    }
+
+    /** K7a: thẻ cây báo tồn kho + sao từ cột có sẵn của cây; cam kết trang chủ lấy từ cấu hình (đổi config là đổi theo). */
+    public function test_storefront_cards_and_promises(): void
+    {
+        config(['shop.return_window_days' => 9, 'shop.shipping.free_min_order' => 650000]);
+        $home = $this->get(route('home'))->assertOk()->getContent();
+        $this->assertStringContainsString('Đổi trả 9 ngày', $home);
+        $this->assertStringContainsString('650.000đ', $home);
+        $this->assertStringContainsString('id="chon-theo-menh"', $home);
+
+        $plant = Plant::findOrFail(1);
+        DB::table('plants')->where('id', 1)->update(['rating_sum' => 9, 'rating_count' => 2, 'reorder_point' => $plant->stock]);
+        $card = view('partials.plant-card', ['plant' => Plant::with('category')->findOrFail(1)])->render();
+        $this->assertStringContainsString('Sắp hết hàng', $card);
+        $this->assertStringContainsString('(2)', $card, 'Số lượt đánh giá');
+        $this->assertStringContainsString('title="4.5/5"', $card);
+
+        DB::table('plants')->where('id', 1)->update(['rating_count' => 0, 'rating_sum' => 0, 'reorder_point' => 0]);
+        $card = view('partials.plant-card', ['plant' => Plant::with('category')->findOrFail(1)])->render();
+        $this->assertStringNotContainsString('Sắp hết hàng', $card);
+        $this->assertStringNotContainsString('gg-stars', $card);
     }
 
     /** Thương hiệu thống nhất là GreenGarden: không còn tên cũ ở bất cứ chỗ nào khách nhìn thấy (giao diện, mail, cấu hình). */
