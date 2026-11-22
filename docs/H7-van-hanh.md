@@ -49,6 +49,7 @@ Cài cron, supervisor, nginx theo 3 file mẫu trong `deploy/` (đổi `shop.exa
 | `APP_ENV` | `production` | cổng thanh toán giả lập bị **tắt** tự động khi khác local/testing; cookie phiên chỉ gửi qua HTTPS |
 | `APP_DEBUG` | `false` | `true` = trang lỗi lộ code, biến môi trường, mật khẩu DB |
 | `APP_URL` | `https://<tên miền>` | link trong email + URL quay về VNPay sai |
+| `APP_NAME` / `APP_LOCALE` | `"GreenLife Shop"` / `vi` | tên người gửi + đầu mail hiện "Laravel"; thông báo lỗi form và mail bằng tiếng Anh |
 | `DB_*` | DB riêng, user riêng chỉ có quyền trên DB đó | |
 | `TRUSTED_PROXIES` | IP của nginx/LB (`127.0.0.1` nếu nginx cùng máy) | để trống khi có proxy: **mọi khách chung 1 IP** → giới hạn đăng nhập 20 lần/phút khóa cả site; HTTPS bị coi là HTTP |
 | `MAIL_MAILER` + `MAIL_*` | SMTP thật | `log` = khách không nhận mail nào |
