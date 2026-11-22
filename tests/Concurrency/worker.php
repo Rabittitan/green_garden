@@ -8,10 +8,12 @@
 use App\Enums\ActorType;
 use App\Enums\PaymentMethod;
 use App\Exceptions\BusinessException;
+use App\Models\Coupon;
 use App\Models\GoodsReceipt;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\CouponService;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\OrderService;
 use App\Services\Payments\PaymentGateway;
@@ -37,7 +39,11 @@ try {
         'place' => app(OrderService::class)->place(User::findOrFail((int) $args[0]), new PlaceOrderData(
             cart: json_decode($args[1], true), paymentMethod: PaymentMethod::from($args[3] ?? 'cod'), checkoutToken: $args[2],
             shipping: ['recipient_name' => 'K', 'phone' => '0900000000', 'province' => 'HCM', 'district' => 'Q1', 'ward' => 'BN', 'address_line' => '1'],
+            couponCode: $args[4] ?? null,
         ))->id,
+        // Nhóm B: admin sửa phạm vi mã (thêm cây) đúng lúc khách đặt hàng bằng mã đó
+        'coupon-update' => app(CouponService::class)->update(Coupon::findOrFail((int) $args[0]),
+            ['name' => 'Sửa song song '.getmypid(), 'value' => (int) $args[2]], json_decode($args[1], true), [])->id,
         'cancel' => app(OrderService::class)->cancel(Order::findOrFail((int) $args[0]), ActorType::Staff,
             User::where('role', 'admin')->firstOrFail(), 'Hủy song song')->id,
         'expire' => app(OrderService::class)->expireOverdue(),

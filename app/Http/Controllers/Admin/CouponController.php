@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CouponScope;
 use App\Enums\CouponType;
+use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\MembershipTier;
 use App\Models\Plant;
+use App\Services\CouponService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,20 +51,14 @@ class CouponController extends Controller
         return view('admin.coupons.edit', $this->formData($coupon->load(['plants', 'categories'])));
     }
 
-    public function update(Request $request, Coupon $coupon): RedirectResponse
+    public function update(Request $request, Coupon $coupon, CouponService $coupons): RedirectResponse
     {
         $data = $this->validated($request, $coupon);
-        DB::transaction(function () use ($data, $coupon) {
-            $attrs = $data['attrs'];
-            if ($coupon->isLocked()) {                                      // đã có người dùng: giữ nguyên "luật" giảm giá
-                $attrs = Arr::only($attrs, ['name', 'description', 'usage_limit', 'usage_limit_per_user', 'starts_at', 'ends_at', 'is_active']);
-            }
-            $coupon->update($attrs);
-            if (! $coupon->isLocked()) {
-                $coupon->plants()->sync($data['plant_ids']);
-                $coupon->categories()->sync($data['category_ids']);
-            }
-        });
+        try {
+            $coupons->update($coupon, $data['attrs'], $data['plant_ids'], $data['category_ids']);
+        } catch (BusinessException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('admin.coupons.index')->with('success', 'Đã cập nhật mã giảm giá.');
     }
