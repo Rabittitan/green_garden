@@ -2,7 +2,7 @@
 <div class="card plant-card h-100">
     <a href="{{ route('plants.show', $plant->id) }}">
         <img src="{{ $plant->image }}" class="card-img-top" alt="{{ $plant->name }}"
-             onerror="this.onerror=null;this.src='https://placehold.co/600x400/e8f5e9/2e7d32?text=GreenLife'">
+             onerror="this.onerror=null;this.src='https://placehold.co/600x400/e8f5e9/2e7d32?text=GreenGarden'">
     </a>
     <div class="card-body d-flex flex-column">
         <small class="text-muted">{{ $plant->category->name }}</small>

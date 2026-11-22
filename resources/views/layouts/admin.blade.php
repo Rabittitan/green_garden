@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Quản trị') - GreenLife Admin</title>
+    <title>@yield('title', 'Quản trị') - GreenGarden Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <style>
@@ -23,7 +23,7 @@
         {{-- ===== MENU TRÁI ===== --}}
         <div class="col-md-2 p-0 sidebar">
             <div class="text-white fw-bold fs-5 p-3 border-bottom border-success">
-                <i class="fa-solid fa-seedling"></i> GreenLife Admin
+                <i class="fa-solid fa-seedling"></i> GreenGarden Admin
             </div>
             {{-- request()->routeIs(...) để tô sáng menu đang mở --}}
             @php $isAdmin = auth()->user()->isAdmin(); @endphp

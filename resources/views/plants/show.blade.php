@@ -7,7 +7,7 @@
 <div class="row g-4">
     <div class="col-md-5">
         <img src="{{ $plant->image }}" class="img-fluid rounded-3 shadow-sm w-100" alt="{{ $plant->name }}"
-             onerror="this.onerror=null;this.src='https://placehold.co/600x500/e8f5e9/2e7d32?text=GreenLife'">
+             onerror="this.onerror=null;this.src='https://placehold.co/600x500/e8f5e9/2e7d32?text=GreenGarden'">
     </div>
     <div class="col-md-7">
         <small class="text-muted">{{ $plant->category->name }}</small>

@@ -19,10 +19,10 @@ class VietnameseLocalizationTest extends TestCase
     public function test_locale_and_shop_name(): void
     {
         $this->assertSame('vi', app()->getLocale());
-        $this->assertSame('GreenLife Shop', config('app.name'));
+        $this->assertSame('GreenGarden Shop', config('app.name'));
         // Máy mới cài từ .env.example phải đúng ngay; .env có sẵn của máy cũ ghi đè giá trị này (xem docs/H7)
         $env = file_get_contents(base_path('.env.example'));
-        $this->assertStringContainsString("\nAPP_NAME=\"GreenLife Shop\"\n", "\n".$env);
+        $this->assertStringContainsString("\nAPP_NAME=\"GreenGarden Shop\"\n", "\n".$env);
         $this->assertStringContainsString("\nAPP_LOCALE=vi\n", $env);
     }
 
@@ -72,7 +72,7 @@ class VietnameseLocalizationTest extends TestCase
 
         foreach ([(new VerifyEmail)->toMail($user), (new OrderShipped($order))->toMail($user)] as $mail) {
             $html = (string) $mail->render();
-            $this->assertStringContainsString('GreenLife Shop', $html);
+            $this->assertStringContainsString('GreenGarden Shop', $html);
             $this->assertStringContainsString('Bảo lưu mọi quyền', $html);
             $this->assertStringContainsString('Nếu không bấm được nút', $html);
             foreach (self::ENGLISH_LEAKS as $leak) {

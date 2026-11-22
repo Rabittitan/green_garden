@@ -91,7 +91,7 @@ class PasswordResetTest extends TestCase
         $token = $this->requestToken($user);
         $mail = (new ResetPassword($token))->toMail($user);
 
-        $this->assertSame('Đặt lại mật khẩu - GreenLife', $mail->subject);
+        $this->assertSame('Đặt lại mật khẩu - GreenGarden', $mail->subject);
         $this->assertStringContainsString(route('password.reset', ['token' => $token, 'email' => $user->email]), $mail->actionUrl);
         $this->assertStringContainsString('hết hạn sau 60 phút', implode(' ', $mail->outroLines));
         $this->assertStringNotContainsString('Reset Password', (string) $mail->render());

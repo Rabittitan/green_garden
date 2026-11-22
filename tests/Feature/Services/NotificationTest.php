@@ -157,7 +157,7 @@ class NotificationTest extends TestCase
             new RefundCompleted($order, $payment), new ReturnInstructions($order), new TierUpgraded(MembershipTier::first()),
             new OrderCompleted($order), new LatePaymentRefund($order, 280000)] as $n) {
             $html = (string) $n->toMail($this->customer())->render();
-            $this->assertStringContainsString('GreenLife', $html, get_class($n));
+            $this->assertStringContainsString('GreenGarden', $html, get_class($n));
         }
     }
 }

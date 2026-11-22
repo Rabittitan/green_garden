@@ -15,7 +15,7 @@ class OrderCompleted extends OrderNotification
 
     protected function lines(): array
     {
-        $lines = ['Đơn '.$this->order->code.' đã được giao thành công. Cảm ơn bạn đã mua cây tại GreenLife!'];
+        $lines = ['Đơn '.$this->order->code.' đã được giao thành công. Cảm ơn bạn đã mua cây tại GreenGarden!'];
         if ($this->order->payment_method === PaymentMethod::Cod) {
             $lines[] = 'Bạn đã thanh toán '.$this->money($this->order->paid_amount).' tiền mặt khi nhận hàng.';
         }

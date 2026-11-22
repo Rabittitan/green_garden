@@ -62,13 +62,29 @@ class LayoutAndAuthUiTest extends TestCase
         $this->assertStringContainsString('Trang quản trị', $this->actingAs($this->admin())->get(route('home'))->getContent());
     }
 
+    /** Thương hiệu thống nhất là GreenGarden: không còn tên cũ ở bất cứ chỗ nào khách nhìn thấy (giao diện, mail, cấu hình). */
+    public function test_no_old_brand_name_in_customer_facing_code(): void
+    {
+        $leaks = [];
+        foreach (['app', 'resources', 'config', 'lang'] as $dir) {
+            $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path($dir), \FilesystemIterator::SKIP_DOTS));
+            foreach ($files as $file) {
+                if (preg_match('/GreenLife|GREENLIFE/', (string) file_get_contents($file->getPathname()))) {
+                    $leaks[] = str_replace(base_path().'/', '', $file->getPathname());
+                }
+            }
+        }
+        $this->assertSame([], $leaks, 'Còn tên thương hiệu cũ "GreenLife"');
+        $this->assertSame('GreenGarden Shop', config('app.name'));
+    }
+
     public function test_mail_template_is_branded_and_never_shows_laravel(): void
     {
         $user = $this->customer();
-        foreach (['GreenLife Shop', 'Laravel'] as $appName) {          // "Laravel": máy có .env chưa đổi APP_NAME
+        foreach (['GreenGarden Shop', 'Laravel'] as $appName) {          // "Laravel": máy có .env chưa đổi APP_NAME
             config(['app.name' => $appName]);
             $html = (string) (new ResetPassword('t'))->toMail($user)->render();
-            $this->assertStringContainsString('GreenLife Shop', $html);
+            $this->assertStringContainsString('GreenGarden Shop', $html);
             $this->assertStringNotContainsString('Laravel', $html);
             $this->assertStringContainsString('Hotline 0900 000 001', $html);
             $this->assertStringContainsString('#2e7d32', $html, 'Nút / viền mail phải theo màu thương hiệu');

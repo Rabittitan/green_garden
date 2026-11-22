@@ -10,7 +10,7 @@
         <small class="text-muted"><i class="fa fa-calendar"></i> {{ $article->created_at->format('d/m/Y') }}</small>
 
         <img src="{{ $article->image }}" class="img-fluid rounded-3 shadow-sm w-100 my-3" alt="{{ $article->title }}"
-             onerror="this.onerror=null;this.src='https://placehold.co/800x400/e8f5e9/2e7d32?text=GreenLife'">
+             onerror="this.onerror=null;this.src='https://placehold.co/800x400/e8f5e9/2e7d32?text=GreenGarden'">
 
         {{-- e() chống chèn mã độc, nl2br giữ xuống dòng giữa các đoạn --}}
         <div class="fs-5 text-secondary" style="line-height:1.8">{!! nl2br(e($article->content)) !!}</div>

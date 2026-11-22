@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Tham số nghiệp vụ của GreenLife Shop. Đổi chính sách ở đây, không sửa code.
+ * Tham số nghiệp vụ của GreenGarden Shop. Đổi chính sách ở đây, không sửa code.
  */
 return [
 
@@ -44,11 +44,11 @@ return [
     'bank_transfer' => [
         'bank_name' => env('SHOP_BANK_NAME', 'Vietcombank'),
         'account_no' => env('SHOP_BANK_ACCOUNT_NO', ''),
-        'account_name' => env('SHOP_BANK_ACCOUNT_NAME', 'GREENLIFE SHOP'),
+        'account_name' => env('SHOP_BANK_ACCOUNT_NAME', 'GREENGARDEN SHOP'),
     ],
 
     // Địa chỉ nhận hàng trả về (hiện trong email + trang đơn khi khách yêu cầu trả hàng)
-    'return_address' => env('SHOP_RETURN_ADDRESS', 'GreenLife Shop - 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh - 0900 000 001'),
+    'return_address' => env('SHOP_RETURN_ADDRESS', 'GreenGarden Shop - 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh - 0900 000 001'),
 
     // Khách được trả hàng trong N ngày sau khi nhận. Hết hạn này đơn mới được cộng vào tổng chi tiêu xét hạng.
     'return_window_days' => 7,

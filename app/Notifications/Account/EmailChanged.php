@@ -38,12 +38,12 @@ class EmailChanged extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Email đăng nhập tài khoản đã được thay đổi - GreenLife')
+            ->subject('Email đăng nhập tài khoản đã được thay đổi - GreenGarden')
             ->greeting('Xin chào '.$this->name.',')
-            ->line('Email đăng nhập tài khoản GreenLife của bạn vừa được đổi sang '.self::mask($this->newEmail)
+            ->line('Email đăng nhập tài khoản GreenGarden của bạn vừa được đổi sang '.self::mask($this->newEmail)
                 .' lúc '.Format::datetime($this->changedAt).'.')
             ->line('Từ nay thông báo đơn hàng sẽ gửi tới email mới; email này sẽ không nhận thêm thông báo nào.')
             ->line('Nếu KHÔNG phải bạn thực hiện, hãy liên hệ shop ngay để được hỗ trợ khóa và lấy lại tài khoản.')
-            ->salutation('Trân trọng, GreenLife Shop');
+            ->salutation('Trân trọng, GreenGarden Shop');
     }
 }

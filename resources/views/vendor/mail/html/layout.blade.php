@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
 {{-- Tiêu đề mail: cùng quy tắc tên shop với message.blade.php (.env chưa đổi APP_NAME vẫn không lộ "Laravel") --}}
-<title>{{ config('app.name') === 'Laravel' ? 'GreenLife Shop' : config('app.name') }}</title>
+<title>{{ config('app.name') === 'Laravel' ? 'GreenGarden Shop' : config('app.name') }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta name="color-scheme" content="light">

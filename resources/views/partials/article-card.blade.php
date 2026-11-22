@@ -2,7 +2,7 @@
 <div class="card plant-card h-100">
     <a href="{{ route('news.show', $article->id) }}">
         <img src="{{ $article->image }}" class="card-img-top" alt="{{ $article->title }}"
-             onerror="this.onerror=null;this.src='https://placehold.co/800x400/e8f5e9/2e7d32?text=GreenLife'">
+             onerror="this.onerror=null;this.src='https://placehold.co/800x400/e8f5e9/2e7d32?text=GreenGarden'">
     </a>
     <div class="card-body d-flex flex-column">
         <small class="text-muted"><i class="fa fa-calendar"></i> {{ $article->created_at->format('d/m/Y') }}</small>

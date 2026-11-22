@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-GreenLife Shop: a Laravel 12 shop selling ornamental plants. It covers orders, payments (COD, VNPay, bank transfer), coupons, membership tiers, an inventory ledger, purchasing, and reviews and Q&A. The UI, domain messages, code comments, docs and commit messages are all in **Vietnamese**. Keep that convention, and reply to the owner in Vietnamese.
+GreenGarden Shop: a Laravel 12 shop selling ornamental plants. It covers orders, payments (COD, VNPay, bank transfer), coupons, membership tiers, an inventory ledger, purchasing, and reviews and Q&A. The UI, domain messages, code comments, docs and commit messages are all in **Vietnamese**. Keep that convention, and reply to the owner in Vietnamese.
 
 ## Commands
 

@@ -1,4 +1,4 @@
-# H8 — Báo cáo nghiệm thu GreenLife Shop
+# H8 — Báo cáo nghiệm thu GreenGarden Shop
 
 **Ngày:** 17/11/2026 · **Nhánh:** `claude/sweet-archimedes-sb7rwp` · **Môi trường chuẩn:** PHP 8.4 + MySQL 8.0 (CI GitHub Actions) · Laravel 12.71
 

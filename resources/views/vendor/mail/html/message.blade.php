@@ -1,5 +1,5 @@
 {{-- Tên shop: nếu .env chưa đổi APP_NAME (còn "Laravel") vẫn hiện đúng tên shop cho khách --}}
-@php($shop = config('app.name') === 'Laravel' ? 'GreenLife Shop' : config('app.name'))
+@php($shop = config('app.name') === 'Laravel' ? 'GreenGarden Shop' : config('app.name'))
 <x-mail::layout>
 {{-- Header --}}
 <x-slot:header>
