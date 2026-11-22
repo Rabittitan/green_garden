@@ -1,4 +1,4 @@
-# Quyết định kiến trúc (ADR) — GreenLife Shop
+# Quyết định kiến trúc (ADR) — GreenGarden Shop
 
 Ghi lại **vì sao** hệ thống được thiết kế như hiện tại. Trước khi đổi một điều dưới đây, hãy đọc ADR tương ứng: phần lớn được bảo vệ bởi test, và đổi ngược thường mở lại đúng lỗi mà quyết định đó đã chặn.
 

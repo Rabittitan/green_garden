@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ActorType;
+use App\Enums\OrderStatus;
 use App\Exceptions\BusinessException;
 use App\Models\Order;
+use App\Models\PlantReview;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use Illuminate\Contracts\View\View;
@@ -30,7 +32,12 @@ class OrderController extends Controller
         $this->orders->expireIfOverdue($order);                         // hết hạn thì hủy ngay, không chờ lệnh định kỳ
         $order->refresh()->load(['items.plant', 'payments', 'histories', 'tier']);
 
-        return view('orders.show', ['order' => $order, 'bank' => config('shop.bank_transfer')]);
+        // Đơn đã nhận hàng: mỗi cây có nút đánh giá; 1 truy vấn lấy đánh giá sẵn có của khách cho các cây trong đơn
+        $myReviews = $order->status === OrderStatus::Completed
+            ? PlantReview::where('user_id', $order->user_id)->whereIn('plant_id', $order->items->pluck('plant_id'))->get()->keyBy('plant_id')
+            : collect();
+
+        return view('orders.show', ['order' => $order, 'bank' => config('shop.bank_transfer'), 'myReviews' => $myReviews]);
     }
 
     /** Sang cổng thanh toán (lần đầu hoặc trả tiếp: cùng một giao dịch đang chờ). */

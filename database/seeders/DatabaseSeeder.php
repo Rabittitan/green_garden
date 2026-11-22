@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
         $customerId = DB::table('users')->where('email', 'khach@greenlife.test')->value('id');
         DB::table('user_addresses')->insert([
             'user_id' => $customerId, 'recipient_name' => 'Nguyễn Văn Khách', 'phone' => '0900000002',
-            'province' => 'TP. Hồ Chí Minh', 'district' => 'Quận 1', 'ward' => 'Phường Bến Nghé',
+            'province' => 'Thành phố Hồ Chí Minh', 'district' => 'Thành phố Hồ Chí Minh', 'ward' => 'Phường Sài Gòn',   // địa giới từ 01/07/2025
             'address_line' => '12 Nguyễn Huệ', 'is_default' => true, 'created_at' => $now, 'updated_at' => $now,
         ]);
 
@@ -113,7 +113,7 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Củ Chi, TP.HCM', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
         ]);
 
-        // ===== 6. Bài viết =====
-        $this->call(ArticleSeeder::class);
+        // ===== 6. Thông tin chi tiết cây mẫu + bài viết =====
+        $this->call([PlantDetailSeeder::class, ArticleSeeder::class]);
     }
 }

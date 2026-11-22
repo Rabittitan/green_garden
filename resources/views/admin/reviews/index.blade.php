@@ -4,10 +4,12 @@
 @section('content')
 <h4 class="text-green fw-bold mb-3"><i class="fa fa-star"></i> Đánh giá cây</h4>
 <div class="mb-3 d-flex gap-1">
-    @foreach(['pending' => 'Chờ duyệt', 'approved' => 'Đã duyệt', 'rejected' => 'Từ chối'] as $v => $l)
+    @foreach(['pending' => 'Chờ duyệt', 'approved' => 'Đang hiển thị', 'rejected' => 'Từ chối'] as $v => $l)
         <a href="{{ route('admin.reviews.index', ['status' => $v]) }}" class="btn btn-sm {{ $status === $v ? 'btn-success' : 'btn-outline-success' }}">{{ $l }} ({{ $counts[$v] ?? 0 }})</a>
     @endforeach
 </div>
+<p class="small text-muted">Đánh giá của khách đã nhận hàng được đăng ngay. Đánh giá không phù hợp: bấm "Từ chối" (ghi lý do) để gỡ khỏi trang cây.
+    Đánh giá đã bị từ chối mà khách sửa lại sẽ vào mục "Chờ duyệt".</p>
 @forelse($reviews as $r)
     <div class="card card-body shadow-sm mb-3">
         <div class="d-flex justify-content-between">

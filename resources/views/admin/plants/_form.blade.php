@@ -91,5 +91,47 @@
     <textarea name="description" rows="4" class="form-control">{{ old('description', $plant->description ?? '') }}</textarea>
 </div>
 
+{{-- Thông tin chi tiết (K8): đều không bắt buộc; trống mục nào thì trang cây ẩn mục đó --}}
+<fieldset class="border rounded-3 p-3 mb-3">
+    <legend class="float-none w-auto px-2 fs-6 fw-bold mb-0">Thông tin chi tiết <span class="fw-normal text-muted small">(hiện ở trang cây, không bắt buộc)</span></legend>
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <label class="form-label" for="height">Kích thước cây</label>
+            <input id="height" name="height" maxlength="60" value="{{ old('height', $plant->height ?? '') }}" class="form-control @error('height') is-invalid @enderror" placeholder="Cao 40–50 cm">
+            @error('height') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label" for="pot_size">Chậu</label>
+            <input id="pot_size" name="pot_size" maxlength="80" value="{{ old('pot_size', $plant->pot_size ?? '') }}" class="form-control @error('pot_size') is-invalid @enderror" placeholder="Chậu sứ Ø15 cm">
+            @error('pot_size') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label" for="growth_rate">Tốc độ lớn</label>
+            <select id="growth_rate" name="growth_rate" class="form-select @error('growth_rate') is-invalid @enderror">
+                <option value="">-- Chưa nhập --</option>
+                @foreach(\App\Models\Plant::GROWTH_RATES as $k => $label)
+                    <option value="{{ $k }}" @selected(old('growth_rate', $plant->growth_rate ?? '') === $k)>{{ $label }}</option>
+                @endforeach
+            </select>
+            @error('growth_rate') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label" for="watering">Tưới nước</label>
+            <input id="watering" name="watering" maxlength="100" value="{{ old('watering', $plant->watering ?? '') }}" class="form-control @error('watering') is-invalid @enderror" placeholder="2–3 lần/tuần">
+            @error('watering') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="growth_info">Quá trình sinh trưởng</label>
+            <textarea id="growth_info" name="growth_info" rows="5" maxlength="5000" class="form-control @error('growth_info') is-invalid @enderror" placeholder="Cây lớn ra sao theo thời gian, mùa ra lá/ra hoa, khi nào thay chậu...">{{ old('growth_info', $plant->growth_info ?? '') }}</textarea>
+            @error('growth_info') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="care_guide">Cách chăm sóc</label>
+            <textarea id="care_guide" name="care_guide" rows="5" maxlength="5000" class="form-control @error('care_guide') is-invalid @enderror" placeholder="Mỗi dòng một ý: ánh sáng, đất, phân bón, sâu bệnh...">{{ old('care_guide', $plant->care_guide ?? '') }}</textarea>
+            @error('care_guide') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+    </div>
+</fieldset>
+
 <button class="btn btn-green"><i class="fa fa-floppy-disk"></i> Lưu</button>
 <a href="{{ route('admin.plants.index') }}" class="btn btn-outline-secondary">Hủy</a>

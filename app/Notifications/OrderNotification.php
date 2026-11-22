@@ -34,14 +34,14 @@ abstract class OrderNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $mail = (new MailMessage)
-            ->subject($this->subject().' - Đơn '.$this->order->code.' - GreenLife')
+            ->subject($this->subject().' - Đơn '.$this->order->code.' - GreenGarden')
             ->greeting('Xin chào '.$this->order->recipient_name.',');
         foreach ($this->lines() as $line) {
             $mail->line($line);
         }
 
         return $mail->action('Xem đơn hàng', route('orders.show', $this->order))
-            ->salutation('Trân trọng, GreenLife Shop');
+            ->salutation('Trân trọng, GreenGarden Shop');
     }
 
     protected function money(int $v): string

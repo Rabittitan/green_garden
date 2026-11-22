@@ -43,7 +43,10 @@ class UserAddress extends Model
 
     public function getFullAddressAttribute(): string
     {
-        return implode(', ', [$this->address_line, $this->ward, $this->district, $this->province]);
+        // Địa chỉ theo địa giới mới (K9): district = tên tỉnh -> không lặp lại khi hiển thị
+        $district = $this->district === $this->province ? null : $this->district;
+
+        return implode(', ', array_filter([$this->address_line, $this->ward, $district, $this->province], fn ($v) => $v !== null && $v !== ''));
     }
 
     /**

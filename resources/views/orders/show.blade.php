@@ -2,13 +2,45 @@
 @section('title', 'Đơn hàng ' . $order->code)
 
 @section('content')
-<a href="{{ route('orders.index') }}" class="text-green text-decoration-none"><i class="fa fa-arrow-left"></i> Đơn hàng của tôi</a>
-<h4 class="fw-bold mt-2">Đơn hàng {{ $order->code }}
-    <span class="badge bg-{{ $order->status->color() }} fs-6">{{ $order->status->label() }}</span>
-    <span class="badge bg-{{ $order->payment_status->color() }} fs-6">{{ $order->payment_status->label() }}</span>
-</h4>
+@php
+    use App\Enums\OrderStatus as OS;
+    // Thanh tiến trình: mỗi bước là một MỐC đã đạt, chỉ suy ra từ trạng thái hiện tại (không truy vấn).
+    // Không có bước "Thanh toán" (đơn COD trả tiền khi nhận hàng); tình trạng tiền xem ở huy hiệu thanh toán.
+    // Tên bước KHÁC nhãn trạng thái để chữ "Chờ xác nhận", "Chờ thanh toán"... chỉ xuất hiện khi đơn thật sự ở trạng thái đó.
+    $steps = ['Đặt hàng', 'Xác nhận', 'Giao hàng', 'Nhận hàng'];
+    $done = match ($order->status) {
+        OS::PendingPayment => 0, OS::Pending => 1, OS::Confirmed => 2, OS::Shipping => 3,
+        OS::Completed, OS::Returning, OS::Returned => 4, OS::Cancelled => null,
+    };
+@endphp
+@include('account._nav')
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <a href="{{ route('orders.index') }}" class="text-green text-decoration-none small"><i class="fa fa-arrow-left"></i> Đơn hàng của tôi</a>
+        <h1 class="h3 fw-bold mt-1 mb-0">Đơn hàng {{ $order->code }}</h1>
+    </div>
+    <div>
+        <span class="badge rounded-pill bg-{{ $order->status->color() }} fs-6">{{ $order->status->label() }}</span>
+        <span class="badge rounded-pill bg-{{ $order->payment_status->color() }} fs-6">{{ $order->payment_status->label() }}</span>
+    </div>
+</div>
+
+@if($done !== null)
+    <div class="gg-panel gg-panel-body mb-3">
+        <ol class="gg-progress">
+            @foreach($steps as $i => $step)
+                <li class="{{ $i < $done ? 'done' : ($i === $done ? 'current' : '') }}">
+                    <span>@if($i < $done)<i class="fa fa-check"></i>@else{{ $i + 1 }}@endif</span>{{ $step }}
+                </li>
+            @endforeach
+        </ol>
+    </div>
+@endif
 
 {{-- ===== VIỆC CẦN LÀM ===== --}}
+@if($order->status === OS::Completed && $order->items->contains(fn ($i) => ! isset($myReviews[$i->plant_id]) && $i->plant?->is_active && ! $i->plant->trashed()))
+    <div class="alert alert-success"><i class="fa fa-star"></i> Đơn đã giao thành công. Hãy <strong>đánh giá cây bạn đã nhận</strong> để giúp người mua sau. Đánh giá được đăng ngay.</div>
+@endif
 @if($order->status === \App\Enums\OrderStatus::PendingPayment)
     <div class="alert alert-warning">
         <i class="fa fa-hourglass-half"></i> Đơn đang được giữ hàng tới <strong>@vndt($order->payment_expires_at)</strong>.
@@ -45,8 +77,8 @@
 
 <div class="row g-4 mt-1">
     <div class="col-md-4">
-        <div class="card card-body shadow-sm mb-3">
-            <h6 class="fw-bold">Thông tin giao hàng</h6>
+        <div class="gg-panel gg-panel-body mb-3">
+            <h2 class="h6 fw-bold">Thông tin giao hàng</h2>
             <div>{{ $order->recipient_name }} · {{ $order->phone }}</div>
             <div>{{ $order->full_address }}</div>
             @if($order->note) <div class="text-muted mt-2">Ghi chú: {{ $order->note }}</div> @endif
@@ -57,18 +89,18 @@
             @endif
         </div>
 
-        <div class="card card-body shadow-sm mb-3">
-            <h6 class="fw-bold">Tiến trình</h6>
-            <ul class="list-unstyled small mb-0">
+        <div class="gg-panel gg-panel-body mb-3">
+            <h2 class="h6 fw-bold mb-3">Tiến trình</h2>
+            <ul class="gg-timeline mb-0">
                 @foreach($order->histories as $h)
-                    <li class="mb-1"><i class="fa fa-circle-check text-success"></i> @vndt($h->created_at) — {{ $h->to_status->label() }}
+                    <li><span class="text-muted">@vndt($h->created_at)</span> — {{ $h->to_status->label() }}
                         @if($h->note) <span class="text-muted">({{ $h->note }})</span> @endif</li>
                 @endforeach
             </ul>
         </div>
 
         @can('cancel', $order)
-            <form action="{{ route('orders.cancel', $order) }}" method="POST" class="card card-body shadow-sm mb-3"
+            <form action="{{ route('orders.cancel', $order) }}" method="POST" class="gg-panel gg-panel-body mb-3"
                   onsubmit="return confirm('Hủy đơn {{ $order->code }}?')">
                 @csrf
                 <label class="form-label fw-bold">Hủy đơn</label>
@@ -77,7 +109,7 @@
             </form>
         @endcan
         @can('requestReturn', $order)
-            <form action="{{ route('orders.return', $order) }}" method="POST" class="card card-body shadow-sm"
+            <form action="{{ route('orders.return', $order) }}" method="POST" class="gg-panel gg-panel-body"
                   onsubmit="return confirm('Gửi yêu cầu trả hàng cho đơn {{ $order->code }}?')">
                 @csrf
                 <label class="form-label fw-bold">Trả hàng (trong {{ config('shop.return_window_days') }} ngày sau khi nhận)</label>
@@ -88,15 +120,27 @@
     </div>
 
     <div class="col-md-8">
-        <div class="table-responsive">
-        <table class="table bg-white shadow-sm align-middle">
-            <thead class="table-success"><tr><th>Cây</th><th>Đơn giá</th><th>SL</th><th>Giảm</th><th class="text-end">Thành tiền</th></tr></thead>
+        <div class="gg-panel table-responsive">
+        <table class="table align-middle mb-0">
+            <thead><tr class="small text-muted"><th>Cây</th><th>Đơn giá</th><th>SL</th><th>Giảm</th><th class="text-end">Thành tiền</th></tr></thead>
             <tbody>
                 @foreach($order->items as $item)
                     <tr>
                         <td>{{ $item->plant_name }}
                             @if($item->returned_good_qty + $item->returned_damaged_qty > 0)
                                 <div class="small text-muted">Đã hoàn: {{ $item->returned_good_qty + $item->returned_damaged_qty }}</div>
+                            @endif
+                            {{-- Đơn đã nhận hàng: mời đánh giá (chỉ khi cây còn bán, vì trang cây ngừng bán trả 404) --}}
+                            @if($order->status === OS::Completed && $item->plant?->is_active && ! $item->plant->trashed())
+                                @php $mine = $myReviews[$item->plant_id] ?? null; @endphp
+                                <div class="mt-1">
+                                    @if($mine)
+                                        <a href="{{ route('plants.show', $item->plant_id) }}#reviews" class="btn btn-sm btn-outline-secondary py-0">
+                                            <span class="gg-stars">{{ str_repeat('★', $mine->rating) }}</span> Đã đánh giá · Sửa</a>
+                                    @else
+                                        <a href="{{ route('plants.show', $item->plant_id) }}#reviews" class="btn btn-sm btn-green py-0"><i class="fa fa-star"></i> Đánh giá cây này</a>
+                                    @endif
+                                </div>
                             @endif
                         </td>
                         <td>@money($item->unit_price)</td>

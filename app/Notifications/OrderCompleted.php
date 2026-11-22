@@ -15,12 +15,13 @@ class OrderCompleted extends OrderNotification
 
     protected function lines(): array
     {
-        $lines = ['Đơn '.$this->order->code.' đã được giao thành công. Cảm ơn bạn đã mua cây tại GreenLife!'];
+        $lines = ['Đơn '.$this->order->code.' đã được giao thành công. Cảm ơn bạn đã mua cây tại GreenGarden!'];
         if ($this->order->payment_method === PaymentMethod::Cod) {
             $lines[] = 'Bạn đã thanh toán '.$this->money($this->order->paid_amount).' tiền mặt khi nhận hàng.';
         }
         $deadline = $this->order->completed_at?->copy()->addDays((int) config('shop.return_window_days'));
         $lines[] = 'Nếu cây có vấn đề, bạn có thể yêu cầu trả hàng trên trang đơn đến hết '.Format::datetime($deadline).'.';
+        $lines[] = 'Cây đã ổn định? Hãy vào trang đơn và bấm "Đánh giá cây này" để chia sẻ cảm nhận với người mua sau.';
 
         return $lines;
     }

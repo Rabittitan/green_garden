@@ -1,4 +1,4 @@
-# H8 — Báo cáo nghiệm thu GreenLife Shop
+# H8 — Báo cáo nghiệm thu GreenGarden Shop
 
 **Ngày:** 17/11/2026 · **Nhánh:** `claude/sweet-archimedes-sb7rwp` · **Môi trường chuẩn:** PHP 8.4 + MySQL 8.0 (CI GitHub Actions) · Laravel 12.71
 
@@ -22,7 +22,7 @@
 | Mã | Tiêu chí | Bằng chứng | Kết quả |
 |---|---|---|---|
 | **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 370 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
-| **C2** | Toàn vẹn dữ liệu | `shop:reconcile` (8 bất biến: kho = sổ kho, tiền thu/hoàn = payments, giảm giá dòng = đơn, lượt mã, điểm đánh giá, lượt hữu ích, đơn quá hạn, chi tiêu hạng) chạy ở 3 chỗ: trong ma trận trạng thái (sau mỗi ô), trên CI (DB mới + seed), và sau kịch bản trình duyệt. Schema không đổi kể từ khi chốt | ✅ |
+| **C2** | Toàn vẹn dữ liệu | `shop:reconcile` (8 bất biến: kho = sổ kho, tiền thu/hoàn = payments, giảm giá dòng = đơn, lượt mã, điểm đánh giá, lượt hữu ích, đơn quá hạn, chi tiêu hạng) chạy ở 3 chỗ: trong ma trận trạng thái (sau mỗi ô), trên CI (DB mới + seed), và sau kịch bản trình duyệt. Schema chỉ đổi một lần sau khi chốt, có duyệt của chủ shop: K8 (22/11/2026) thêm 6 cột thông tin chi tiết vào `plants`, đều cho phép trống, kèm CHECK `chk_plants_growth_rate`; không đụng tiền, kho hay đơn | ✅ |
 | **C3** | Đồng thời | 11 kịch bản đua bằng **tiến trình PHP thật**, gồm: tranh cây cuối, bấm đúp nhiều tab, IPN đua với hết hạn, hủy đua với đặt mới, mã chứng từ, nhập kho đua với đặt hàng, đánh giá trùng, nhân viên hủy đua với IPN, giao đua với hủy, 2 admin cùng xác nhận hoàn tiền, 3 admin cùng xác nhận đơn. Kết quả: không tồn âm, không thu tiền 2 lần, không deadlock | ✅ |
 | **C4** | Luồng khép kín | `OrderStateMatrixTest`: 12 hành động × 9 trạng thái = 108 ô. Ô được phép phải chạy xong và đối soát sạch; ô bị cấm phải không để lại tác dụng phụ. Mọi trạng thái đều tới được, và mọi trạng thái chưa kết thúc đều có lối ra. Kịch bản trình duyệt đi qua đủ các nút bấm thật của cả 3 vai trò | ✅ |
 | **C5** | Phân quyền & bảo mật | Phân quyền: `RoutePermissionMatrixTest` tự đọc **62 route admin** và thử từng route với 4 vai trò; 404 và 403 không làm lộ id có tồn tại hay không. **Mới ở H8:** `AcceptanceCrawlTest` mở **mọi route GET × 4 vai trò** và chứng minh không route GET nào ghi DB. Test này đã được kiểm ngược: cài thử một lệnh ghi DB vào trang chủ thì test đỏ. IPN sai chữ ký không thay đổi gì. Khi `APP_DEBUG=false`, trang lỗi không lộ chi tiết. Có header bảo mật, CSP, giới hạn tần suất đăng nhập, chặn open redirect | ✅ |

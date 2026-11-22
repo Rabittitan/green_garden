@@ -28,11 +28,11 @@ class TierUpgraded extends Notification implements ShouldQueue
         $t = $this->tier;
 
         return (new MailMessage)
-            ->subject('Chúc mừng bạn lên hạng '.$t->name.' - GreenLife')
+            ->subject('Chúc mừng bạn lên hạng '.$t->name.' - GreenGarden')
             ->greeting('Xin chào '.$notifiable->name.',')
             ->line('Bạn vừa lên hạng thành viên '.$t->name.'.')
             ->line('Quyền lợi: giảm '.$t->discount_percent.'% mọi đơn'.($t->max_discount_per_order ? ' (tối đa '.Format::money($t->max_discount_per_order).'/đơn)' : '').'.')
             ->action('Xem hạng thành viên', route('account.membership'))
-            ->salutation('Trân trọng, GreenLife Shop');
+            ->salutation('Trân trọng, GreenGarden Shop');
     }
 }

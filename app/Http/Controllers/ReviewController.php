@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReviewStatus;
 use App\Exceptions\BusinessException;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -23,12 +24,14 @@ class ReviewController extends Controller
             'content' => ['nullable', 'string', 'max:2000'],
         ], [], ['rating' => 'số sao']);
         try {
-            $this->reviews->submit($request->user(), $plant->id, (int) $data['rating'], $data['title'] ?? null, $data['content'] ?? null);
+            $review = $this->reviews->submit($request->user(), $plant->id, (int) $data['rating'], $data['title'] ?? null, $data['content'] ?? null);
         } catch (BusinessException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Cảm ơn bạn! Đánh giá sẽ hiển thị sau khi shop duyệt.');
+        return back()->with('success', $review->status === ReviewStatus::Approved
+            ? 'Cảm ơn bạn! Đánh giá đã được đăng.'
+            : 'Cảm ơn bạn! Đánh giá sẽ hiển thị lại sau khi shop xem xét.');
     }
 
     public function destroy(Request $request, PlantReview $review): RedirectResponse

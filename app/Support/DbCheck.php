@@ -19,7 +19,7 @@ class DbCheck
     {
         $driver = DB::connection()->getDriverName();
         if (! in_array($driver, ['mysql', 'mariadb'], true)) {
-            throw new RuntimeException("GreenLife chỉ hỗ trợ MySQL/MariaDB, đang dùng driver [{$driver}].");
+            throw new RuntimeException("GreenGarden chỉ hỗ trợ MySQL/MariaDB, đang dùng driver [{$driver}].");
         }
 
         $version = (string) DB::selectOne('SELECT VERSION() AS v')->v;

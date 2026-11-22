@@ -1,4 +1,4 @@
-# H7 — Sổ tay vận hành GreenLife Shop
+# H7 — Sổ tay vận hành GreenGarden Shop
 
 Tài liệu cho người triển khai và trực vận hành. Mọi lệnh chạy trong thư mục code (mặc định `/var/www/greenlife`), bằng user chạy PHP-FPM (`www-data`), **không phải root**.
 
@@ -36,7 +36,7 @@ php artisan optimize
 sudo chown -R www-data:www-data storage bootstrap/cache
 ```
 
-Nhân viên (xử lý đơn, kho, duyệt đánh giá; **không** hoàn tiền / sửa mã / sửa hạng): `php artisan shop:create-admin nv@shop.vn --staff`. Lệnh này cũng dùng để **đặt lại mật khẩu admin** khi quên.
+Nhân viên (xử lý đơn, kho, gỡ đánh giá không phù hợp; **không** hoàn tiền / sửa mã / sửa hạng): `php artisan shop:create-admin nv@shop.vn --staff`. Lệnh này cũng dùng để **đặt lại mật khẩu admin** khi quên.
 
 Cài cron, supervisor, nginx theo 3 file mẫu trong `deploy/` (đổi `shop.example.vn` và đường dẫn), rồi `certbot --nginx -d <tên miền>`.
 
@@ -49,6 +49,7 @@ Cài cron, supervisor, nginx theo 3 file mẫu trong `deploy/` (đổi `shop.exa
 | `APP_ENV` | `production` | cổng thanh toán giả lập bị **tắt** tự động khi khác local/testing; cookie phiên chỉ gửi qua HTTPS |
 | `APP_DEBUG` | `false` | `true` = trang lỗi lộ code, biến môi trường, mật khẩu DB |
 | `APP_URL` | `https://<tên miền>` | link trong email + URL quay về VNPay sai |
+| `APP_NAME` / `APP_LOCALE` | `"GreenGarden Shop"` / `vi` | tên người gửi + đầu mail hiện "Laravel"; thông báo lỗi form và mail bằng tiếng Anh |
 | `DB_*` | DB riêng, user riêng chỉ có quyền trên DB đó | |
 | `TRUSTED_PROXIES` | IP của nginx/LB (`127.0.0.1` nếu nginx cùng máy) | để trống khi có proxy: **mọi khách chung 1 IP** → giới hạn đăng nhập 20 lần/phút khóa cả site; HTTPS bị coi là HTTP |
 | `MAIL_MAILER` + `MAIL_*` | SMTP thật | `log` = khách không nhận mail nào |
@@ -156,6 +157,8 @@ Chỉ deploy commit có CI xanh (Test + Larastan) trên GitHub.
 - *Đơn chờ thanh toán quá hạn*: cron không chạy → kiểm tra crontab, chạy tay `php artisan orders:expire-unpaid`.
 
 **Khách báo đã trả tiền nhưng đơn vẫn chờ**: xem `payment_webhook_logs` theo mã giao dịch. Không có log → VNPay chưa gọi IPN (kiểm tra IPN URL, firewall, `TRUSTED_PROXIES`). Có log → xem `signature_valid` (0 = sai `VNPAY_HASH_SECRET`), `result_code` (mã VNPay trả) và `ip` (IP thật của VNPay nhờ `TRUSTED_PROXIES`). Chuyển khoản: admin bấm *Xác nhận chuyển khoản* trên trang đơn.
+
+**Danh mục tỉnh/xã khi đặt hàng** (`public/data/vn-dvhc-2025.json`): 34 tỉnh/thành và 3.321 xã/phường/đặc khu theo địa giới từ 01/07/2025. Trình duyệt dùng file này để hiện danh sách chọn, server dùng chính file này để kiểm tra. Nguồn dữ liệu ghi trong khóa `_meta`. Khi Nhà nước sắp xếp lại đơn vị hành chính: thay file (giữ định dạng `{"provinces":[{"name","wards":[...]}]}`) và chạy `php artisan test tests/Feature/Http/AddressSelectionTest.php` (sửa số lượng mong đợi trong test). Đơn và địa chỉ cũ không bị đổi; khách có địa chỉ cũ sẽ được nhắc chọn lại khi đặt hàng.
 
 ---
 

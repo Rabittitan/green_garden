@@ -1,4 +1,4 @@
-# GreenLife Shop 🌿
+# GreenGarden Shop 🌿
 
 Website bán cây cảnh: đặt hàng, thanh toán (COD / VNPay / chuyển khoản), voucher, hạng thành viên, kho có sổ cái, nhập hàng từ nhà cung cấp, đánh giá & hỏi đáp. Laravel 12 + MySQL 8.
 

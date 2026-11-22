@@ -19,9 +19,11 @@ class ReviewController extends Controller
 
     public function index(Request $request): View
     {
-        $status = $request->validate(['status' => ['nullable', Rule::enum(ReviewStatus::class)]])['status'] ?? 'pending';
-        $reviews = PlantReview::with(['plant', 'user', 'orderItem.order'])->where('status', $status)->latest('id')->paginate(20)->withQueryString();
         $counts = PlantReview::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status');
+        // Đánh giá mới hiện ngay (đã duyệt sẵn): mặc định mở tab "Chờ duyệt" khi còn việc, không thì mở tab đánh giá đang hiển thị
+        $status = $request->validate(['status' => ['nullable', Rule::enum(ReviewStatus::class)]])['status']
+            ?? (($counts[ReviewStatus::Pending->value] ?? 0) > 0 ? ReviewStatus::Pending->value : ReviewStatus::Approved->value);
+        $reviews = PlantReview::with(['plant', 'user', 'orderItem.order'])->where('status', $status)->latest('id')->paginate(20)->withQueryString();
 
         return view('admin.reviews.index', compact('reviews', 'counts', 'status'));
     }

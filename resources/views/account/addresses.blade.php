@@ -2,13 +2,14 @@
 @section('title', 'Sổ địa chỉ')
 
 @section('content')
-<h4 class="text-green fw-bold mb-3"><i class="fa fa-location-dot"></i> Sổ địa chỉ</h4>
+@include('account._nav')
+<div class="gg-page-head"><h1><i class="fa fa-location-dot text-green"></i> Sổ địa chỉ</h1></div>
 
 <div class="row g-4">
     <div class="col-lg-7">
         @forelse($addresses as $a)
-            <div class="card card-body shadow-sm mb-3">
-                <div class="d-flex justify-content-between">
+            <div class="gg-panel gg-panel-body mb-3">
+                <div class="d-flex justify-content-between gap-2">
                     <div>
                         <strong>{{ $a->recipient_name }}</strong> · {{ $a->phone }}
                         @if($a->is_default) <span class="badge bg-success">Mặc định</span> @endif
@@ -29,18 +30,24 @@
         @endforelse
     </div>
     <div class="col-lg-5">
-        <form action="{{ route('addresses.store') }}" method="POST" class="card card-body shadow-sm">
+        <form action="{{ route('addresses.store') }}" method="POST" class="gg-panel gg-panel-body gg-sticky">
             @csrf
-            <h6 class="fw-bold">Thêm địa chỉ</h6>
-            @foreach(['recipient_name' => 'Họ tên người nhận', 'phone' => 'Số điện thoại', 'province' => 'Tỉnh / Thành phố', 'district' => 'Quận / Huyện', 'ward' => 'Phường / Xã', 'address_line' => 'Số nhà, tên đường'] as $f => $label)
+            <h2 class="h6 fw-bold mb-3"><i class="fa fa-plus text-green"></i> Thêm địa chỉ</h2>
+            @foreach(['recipient_name' => 'Họ tên người nhận', 'phone' => 'Số điện thoại'] as $f => $label)
                 <div class="mb-2">
                     <input name="{{ $f }}" value="{{ old($f) }}" placeholder="{{ $label }} *" class="form-control @error($f) is-invalid @enderror">
                     @error($f) <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             @endforeach
+            @include('partials.address-select', ['province' => old('province'), 'ward' => old('ward'), 'col' => 'col-12'])
+            <div class="mb-2">
+                <input name="address_line" value="{{ old('address_line') }}" placeholder="Số nhà, tên đường *" class="form-control @error('address_line') is-invalid @enderror">
+                @error('address_line') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            </div>
             <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_default" value="1" id="def"><label class="form-check-label" for="def">Đặt làm mặc định</label></div>
-            <button class="btn btn-green">Lưu địa chỉ</button>
+            <button class="btn btn-green w-100">Lưu địa chỉ</button>
         </form>
     </div>
 </div>
+<script src="{{ asset('js/address.js') }}?v={{ @filemtime(public_path('js/address.js')) }}"></script>
 @endsection
