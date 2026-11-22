@@ -11,6 +11,7 @@ use App\Services\Payments\DisabledGateway;
 use App\Services\Payments\FakeGateway;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\VnpayGateway;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -79,6 +80,20 @@ class AppServiceProvider extends ServiceProvider
             'article' => Article::class,
             'user' => User::class,
         ]);
+
+        // Mail đặt lại mật khẩu tiếng Việt (link hết hạn theo auth.passwords.users.expire)
+        ResetPassword::toMailUsing(function (object $notifiable, string $token) {
+            $minutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
+
+            return (new MailMessage)
+                ->subject('Đặt lại mật khẩu - GreenLife')
+                ->greeting('Xin chào '.$notifiable->name.'!')
+                ->line('Bạn nhận được email này vì có yêu cầu đặt lại mật khẩu cho tài khoản GreenLife của bạn.')
+                ->action('Đặt mật khẩu mới', url(route('password.reset', ['token' => $token, 'email' => $notifiable->getEmailForPasswordReset()], false)))
+                ->line("Liên kết chỉ dùng được một lần và hết hạn sau {$minutes} phút.")
+                ->line('Nếu bạn không yêu cầu, hãy bỏ qua email này: mật khẩu hiện tại vẫn giữ nguyên.')
+                ->salutation('Trân trọng, GreenLife Shop');
+        });
 
         // Nội dung mail xác thực bằng tiếng Việt (mặc định Laravel gửi tiếng Anh)
         VerifyEmail::toMailUsing(function (object $notifiable, string $url) {

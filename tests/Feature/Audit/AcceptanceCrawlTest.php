@@ -56,6 +56,7 @@ class AcceptanceCrawlTest extends TestCase
             'order' => $order, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id, 'user' => $this->customer()->id,
             'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id, 'goods_receipt' => $receipt->id,
             'address' => UserAddress::first()->id,
+            'token' => 'token-dat-lai-mat-khau-khong-hop-le',               // trang đặt lại mật khẩu: chỉ hiện form, không ghi DB
         ];
     }
 

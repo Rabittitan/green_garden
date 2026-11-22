@@ -22,6 +22,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ProfileController;
@@ -54,6 +55,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/dang-nhap', [AuthController::class, 'login'])->name('login.post')->middleware('throttle:login');
     Route::get('/dang-ky', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/dang-ky', [AuthController::class, 'register'])->name('register.post')->middleware('throttle:5,1');
+    // Quên mật khẩu (tên route theo chuẩn Laravel: mail đặt lại dùng route('password.reset'))
+    Route::get('/quen-mat-khau', [PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('/quen-mat-khau', [PasswordResetController::class, 'email'])->name('password.email')->middleware('throttle:5,1');
+    Route::get('/dat-lai-mat-khau/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
+    Route::post('/dat-lai-mat-khau', [PasswordResetController::class, 'reset'])->name('password.update')->middleware('throttle:5,1');
 });
 Route::post('/dang-xuat', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 

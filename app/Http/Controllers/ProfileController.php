@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Notifications\Account\EmailChanged;
+use App\Notifications\Account\PasswordChanged;
+use App\Support\Notifier;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,7 +48,8 @@ class ProfileController extends Controller
             'phone.regex' => 'Số điện thoại không hợp lệ (VD: 0901234567).',
         ]);
 
-        $emailChanged = $data['email'] !== $user->email;
+        $oldEmail = $user->email;
+        $emailChanged = $data['email'] !== $oldEmail;
 
         $user->fill($data);
         if ($emailChanged) {
@@ -54,6 +58,7 @@ class ProfileController extends Controller
         $user->save();
 
         if ($emailChanged) {
+            Notifier::sendToAddress($oldEmail, new EmailChanged($user->name, $user->email, now()));   // báo chủ cũ: chống chiếm tài khoản
             $user->sendEmailVerificationNotification();   // gửi link xác thực tới email mới
 
             return redirect()->route('verification.notice')
@@ -75,6 +80,7 @@ class ProfileController extends Controller
         ]);
 
         $request->user()->update(['password' => Hash::make($request->password)]);
+        Notifier::send($request->user(), new PasswordChanged(now()));
         $request->session()->regenerate();                         // đổi session id sau khi đổi mật khẩu
 
         return back()->with('success', 'Đổi mật khẩu thành công.');
