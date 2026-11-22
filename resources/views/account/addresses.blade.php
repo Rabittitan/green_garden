@@ -33,15 +33,21 @@
         <form action="{{ route('addresses.store') }}" method="POST" class="gg-panel gg-panel-body gg-sticky">
             @csrf
             <h2 class="h6 fw-bold mb-3"><i class="fa fa-plus text-green"></i> Thêm địa chỉ</h2>
-            @foreach(['recipient_name' => 'Họ tên người nhận', 'phone' => 'Số điện thoại', 'province' => 'Tỉnh / Thành phố', 'district' => 'Quận / Huyện', 'ward' => 'Phường / Xã', 'address_line' => 'Số nhà, tên đường'] as $f => $label)
+            @foreach(['recipient_name' => 'Họ tên người nhận', 'phone' => 'Số điện thoại'] as $f => $label)
                 <div class="mb-2">
                     <input name="{{ $f }}" value="{{ old($f) }}" placeholder="{{ $label }} *" class="form-control @error($f) is-invalid @enderror">
                     @error($f) <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             @endforeach
+            @include('partials.address-select', ['province' => old('province'), 'ward' => old('ward'), 'col' => 'col-12'])
+            <div class="mb-2">
+                <input name="address_line" value="{{ old('address_line') }}" placeholder="Số nhà, tên đường *" class="form-control @error('address_line') is-invalid @enderror">
+                @error('address_line') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            </div>
             <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_default" value="1" id="def"><label class="form-check-label" for="def">Đặt làm mặc định</label></div>
             <button class="btn btn-green w-100">Lưu địa chỉ</button>
         </form>
     </div>
 </div>
+<script src="{{ asset('js/address.js') }}?v={{ @filemtime(public_path('js/address.js')) }}"></script>
 @endsection

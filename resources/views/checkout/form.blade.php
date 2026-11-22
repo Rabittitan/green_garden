@@ -31,11 +31,19 @@
                 </select>
             @endif
             <div class="row">
-                @foreach([
-                    'recipient_name' => ['Họ tên người nhận', 'col-md-6'], 'phone' => ['Số điện thoại', 'col-md-6'],
-                    'province' => ['Tỉnh / Thành phố', 'col-md-4'], 'district' => ['Quận / Huyện', 'col-md-4'], 'ward' => ['Phường / Xã', 'col-md-4'],
-                    'address_line' => ['Số nhà, tên đường', 'col-12'],
-                ] as $field => [$label, $col])
+                @foreach(['recipient_name' => ['Họ tên người nhận', 'col-md-6'], 'phone' => ['Số điện thoại', 'col-md-6']] as $field => [$label, $col])
+                    <div class="{{ $col }} mb-3">
+                        <label class="form-label fw-semibold" for="f-{{ $field }}">{{ $label }} <span class="text-danger">*</span></label>
+                        <input type="text" id="f-{{ $field }}" name="{{ $field }}" value="{{ $val($field) }}" data-field="{{ $field }}"
+                               class="form-control @error($field) is-invalid @enderror">
+                        @error($field) <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+                @endforeach
+            </div>
+            {{-- Tỉnh/thành → Phường/xã: chọn từ danh sách (địa giới từ 01/07/2025) --}}
+            @include('partials.address-select', ['province' => $val('province'), 'ward' => $val('ward')])
+            <div class="row">
+                @foreach(['address_line' => ['Số nhà, tên đường', 'col-12']] as $field => [$label, $col])
                     <div class="{{ $col }} mb-3">
                         <label class="form-label fw-semibold" for="f-{{ $field }}">{{ $label }} <span class="text-danger">*</span></label>
                         <input type="text" id="f-{{ $field }}" name="{{ $field }}" value="{{ $val($field) }}" data-field="{{ $field }}"
@@ -135,13 +143,15 @@
     </div>
 </div>
 
+<script src="{{ asset('js/address.js') }}?v={{ @filemtime(public_path('js/address.js')) }}"></script>
 <script>
-    // Chọn địa chỉ trong sổ -> điền vào form
+    // Chọn địa chỉ trong sổ -> điền vào form (tỉnh/xã qua ô chọn: tự tải lại danh sách xã, báo nếu là địa giới cũ)
     document.getElementById('address-picker')?.addEventListener('change', function () {
         const data = this.selectedOptions[0]?.dataset.address;
         if (!data) return;
         const a = JSON.parse(data);
-        document.querySelectorAll('[data-field]').forEach(el => { if (a[el.dataset.field] !== undefined) el.value = a[el.dataset.field]; });
+        document.querySelectorAll('input[data-field]').forEach(el => { if (a[el.dataset.field] !== undefined) el.value = a[el.dataset.field]; });
+        document.querySelector('[data-gg-address]')?.ggSet?.(a);
     });
     // Chặn bấm 2 lần (server vẫn chống trùng bằng checkout_token)
     document.getElementById('checkout-form').addEventListener('submit', function () {

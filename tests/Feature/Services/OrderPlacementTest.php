@@ -29,7 +29,7 @@ class OrderPlacementTest extends TestCase
         $this->assertSame(OrderStatus::Pending, $order->status);
         $this->assertSame(PaymentStatus::Unpaid, $order->payment_status);
         $this->assertSame([620000, 0, 620000], [$order->subtotal, $order->shipping_fee, $order->total]);
-        $this->assertSame('Phường Bến Nghé', $order->ward);
+        $this->assertSame('Phường Sài Gòn', $order->ward);
         $this->assertSame(28, $this->stock(1));
         $this->assertSame(49, $this->stock(3));
 

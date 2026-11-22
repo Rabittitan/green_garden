@@ -158,6 +158,8 @@ Chỉ deploy commit có CI xanh (Test + Larastan) trên GitHub.
 
 **Khách báo đã trả tiền nhưng đơn vẫn chờ**: xem `payment_webhook_logs` theo mã giao dịch. Không có log → VNPay chưa gọi IPN (kiểm tra IPN URL, firewall, `TRUSTED_PROXIES`). Có log → xem `signature_valid` (0 = sai `VNPAY_HASH_SECRET`), `result_code` (mã VNPay trả) và `ip` (IP thật của VNPay nhờ `TRUSTED_PROXIES`). Chuyển khoản: admin bấm *Xác nhận chuyển khoản* trên trang đơn.
 
+**Danh mục tỉnh/xã khi đặt hàng** (`public/data/vn-dvhc-2025.json`): 34 tỉnh/thành và 3.321 xã/phường/đặc khu theo địa giới từ 01/07/2025. Trình duyệt dùng file này để hiện danh sách chọn, server dùng chính file này để kiểm tra. Nguồn dữ liệu ghi trong khóa `_meta`. Khi Nhà nước sắp xếp lại đơn vị hành chính: thay file (giữ định dạng `{"provinces":[{"name","wards":[...]}]}`) và chạy `php artisan test tests/Feature/Http/AddressSelectionTest.php` (sửa số lượng mong đợi trong test). Đơn và địa chỉ cũ không bị đổi; khách có địa chỉ cũ sẽ được nhắc chọn lại khi đặt hàng.
+
 ---
 
 ## 9. Bảo mật vận hành

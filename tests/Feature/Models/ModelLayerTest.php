@@ -136,7 +136,7 @@ class ModelLayerTest extends TestCase
         $this->assertFalse($order->isPaymentExpired());
         $this->assertMatchesRegularExpression('/^GL\d{6}[2-9A-HJ-NP-Z]{6}$/', $order->code);
         $this->assertLessThanOrEqual(20, strlen($order->code));
-        $this->assertStringContainsString('Bến Nghé', $order->full_address);
+        $this->assertStringContainsString('Sài Gòn', $order->full_address);
     }
 
     public function test_spend_contribution_excludes_shipping_and_refunds(): void

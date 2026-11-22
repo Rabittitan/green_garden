@@ -9,6 +9,11 @@ use Illuminate\Validation\Rule;
 
 class PlaceOrderRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge(AddressRules::prepare($this));
+    }
+
     /**
      * @return array<string, mixed>
      */

@@ -58,6 +58,11 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     if (html.includes('Mã giảm giá') || html.includes('Hạng thành viên')) throw new Error('nhân viên thấy menu chỉ dành cho quản trị');
     const r = await staff.goto(B + '/admin/coupons'); if (r.status() !== 403) throw new Error('vào được /admin/coupons: ' + r.status());
   });
+  // ===== KHÁCH: sổ địa chỉ chọn Tỉnh -> Phường/xã (K9: tải danh sách xã bằng JS, CSP vẫn áp)
+  await step('khách: sổ địa chỉ — đổi tỉnh thì tải danh sách phường/xã', async () => {
+    await customer.goto(B + '/tai-khoan/dia-chi'); await customer.selectOption('#f-province', 'Thành phố Đà Nẵng');
+    await customer.waitForFunction(() => [...document.querySelectorAll('#f-ward option')].some(o => o.value === 'Phường Hải Châu'), null, { timeout: 5000 });
+  });
   // ===== KHÁCH: đánh giá + hỏi đáp
   await step('khách: đánh giá cây đã nhận + đặt câu hỏi', async () => {
     await customer.goto(B + '/cay-canh/1'); await customer.selectOption('select[name=rating]', '5');

@@ -36,8 +36,9 @@ trait BuildsOrders
 
     protected function shipping(): array
     {
-        return ['recipient_name' => 'Nguyễn Văn Khách', 'phone' => '0900000002', 'province' => 'TP. Hồ Chí Minh',
-            'district' => 'Quận 1', 'ward' => 'Phường Bến Nghé', 'address_line' => '12 Nguyễn Huệ'];
+        // Địa giới từ 01/07/2025: Tỉnh -> Phường (district = tên tỉnh, server tự ghi)
+        return ['recipient_name' => 'Nguyễn Văn Khách', 'phone' => '0900000002', 'province' => 'Thành phố Hồ Chí Minh',
+            'district' => 'Thành phố Hồ Chí Minh', 'ward' => 'Phường Sài Gòn', 'address_line' => '12 Nguyễn Huệ'];
     }
 
     /** @param array<int,int> $cart */
