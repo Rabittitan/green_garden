@@ -96,5 +96,6 @@
         document.addEventListener('click', function (e) { if (bar.classList.contains('show') && !bar.contains(e.target)) bar.classList.remove('show'); });
     })();
 </script>
+@stack('scripts')
 </body>
 </html>

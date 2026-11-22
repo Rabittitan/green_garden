@@ -324,3 +324,36 @@ a { text-underline-offset: 3px; }
     .gg-admin-sidebar.show { transform: none; box-shadow: var(--gg-shadow-lg); }
     .gg-admin-content { padding: 1rem; }
 }
+
+/* ================================================================ K10: dashboard doanh thu */
+.gg-hero-value { font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin: .15rem 0 .25rem; }
+.gg-delta { display: inline-flex; align-items: center; gap: .25rem; font-weight: 700; border-radius: 999px; padding: .1rem .55rem; }
+.gg-delta.up { background: #e8f5e9; color: #1b5e20; }
+.gg-delta.down { background: #fdecea; color: #b3261e; }
+.gg-mini-kpis { display: flex; gap: .75rem; }
+.gg-mini-kpis > div { background: var(--gg-soft, #f4f8f4); border-radius: 12px; padding: .55rem .85rem; min-width: 130px; }
+.gg-mini-kpis small { display: block; color: var(--gg-muted); font-size: .78rem; font-weight: 600; }
+.gg-mini-kpis strong { font-size: 1.1rem; }
+.gg-chart { position: relative; height: 280px; }
+.gg-chart-fallback { display: none; }
+.gg-chart-off { height: auto; }
+.gg-chart-off canvas { display: none; }
+.gg-chart-off .gg-chart-fallback { display: block; padding: 1rem 0; }
+/* Thanh đo (meter list): tên | thanh | số — cùng một màu, thanh thẳng hàng để so sánh */
+.gg-meters { list-style: none; padding: 0; margin: 0; }
+.gg-meters li, .gg-meters li > a { display: grid; grid-template-columns: minmax(0, 9.5rem) 1fr 2.5rem; align-items: center; gap: .6rem; }
+.gg-meters li { padding: .3rem 0; font-size: .875rem; }
+.gg-meters li > a { grid-column: 1 / -1; color: var(--gg-ink); text-decoration: none; border-radius: 8px; }
+.gg-meters li > a:hover .gg-meter-name { color: var(--gg-green); }
+.gg-meter-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gg-meter-bar { height: 8px; background: #eef2ee; border-radius: 4px; overflow: hidden; }
+.gg-meter-bar > span { display: block; height: 100%; background: var(--gg-green); border-radius: 4px; }
+.gg-meter-value { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gg-meters-ranked { counter-reset: rank; }
+.gg-meters-ranked .gg-meter-name::before { counter-increment: rank; content: counter(rank) ". "; color: var(--gg-muted); }
+@media (max-width: 575.98px) {
+    .gg-hero-value { font-size: 1.9rem; }
+    .gg-mini-kpis { width: 100%; }
+    .gg-mini-kpis > div { flex: 1; min-width: 0; }
+    .gg-chart { height: 220px; }
+}
