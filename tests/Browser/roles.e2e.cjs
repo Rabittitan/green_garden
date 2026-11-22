@@ -121,6 +121,14 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     await customer.goto(B + '/dat-hang'); await customer.fill('input[name=coupon_code]', 'e2e15');
     await click(customer, 'form[action$="ap-ma"] button'); await expect(customer, 'Mã E2E15');
   });
+  await step('quản trị trên điện thoại (390px): các trang danh sách không tràn ngang', async () => {
+    await admin.setViewportSize({ width: 390, height: 844 });
+    for (const u of ['/admin', '/admin/orders', '/admin/plants', '/admin/inventory', '/admin/coupons', '/admin/customers', '/admin/tiers', '/admin/purchase-requests', '/admin/goods-receipts', '/admin/suppliers']) {
+      await admin.goto(B + u); const w = await admin.evaluate(() => document.documentElement.scrollWidth);
+      if (w > 391) throw new Error(u + ' tràn ngang: ' + w + 'px');
+    }
+    await admin.setViewportSize({ width: 1280, height: 720 });
+  });
   await step('trang lỗi tiếng Việt (404, 403) có CSS, không lộ chi tiết', async () => {
     const r = await customer.goto(B + '/khong-co-trang-nay'); if (r.status() !== 404) throw new Error('404? ' + r.status());
     await expect(customer, 'Không tìm thấy trang');
