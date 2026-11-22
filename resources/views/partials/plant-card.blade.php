@@ -14,7 +14,7 @@
             <span class="badge bg-warning-subtle text-warning-emphasis border">{{ \App\Models\Plant::LIGHTS[$plant->light] }}</span>
         </div>
         <div class="mt-auto">
-            <div class="fw-bold text-green fs-5 mb-2">{{ number_format($plant->price, 0, ',', '.') }}đ</div>
+            <div class="fw-bold text-green fs-5 mb-2">@money($plant->price)</div>
             @if($plant->stock > 0)
                 {{-- Thêm nhanh 1 cây vào giỏ --}}
                 <form action="{{ route('cart.add', $plant->id) }}" method="POST">

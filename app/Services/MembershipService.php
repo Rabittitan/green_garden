@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\OrderStatus;
 use App\Enums\TierChangeReason;
+use App\Enums\UserRole;
 use App\Exceptions\BusinessException;
 use App\Models\MembershipTier;
 use App\Models\MembershipTierHistory;
@@ -124,7 +125,7 @@ class MembershipService
     public function recalculateAll(): int
     {
         $upgraded = 0;
-        User::where('role', 'customer')->orderBy('id')->select('id', 'membership_tier_id')
+        User::where('role', UserRole::Customer->value)->orderBy('id')->select('id', 'membership_tier_id')
             ->chunkById(200, function ($users) use (&$upgraded) {
                 foreach ($users as $u) {
                     try {

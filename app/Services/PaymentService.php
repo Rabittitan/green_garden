@@ -19,6 +19,7 @@ use App\Notifications\RefundCompleted;
 use App\Services\Orders\OrderStateWriter;
 use App\Services\Payments\GatewayResult;
 use App\Services\Payments\PaymentGateway;
+use App\Support\Format;
 use App\Support\Notifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +82,7 @@ class PaymentService
                 throw new BusinessException('Đơn hàng đã hết hạn thanh toán.');
             }
             $charge = Payment::where('order_id', $order->id)->where('type', PaymentType::Charge->value)
-                ->where('status', PaymentState::Pending->value)->lockForUpdate()->first();
+                ->pending()->lockForUpdate()->first();
 
             return $charge ?? $this->openCharge($order, $clientIp);   // lần trước thất bại -> giao dịch mới
         }, 3);
@@ -171,8 +172,8 @@ class PaymentService
                 throw new BusinessException('Không có khoản thu nào đang chờ xác nhận.');
             }
             if ($amount !== $charge->amount) {
-                throw new BusinessException('Số tiền nhận được ('.number_format($amount, 0, ',', '.').'đ) không khớp số phải thu ('
-                    .number_format($charge->amount, 0, ',', '.').'đ). Hãy liên hệ khách để xử lý.');
+                throw new BusinessException('Số tiền nhận được ('.Format::money($amount).') không khớp số phải thu ('
+                    .Format::money($charge->amount).'). Hãy liên hệ khách để xử lý.');
             }
             $charge->forceFill(['provider_txn_no' => $bankRef, 'note' => 'Xác nhận bởi '.$by->name]);
             $this->applySucceededCharge($order, $charge, ActorType::Staff, $by->id);
@@ -205,7 +206,7 @@ class PaymentService
     public function settleCod(Order $order): void
     {
         $charge = Payment::where('order_id', $order->id)->where('type', PaymentType::Charge->value)
-            ->where('status', PaymentState::Pending->value)->lockForUpdate()->first();
+            ->pending()->lockForUpdate()->first();
         if ($charge && $charge->method === PaymentMethod::Cod) {
             $charge->forceFill(['status' => PaymentState::Succeeded, 'paid_at' => now()])->save();
         }
@@ -215,7 +216,7 @@ class PaymentService
     public function cancelPendingCharges(Order $order): void
     {
         Payment::where('order_id', $order->id)->where('type', PaymentType::Charge->value)
-            ->where('status', PaymentState::Pending->value)->lockForUpdate()->get()
+            ->pending()->lockForUpdate()->get()
             ->each(fn (Payment $p) => $p->forceFill(['status' => PaymentState::Cancelled])->save());
     }
 
@@ -225,7 +226,7 @@ class PaymentService
     public function refundableAmount(Order $order): int
     {
         $pendingRefunds = (int) Payment::where('order_id', $order->id)->where('type', PaymentType::Refund->value)
-            ->where('status', PaymentState::Pending->value)->sum('amount');
+            ->pending()->sum('amount');
 
         return $this->sumSucceeded($order, PaymentType::Charge) - $this->sumSucceeded($order, PaymentType::Refund) - $pendingRefunds;
     }
@@ -251,10 +252,10 @@ class PaymentService
     {
         $refundable = $this->refundableAmount($order);
         if ($amount < 1 || $amount > $refundable) {
-            throw new BusinessException('Số tiền hoàn phải từ 1đ đến '.number_format($refundable, 0, ',', '.').'đ.');
+            throw new BusinessException('Số tiền hoàn phải từ 1đ đến '.Format::money($refundable).'.');
         }
         $charge = Payment::where('order_id', $order->id)->where('type', PaymentType::Charge->value)
-            ->where('status', PaymentState::Succeeded->value)->firstOrFail();
+            ->succeeded()->firstOrFail();
 
         return $order->payments()->create([
             'parent_payment_id' => $charge->id, 'type' => PaymentType::Refund, 'method' => $charge->method,
@@ -300,7 +301,7 @@ class PaymentService
         $paid = $this->sumSucceeded($order, PaymentType::Charge);
         $refunded = $this->sumSucceeded($order, PaymentType::Refund);
         $pendingRefund = Payment::where('order_id', $order->id)->where('type', PaymentType::Refund->value)
-            ->where('status', PaymentState::Pending->value)->exists();
+            ->pending()->exists();
         if ($paid > $order->total) {
             throw new LogicException("Đơn {$order->code} thu vượt tổng tiền.");
         }
@@ -322,7 +323,7 @@ class PaymentService
     private function sumSucceeded(Order $order, PaymentType $type): int
     {
         return (int) Payment::where('order_id', $order->id)->where('type', $type->value)
-            ->where('status', PaymentState::Succeeded->value)->sum('amount');
+            ->succeeded()->sum('amount');
     }
 
     private function nextTxnRef(Order $order, PaymentType $type): string

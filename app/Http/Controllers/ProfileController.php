@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class ProfileController extends Controller
         $user->load('tier');
         $stats = [
             'orders' => $user->orders()->count(),
-            'completed' => $user->orders()->where('status', 'completed')->count(),
+            'completed' => $user->orders()->where('status', OrderStatus::Completed->value)->count(),
             'spent' => $user->lifetime_spend,                       // tổng chi tiêu đã chốt (dùng xét hạng)
         ];
         $latestOrders = $user->orders()->latest('id')->take(5)->get();

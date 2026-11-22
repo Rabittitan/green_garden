@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReviewStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -108,7 +109,7 @@ class Plant extends Model
     /** @return HasMany<PlantReview, $this> */
     public function approvedReviews(): HasMany
     {
-        return $this->reviews()->where('status', 'approved');
+        return $this->reviews()->where('status', ReviewStatus::Approved->value);
     }
 
     /** @return MorphMany<Comment, $this> */

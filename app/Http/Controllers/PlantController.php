@@ -39,20 +39,20 @@ class PlantController extends Controller
             $query->where('name', 'like', '%'.$request->keyword.'%');
         }
 
-        // Lọc theo khoảng giá (?price=100-300)
+        // Lọc theo khoảng giá (?price=100-300). Các khoảng nối tiếp, không chồng nhau: mốc dưới TÍNH, mốc trên KHÔNG tính
         if ($request->filled('price')) {
             switch ($request->price) {
                 case 'duoi-100':                                   // dưới 100.000đ
                     $query->where('price', '<', 100000);
                     break;
-                case '100-300':                                    // từ 100.000 đến 300.000đ
-                    $query->whereBetween('price', [100000, 300000]);
+                case '100-300':                                    // 100.000 <= giá < 300.000
+                    $query->where('price', '>=', 100000)->where('price', '<', 300000);
                     break;
-                case '300-500':                                    // từ 300.000 đến 500.000đ
-                    $query->whereBetween('price', [300000, 500000]);
+                case '300-500':                                    // 300.000 <= giá < 500.000
+                    $query->where('price', '>=', 300000)->where('price', '<', 500000);
                     break;
-                case 'tren-500':                                   // trên 500.000đ
-                    $query->where('price', '>', 500000);
+                case 'tren-500':                                   // giá >= 500.000
+                    $query->where('price', '>=', 500000);
                     break;
             }
         }
