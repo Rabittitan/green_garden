@@ -280,3 +280,47 @@ a { text-underline-offset: 3px; }
     .gg-cart-line .gg-cart-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
     .gg-progress li { font-size: .7rem; }
 }
+
+/* ================================================================ K7c: khu quản trị */
+.gg-admin { background: #f3f5f2; margin: 0; }
+/* Khung 2 cột tự định nghĩa (KHÔNG dựa vào .d-flex của Bootstrap CDN): CDN lỗi thì menu vẫn không đè lên nội dung */
+.gg-admin-shell { display: flex; align-items: stretch; min-height: 100vh; }
+.gg-admin-sidebar { width: 252px; background: #12351a; color: #c8e6c9; min-height: 100vh; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex: 0 0 252px; }
+.gg-admin-brand { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.25rem; color: #fff; font-weight: 800; font-size: 1.05rem; text-decoration: none; }
+.gg-admin-brand:hover { color: #fff; }
+.gg-admin-group { padding: 1rem 1.25rem .35rem; font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #81c784; }
+.gg-admin-link { display: flex; align-items: center; gap: .7rem; margin: .1rem .65rem; padding: .55rem .75rem; border-radius: 10px;
+                 color: #c8e6c9; text-decoration: none; font-size: .93rem; background: none; border: 0; width: calc(100% - 1.3rem); text-align: left; }
+.gg-admin-link i { width: 18px; text-align: center; opacity: .85; }
+.gg-admin-link:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+.gg-admin-link.active { background: #2e7d32; color: #fff; font-weight: 600; }
+.gg-admin-main { flex: 1; min-width: 0; }
+.gg-admin-top { background: #fff; border-bottom: 1px solid var(--gg-line); padding: .7rem 1.5rem; position: sticky; top: 0; z-index: 1020; }
+.gg-admin-content { padding: 1.5rem; }
+.gg-role { background: var(--gg-green-light); color: var(--gg-green-dark); font-weight: 600; }
+
+/* Bảng / thẻ trong khu quản trị (áp cho mọi trang admin, không phải sửa từng view) */
+.gg-admin-content .card { border: 1px solid var(--gg-line); border-radius: var(--gg-radius); box-shadow: var(--gg-shadow); }
+.gg-admin-content .card-header { background: #fff; border-bottom: 1px solid var(--gg-line); padding: .85rem 1.1rem; font-weight: 700; }
+.gg-admin-content .table > thead th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gg-muted); font-weight: 700; background: #fafcfa; }
+.gg-admin-content .table > :not(caption) > * > * { padding: .7rem .85rem; }
+.gg-admin-content .table-success { --bs-table-bg: #eef6ee; }
+.gg-admin-content h4.text-green { color: var(--gg-ink) !important; font-weight: 800; letter-spacing: -.01em; }
+.gg-admin-content h4.text-green i { color: var(--gg-green); }
+
+/* Thẻ số liệu (trang tổng quan) */
+.gg-stat { background: #fff; border: 1px solid var(--gg-line); border-radius: var(--gg-radius); box-shadow: var(--gg-shadow); padding: 1.15rem 1.25rem; height: 100%; }
+.gg-stat-icon { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 1.05rem; margin-bottom: .75rem; }
+.gg-stat-label { color: var(--gg-muted); font-size: .85rem; font-weight: 600; }
+.gg-stat-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+.gg-stat small { color: var(--gg-muted); }
+.gg-todo a { display: flex; justify-content: space-between; align-items: center; padding: .45rem 0; color: var(--gg-ink); text-decoration: none; border-bottom: 1px dashed var(--gg-line); }
+.gg-todo a:last-child { border-bottom: 0; }
+.gg-todo a:hover { color: var(--gg-green); }
+.gg-todo .badge { min-width: 30px; }
+
+@media (max-width: 991.98px) {
+    .gg-admin-sidebar { position: fixed; left: 0; top: 0; z-index: 1045; transform: translateX(-100%); transition: transform .2s; }
+    .gg-admin-sidebar.show { transform: none; box-shadow: var(--gg-shadow-lg); }
+    .gg-admin-content { padding: 1rem; }
+}

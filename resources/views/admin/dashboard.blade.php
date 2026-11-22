@@ -2,28 +2,41 @@
 @section('title', 'Thống kê')
 
 @section('content')
-<h4 class="text-green fw-bold mb-4"><i class="fa fa-chart-line"></i> Thống kê</h4>
+<h4 class="text-green fw-bold mb-3"><i class="fa fa-chart-line"></i> Thống kê</h4>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card text-white bg-success h-100"><div class="card-body">
-        <div>Doanh thu hàng hóa</div><div class="fs-4 fw-bold">@money($revenue)</div>
+    <div class="col-sm-6 col-xl-3"><div class="gg-stat">
+        <div class="gg-stat-icon" style="background:#e8f5e9;color:#2e7d32"><i class="fa fa-sack-dollar"></i></div>
+        <div class="gg-stat-label">Doanh thu hàng hóa</div><div class="gg-stat-value">@money($revenue)</div>
         <small>đơn hoàn thành, sau giảm giá và hoàn tiền, không gồm ship</small>
-    </div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-primary h-100"><div class="card-body">
-        <div>Lợi nhuận gộp</div><div class="fs-4 fw-bold">@money($revenue - $cogs)</div>
+    </div></div>
+    <div class="col-sm-6 col-xl-3"><div class="gg-stat">
+        <div class="gg-stat-icon" style="background:#e3f2fd;color:#1565c0"><i class="fa fa-chart-line"></i></div>
+        <div class="gg-stat-label">Lợi nhuận gộp</div><div class="gg-stat-value">@money($revenue - $cogs)</div>
         <small>doanh thu − giá vốn lúc bán (@money($cogs))</small>
-    </div></div></div>
-    <div class="col-md-3"><div class="card text-white bg-secondary h-100"><div class="card-body">
-        <div>Tiền thực thu</div><div class="fs-4 fw-bold">@money($cashIn)</div>
+    </div></div>
+    <div class="col-sm-6 col-xl-3"><div class="gg-stat">
+        <div class="gg-stat-icon" style="background:#f3e5f5;color:#6a1b9a"><i class="fa fa-wallet"></i></div>
+        <div class="gg-stat-label">Tiền thực thu</div><div class="gg-stat-value">@money($cashIn)</div>
         <small>đã thu − đã hoàn (@money($refunded))</small>
-    </div></div></div>
-    <div class="col-md-3"><div class="card text-dark bg-warning h-100"><div class="card-body">
-        <div>Việc cần làm</div>
-        <div><a href="{{ route('admin.orders.index', ['status' => 'pending']) }}" class="text-dark">{{ $counts['pending'] ?? 0 }} đơn chờ xác nhận</a></div>
-        <div><a href="{{ route('admin.orders.index', ['status' => 'confirmed']) }}" class="text-dark">{{ $counts['confirmed'] ?? 0 }} đơn chờ giao</a></div>
-        <div><a href="{{ route('admin.orders.index', ['status' => 'returning']) }}" class="text-dark">{{ $counts['returning'] ?? 0 }} đơn đang hoàn về</a></div>
-        <div><a href="{{ route('admin.orders.index', ['payment_status' => 'refund_pending']) }}" class="text-dark fw-bold">{{ $needRefund }} đơn chờ hoàn tiền</a></div>
-    </div></div></div>
+    </div></div>
+    <div class="col-sm-6 col-xl-3"><div class="gg-stat">
+        <div class="gg-stat-icon" style="background:#fff4d6;color:#8a5a00"><i class="fa fa-list-check"></i></div>
+        <div class="gg-stat-label mb-1">Việc cần làm</div>
+        @php
+            $todo = [
+                [route('admin.orders.index', ['status' => 'pending']), $counts['pending'] ?? 0, 'đơn chờ xác nhận'],
+                [route('admin.orders.index', ['status' => 'confirmed']), $counts['confirmed'] ?? 0, 'đơn chờ giao'],
+                [route('admin.orders.index', ['status' => 'returning']), $counts['returning'] ?? 0, 'đơn đang hoàn về'],
+                [route('admin.orders.index', ['payment_status' => 'refund_pending']), $needRefund, 'đơn chờ hoàn tiền'],
+            ];
+        @endphp
+        <div class="gg-todo small">
+            @foreach($todo as [$url, $n, $label])
+                <a href="{{ $url }}"><span>{{ $n }} {{ $label }}</span><span class="badge rounded-pill {{ $n > 0 ? 'bg-danger' : 'bg-light text-muted' }}">{{ $n }}</span></a>
+            @endforeach
+        </div>
+    </div></div>
 </div>
 
 <div class="row g-4">
@@ -72,7 +85,7 @@
                             <td>{{ $order->code }}</td><td>{{ $order->recipient_name }}</td><td>@money($order->total)</td>
                             <td><span class="badge bg-{{ $order->status->color() }}">{{ $order->status->label() }}</span></td>
                             <td><span class="badge bg-{{ $order->payment_status->color() }}">{{ $order->payment_status->label() }}</span></td>
-                            <td><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-success">Xem</a></td>
+                            <td><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-green">Xem</a></td>
                         </tr>
                     @endforeach
                 </tbody>

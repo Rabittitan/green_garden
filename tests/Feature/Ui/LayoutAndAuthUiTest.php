@@ -5,6 +5,7 @@ namespace Tests\Feature\Ui;
 use App\Enums\ActorType;
 use App\Enums\OrderStatus;
 use App\Models\Plant;
+use App\Models\User;
 use App\Services\OrderService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,6 +129,31 @@ class LayoutAndAuthUiTest extends TestCase
         foreach (['profile.edit', 'orders.index', 'account.membership', 'addresses.index'] as $route) {
             $this->assertStringContainsString('gg-account-nav', $this->get(route($route))->assertOk()->getContent(), $route);
         }
+    }
+
+    /** K7c: menu quản trị chia nhóm; nhóm "Quản trị" (mã giảm giá / khách hàng / hạng) ẩn HOÀN TOÀN với nhân viên. */
+    public function test_admin_menu_hides_admin_only_group_from_staff(): void
+    {
+        $adminOnly = ['admin.coupons.index' => 'Mã giảm giá', 'admin.customers.index' => 'Khách hàng', 'admin.tiers.index' => 'Hạng thành viên'];
+
+        $staffHtml = $this->actingAs(User::factory()->staff()->create())->get(route('admin.dashboard'))->assertOk()->getContent();
+        $this->assertStringContainsString('gg-admin-sidebar', $staffHtml);
+        $this->assertStringContainsString('Kho &amp; nhập hàng', $staffHtml);
+        $this->assertStringNotContainsString('<div class="gg-admin-group">Quản trị</div>', $staffHtml);
+        foreach ($adminOnly as $route => $label) {
+            $this->assertStringNotContainsString(route($route), $staffHtml);
+            $this->assertStringNotContainsString($label, $staffHtml);
+        }
+
+        $adminHtml = $this->actingAs($this->admin())->get(route('admin.dashboard'))->assertOk()->getContent();
+        $this->assertStringContainsString('<div class="gg-admin-group">Quản trị</div>', $adminHtml);
+        foreach ($adminOnly as $route => $label) {
+            $this->assertStringContainsString(route($route), $adminHtml);
+        }
+        $this->assertStringContainsString('id="admin-menu-toggle"', $adminHtml);
+        // Khung 2 cột phải nằm trong CSS của dự án: CDN Bootstrap lỗi thì menu trái vẫn không đè lên nội dung (lỗi đã gặp)
+        $this->assertStringContainsString('class="gg-admin-shell"', $adminHtml);
+        $this->assertMatchesRegularExpression('/\.gg-admin-shell\s*\{[^}]*display:\s*flex/', (string) file_get_contents(public_path('css/app.css')));
     }
 
     /** Thương hiệu thống nhất là GreenGarden: không còn tên cũ ở bất cứ chỗ nào khách nhìn thấy (giao diện, mail, cấu hình). */
