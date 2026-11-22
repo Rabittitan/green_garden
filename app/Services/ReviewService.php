@@ -19,7 +19,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Quy tắc:
  *  - Chỉ khách đã NHẬN cây (dòng hàng thuộc đơn completed của chính họ) mới được đánh giá.
- *  - Mỗi khách 1 đánh giá / 1 cây; sửa nội dung -> phải duyệt lại.
+ *  - Mỗi khách 1 đánh giá / 1 cây. Gửi hoặc sửa là HIỆN NGAY (không chờ duyệt), cộng vào điểm sao luôn.
+ *    Shop gỡ đánh giá xấu bằng "Từ chối"; đánh giá đã bị từ chối mà khách sửa lại thì chờ shop duyệt lại
+ *    (không để khách tự đăng lại thứ shop đã gỡ).
  *  - Thứ tự khóa: users -> plant_reviews -> plants (giống các luồng khác: users đứng đầu).
  */
 class ReviewService
@@ -51,11 +53,19 @@ class ReviewService
                 $this->applyToPlant($plantId, -$review->rating, -1);
             }
 
+            $publish = ! ($review->exists && $review->status === ReviewStatus::Rejected);
+
             $review->fill(['order_item_id' => $orderItem->id, 'rating' => $rating, 'title' => $title, 'content' => $content]);
-            $review->status = ReviewStatus::Pending;                       // sửa nội dung thì phải duyệt lại
+            $review->status = $publish ? ReviewStatus::Approved : ReviewStatus::Pending;
             $review->reject_reason = null;
+            $review->moderated_by = null;                                  // hiện tự động, chưa có ai kiểm duyệt bản này
+            $review->moderated_at = null;
             $review->deleted_at = null;
             $review->save();
+
+            if ($publish) {
+                $this->applyToPlant($plantId, $rating, 1);
+            }
 
             return $review;
         }, 3);

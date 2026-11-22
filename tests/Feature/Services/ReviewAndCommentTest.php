@@ -18,7 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsOrders;
 use Tests\TestCase;
 
-/** H4: đánh giá (chỉ người đã nhận cây, duyệt, điểm luôn khớp) + hỏi đáp. */
+/** H4: đánh giá (chỉ người đã nhận cây, hiện ngay, shop gỡ được, điểm luôn khớp) + hỏi đáp. */
 class ReviewAndCommentTest extends TestCase
 {
     use BuildsOrders, RefreshDatabase;
@@ -69,14 +69,12 @@ class ReviewAndCommentTest extends TestCase
     public function test_rating_totals_follow_moderation_edit_and_delete(): void
     {
         $this->delivered();
-        $r = $this->reviews->submit($this->customer(), 1, 4, 'Ổn', 'Cây khỏe');
-        $this->assertSame([ReviewStatus::Pending, 0, 0], [$r->status, $this->plant()->rating_sum, $this->plant()->rating_count]);
+        $r = $this->reviews->submit($this->customer(), 1, 4, 'Ổn', 'Cây khỏe');      // hiện ngay, tính điểm luôn
+        $this->assertSame([ReviewStatus::Approved, 4, 1], [$r->status, $this->plant()->rating_sum, $this->plant()->rating_count]);
+        $this->assertNull($r->moderated_by);
 
-        $this->reviews->moderate($r, ReviewStatus::Approved, $this->admin());
-        $this->assertSame([4, 1, 4.0], [$this->plant()->rating_sum, $this->plant()->rating_count, $this->plant()->rating_avg]);
-
-        $this->reviews->submit($this->customer(), 1, 2, 'Sửa', 'Lá vàng');      // sửa -> chờ duyệt lại, gỡ điểm cũ
-        $this->assertSame([0, 0], [$this->plant()->rating_sum, $this->plant()->rating_count]);
+        $this->reviews->submit($this->customer(), 1, 2, 'Sửa', 'Lá vàng');      // sửa -> vẫn hiện, thay điểm cũ bằng điểm mới
+        $this->assertSame([ReviewStatus::Approved, 2, 1], [$r->refresh()->status, $this->plant()->rating_sum, $this->plant()->rating_count]);
         $this->assertSame(1, PlantReview::count());
 
         try {
@@ -84,13 +82,36 @@ class ReviewAndCommentTest extends TestCase
             $this->fail('Từ chối phải có lý do');
         } catch (BusinessException) {
         }
+        $this->reviews->moderate($r, ReviewStatus::Rejected, $this->admin(), 'Ngôn từ không phù hợp');   // shop gỡ
+        $this->assertSame([0, 0], [$this->plant()->rating_sum, $this->plant()->rating_count]);
+
+        // Bị gỡ rồi khách sửa lại: KHÔNG tự hiện lại, chờ shop duyệt
+        $this->reviews->submit($this->customer(), 1, 3, 'Viết lại', 'Lời lẽ ôn hòa');
+        $this->assertSame([ReviewStatus::Pending, 0, 0], [$r->refresh()->status, $this->plant()->rating_sum, $this->plant()->rating_count]);
+        $this->assertNull($r->reject_reason);
+
         $this->reviews->moderate($r, ReviewStatus::Approved, $this->admin());
+        $this->assertSame([3, 1, 3.0], [$this->plant()->rating_sum, $this->plant()->rating_count, $this->plant()->rating_avg]);
         $this->reviews->delete($r->refresh());
         $this->assertSame([0, 0], [$this->plant()->rating_sum, $this->plant()->rating_count]);
         $this->assertSoftDeleted($r);
 
         $again = $this->reviews->submit($this->customer(), 1, 5, null, 'Viết lại');   // khôi phục bản đã xóa, không tạo trùng
         $this->assertTrue($again->is($r));
+        $this->assertSame([ReviewStatus::Approved, 5, 1], [$again->status, $this->plant()->rating_sum, $this->plant()->rating_count]);
+        $this->artisan('shop:reconcile')->assertSuccessful();
+    }
+
+    /** Khách tự xóa đánh giá đã bị shop gỡ rồi viết lại: vẫn phải chờ duyệt (xóa không "rửa" được trạng thái bị gỡ). */
+    public function test_deleting_a_rejected_review_does_not_bypass_moderation(): void
+    {
+        $this->delivered();
+        $r = $this->reviews->submit($this->customer(), 1, 1, null, 'Spam');
+        $this->reviews->moderate($r, ReviewStatus::Rejected, $this->admin(), 'Spam');
+        $this->reviews->delete($r->refresh());
+        $again = $this->reviews->submit($this->customer(), 1, 1, null, 'Spam lần nữa');
+        $this->assertSame(ReviewStatus::Pending, $again->status);
+        $this->assertSame([0, 0], [$this->plant()->rating_sum, $this->plant()->rating_count]);
         $this->artisan('shop:reconcile')->assertSuccessful();
     }
 
@@ -99,9 +120,10 @@ class ReviewAndCommentTest extends TestCase
         $this->delivered();
         $r = $this->reviews->submit($this->customer(), 1, 5, null, 'Tốt');
         $voter = User::factory()->create();
+        $this->reviews->moderate($r, ReviewStatus::Rejected, $this->admin(), 'Kiểm tra');
         try {
             $this->reviews->toggleHelpful($r, $voter);
-            $this->fail('Chưa duyệt thì chưa bình chọn được');
+            $this->fail('Đánh giá đang bị gỡ thì không bình chọn được');
         } catch (BusinessException) {
         }
         $this->reviews->moderate($r, ReviewStatus::Approved, $this->admin());

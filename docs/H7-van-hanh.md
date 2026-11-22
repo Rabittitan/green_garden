@@ -36,7 +36,7 @@ php artisan optimize
 sudo chown -R www-data:www-data storage bootstrap/cache
 ```
 
-Nhân viên (xử lý đơn, kho, duyệt đánh giá; **không** hoàn tiền / sửa mã / sửa hạng): `php artisan shop:create-admin nv@shop.vn --staff`. Lệnh này cũng dùng để **đặt lại mật khẩu admin** khi quên.
+Nhân viên (xử lý đơn, kho, gỡ đánh giá không phù hợp; **không** hoàn tiền / sửa mã / sửa hạng): `php artisan shop:create-admin nv@shop.vn --staff`. Lệnh này cũng dùng để **đặt lại mật khẩu admin** khi quên.
 
 Cài cron, supervisor, nginx theo 3 file mẫu trong `deploy/` (đổi `shop.example.vn` và đường dẫn), rồi `certbot --nginx -d <tên miền>`.
 

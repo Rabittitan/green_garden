@@ -27,13 +27,18 @@ class ReviewHttpTest extends TestCase
 
         $this->actingAs($this->customer())->get(route('plants.show', 1))->assertSee('Gửi đánh giá');
         $this->post(route('reviews.store', 1), ['rating' => 9])->assertSessionHasErrors('rating');
-        $this->post(route('reviews.store', 1), ['rating' => 5, 'title' => 'Tuyệt', 'content' => 'Cây xanh tốt'])->assertSessionHas('success');
+        $this->post(route('reviews.store', 1), ['rating' => 5, 'title' => 'Tuyệt', 'content' => 'Cây xanh tốt'])
+            ->assertSessionHas('success', 'Cảm ơn bạn! Đánh giá đã được đăng.');
         $review = PlantReview::sole();
-        $this->get(route('plants.show', 1))->assertSee('Chờ duyệt')->assertDontSee('Cây xanh tốt</div>', false);
+        $this->assertSame(ReviewStatus::Approved, $review->status);                        // không chờ duyệt
+        $this->get(route('plants.show', 1))->assertSee('Đã hiển thị')->assertSee('Cây xanh tốt</div>', false);
 
         $staff = User::factory()->staff()->create();
+        // Không có đánh giá chờ duyệt -> trang kiểm duyệt mở sẵn tab đánh giá đang hiển thị
         $this->actingAs($staff)->get(route('admin.reviews.index'))->assertOk()->assertSee('Cây xanh tốt');
-        $this->post(route('admin.reviews.moderate', $review), ['status' => 'approved'])->assertSessionHas('success');
+        $this->post(route('admin.reviews.moderate', $review), ['status' => 'rejected', 'reason' => 'Thử gỡ'])->assertSessionHas('success');
+        $this->actingAs($this->customer())->get(route('plants.show', 1))->assertSee('Bị từ chối')->assertDontSee('Cây xanh tốt</div>', false);
+        $this->actingAs($staff)->post(route('admin.reviews.moderate', $review), ['status' => 'approved'])->assertSessionHas('success');
         $this->post(route('admin.reviews.reply', $review), ['shop_reply' => 'Cảm ơn bạn!'])->assertSessionHas('success');
         $this->assertSame(ReviewStatus::Approved, $review->refresh()->status);
 

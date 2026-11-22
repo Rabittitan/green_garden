@@ -62,13 +62,14 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
   await step('khách: đánh giá cây đã nhận + đặt câu hỏi', async () => {
     await customer.goto(B + '/cay-canh/1'); await customer.selectOption('select[name=rating]', '5');
     await customer.fill('textarea[name=content] >> nth=0', 'Cây khỏe, đóng gói kỹ');
-    await click(customer, 'form[action$="danh-gia"] button'); await expect(customer, 'Chờ duyệt');
+    await click(customer, 'form[action$="danh-gia"] button'); await expect(customer, 'Đã hiển thị');   // K11: đăng ngay, không chờ duyệt
+    await expect(customer, 'Cây khỏe, đóng gói kỹ</div>');
     await customer.fill('form[action$="hoi-dap"] textarea', 'Bao lâu thay chậu một lần?');
     await click(customer, 'form[action$="hoi-dap"] textarea >> xpath=../button'); await expect(customer, 'Bao lâu thay chậu');
   });
-  // ===== NHÂN VIÊN: duyệt đánh giá, trả lời hỏi đáp, lập yêu cầu nhập
-  await step('nhân viên: duyệt đánh giá + trả lời hỏi đáp', async () => {
-    await staff.goto(B + '/admin/reviews'); await click(staff, 'button:has-text("Duyệt")');
+  // ===== NHÂN VIÊN: xem đánh giá vừa đăng, trả lời hỏi đáp, lập yêu cầu nhập
+  await step('nhân viên: thấy đánh giá đang hiển thị + trả lời hỏi đáp', async () => {
+    await staff.goto(B + '/admin/reviews'); await expect(staff, 'Cây khỏe, đóng gói kỹ'); await expect(staff, 'Từ chối');
     await staff.goto(B + '/admin/comments'); await staff.fill('input[name=content]', 'Khoảng 1 năm bạn nhé.'); await click(staff, 'button:has-text("Trả lời")');
     await customer.goto(B + '/cay-canh/1'); await expect(customer, 'Shop trả lời'); await expect(customer, '5</strong>/5');
   });

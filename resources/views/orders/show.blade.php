@@ -38,6 +38,9 @@
 @endif
 
 {{-- ===== VIỆC CẦN LÀM ===== --}}
+@if($order->status === OS::Completed && $order->items->contains(fn ($i) => ! isset($myReviews[$i->plant_id]) && $i->plant?->is_active && ! $i->plant->trashed()))
+    <div class="alert alert-success"><i class="fa fa-star"></i> Đơn đã giao thành công. Hãy <strong>đánh giá cây bạn đã nhận</strong> để giúp người mua sau. Đánh giá được đăng ngay.</div>
+@endif
 @if($order->status === \App\Enums\OrderStatus::PendingPayment)
     <div class="alert alert-warning">
         <i class="fa fa-hourglass-half"></i> Đơn đang được giữ hàng tới <strong>@vndt($order->payment_expires_at)</strong>.
@@ -126,6 +129,18 @@
                         <td>{{ $item->plant_name }}
                             @if($item->returned_good_qty + $item->returned_damaged_qty > 0)
                                 <div class="small text-muted">Đã hoàn: {{ $item->returned_good_qty + $item->returned_damaged_qty }}</div>
+                            @endif
+                            {{-- Đơn đã nhận hàng: mời đánh giá (chỉ khi cây còn bán, vì trang cây ngừng bán trả 404) --}}
+                            @if($order->status === OS::Completed && $item->plant?->is_active && ! $item->plant->trashed())
+                                @php $mine = $myReviews[$item->plant_id] ?? null; @endphp
+                                <div class="mt-1">
+                                    @if($mine)
+                                        <a href="{{ route('plants.show', $item->plant_id) }}#reviews" class="btn btn-sm btn-outline-secondary py-0">
+                                            <span class="gg-stars">{{ str_repeat('★', $mine->rating) }}</span> Đã đánh giá · Sửa</a>
+                                    @else
+                                        <a href="{{ route('plants.show', $item->plant_id) }}#reviews" class="btn btn-sm btn-green py-0"><i class="fa fa-star"></i> Đánh giá cây này</a>
+                                    @endif
+                                </div>
                             @endif
                         </td>
                         <td>@money($item->unit_price)</td>

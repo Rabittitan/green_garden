@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PurchaseRequestStatus;
 use App\Models\Order;
+use App\Models\Plant;
 use App\Models\PlantReview;
 use App\Models\Supplier;
 use App\Models\User;
@@ -171,6 +172,9 @@ class ConcurrencyTest extends TestCase
         $results = $this->race(array_fill(0, 4, ['review', (string) $this->customer()->id, '1']));
         $this->assertSame(1, collect($results)->pluck('result')->unique()->count());
         $this->assertSame(1, PlantReview::count());
+        // Đánh giá hiện ngay: dù gửi chồng 4 lần, điểm sao chỉ tính 1 lần
+        $this->assertSame([5, 1], [Plant::find(1)->rating_sum, Plant::find(1)->rating_count]);
+        $this->artisan('shop:reconcile')->assertSuccessful();
     }
 
     /** Nhân viên hủy đơn đúng lúc VNPay báo đã trả tiền: luôn kết thúc ở "đã hủy + chờ hoàn tiền", kho trả về đủ. */
