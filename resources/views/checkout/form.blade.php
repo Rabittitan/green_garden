@@ -6,17 +6,20 @@
     $default = $addresses->firstWhere('is_default', true) ?? $addresses->first();
     $val = fn ($field) => old($field, $default?->{$field} ?? ($field === 'recipient_name' ? $user->name : ($field === 'phone' ? $user->phone : '')));
 @endphp
-<h4 class="text-green fw-bold mb-3"><i class="fa fa-truck"></i> Xem lại và đặt hàng</h4>
+<div class="gg-page-head">
+    <span class="gg-eyebrow">Thanh toán</span>
+    <h1><i class="fa fa-truck text-green"></i> Xem lại và đặt hàng</h1>
+</div>
 
 <div class="row g-4">
     {{-- ===== CỘT TRÁI: giao hàng + thanh toán ===== --}}
     <div class="col-lg-7">
-        <form id="checkout-form" action="{{ route('checkout.store') }}" method="POST" class="card card-body shadow-sm">
+        <form id="checkout-form" action="{{ route('checkout.store') }}" method="POST" class="gg-panel gg-panel-body">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $token }}">
             <input type="hidden" name="expected_total" value="{{ $quote->total() }}">
 
-            <h6 class="fw-bold">1. Địa chỉ nhận hàng</h6>
+            <div class="gg-step-title"><span class="gg-step-num">1</span> Địa chỉ nhận hàng</div>
             @if($addresses->isNotEmpty())
                 <select class="form-select mb-3" id="address-picker">
                     <option value="">-- Chọn từ sổ địa chỉ --</option>
@@ -34,8 +37,8 @@
                     'address_line' => ['Số nhà, tên đường', 'col-12'],
                 ] as $field => [$label, $col])
                     <div class="{{ $col }} mb-3">
-                        <label class="form-label">{{ $label }} *</label>
-                        <input type="text" name="{{ $field }}" value="{{ $val($field) }}" data-field="{{ $field }}"
+                        <label class="form-label fw-semibold" for="f-{{ $field }}">{{ $label }} <span class="text-danger">*</span></label>
+                        <input type="text" id="f-{{ $field }}" name="{{ $field }}" value="{{ $val($field) }}" data-field="{{ $field }}"
                                class="form-control @error($field) is-invalid @enderror">
                         @error($field) <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
@@ -46,37 +49,37 @@
                 <label class="form-check-label" for="save_address">Lưu địa chỉ này vào sổ địa chỉ</label>
             </div>
             <div class="mb-3">
-                <label class="form-label">Ghi chú cho shop</label>
-                <textarea name="note" rows="2" class="form-control" maxlength="1000">{{ old('note') }}</textarea>
+                <label class="form-label fw-semibold" for="f-note">Ghi chú cho shop</label>
+                <textarea id="f-note" name="note" rows="2" class="form-control" maxlength="1000">{{ old('note') }}</textarea>
             </div>
 
-            <h6 class="fw-bold mt-2">2. Phương thức thanh toán</h6>
+            <div class="gg-step-title mt-2"><span class="gg-step-num">2</span> Phương thức thanh toán</div>
             @error('payment_method') <div class="text-danger small">{{ $message }}</div> @enderror
             @foreach($methods as $m)
-                <div class="form-check mb-2">
+                <div class="gg-pay-option">
                     <input class="form-check-input" type="radio" name="payment_method" value="{{ $m->value }}" id="pm-{{ $m->value }}"
                            @checked(old('payment_method', 'cod') === $m->value)>
-                    <label class="form-check-label" for="pm-{{ $m->value }}">
-                        {{ $m->label() }}
+                    <label for="pm-{{ $m->value }}">
+                        <strong>{{ $m->label() }}</strong>
                         @if($m->isPrepaid())
-                            <span class="text-muted small">— giữ hàng {{ $m->holdMinutes() >= 60 ? intdiv($m->holdMinutes(), 60).' giờ' : $m->holdMinutes().' phút' }} chờ thanh toán</span>
+                            <span class="d-block text-muted small">Giữ hàng {{ $m->holdMinutes() >= 60 ? intdiv($m->holdMinutes(), 60).' giờ' : $m->holdMinutes().' phút' }} chờ thanh toán</span>
                         @endif
                     </label>
                 </div>
             @endforeach
             @error('checkout_token') <div class="alert alert-danger mt-2">{{ $message }}</div> @enderror
 
-            <button class="btn btn-green btn-lg mt-3" id="submit-btn">Đặt hàng · @money($quote->total())</button>
-            <small class="text-muted mt-2">Bấm đặt hàng là bạn đồng ý thanh toán đúng số tiền trên. Nếu giá thay đổi, hệ thống sẽ báo để bạn xem lại.</small>
+            <button class="btn btn-green btn-lg w-100 mt-3" id="submit-btn">Đặt hàng · @money($quote->total())</button>
+            <small class="d-block text-muted mt-2">Bấm đặt hàng là bạn đồng ý thanh toán đúng số tiền trên. Nếu giá thay đổi, hệ thống sẽ báo để bạn xem lại.</small>
         </form>
     </div>
 
     {{-- ===== CỘT PHẢI: báo giá ===== --}}
     <div class="col-lg-5">
-        <div class="card card-body shadow-sm">
+        <div class="gg-panel gg-panel-body gg-sticky">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold mb-0">Đơn hàng của bạn</h6>
-                <span class="badge bg-success">Hạng {{ $quote->tier->name }}</span>
+                <h2 class="h6 fw-bold mb-0">Đơn hàng của bạn</h2>
+                <span class="badge gg-tier"><i class="fa fa-crown"></i> Hạng {{ $quote->tier->name }}</span>
             </div>
             <ul class="list-group list-group-flush mb-2">
                 @foreach($quote->lines as $line)
@@ -103,7 +106,7 @@
                 @if($quote->shippingDiscount > 0)
                     <tr class="text-danger"><td>Mã {{ $quote->coupon->code }} (giảm ship)</td><td class="text-end">−@money($quote->shippingDiscount)</td></tr>
                 @endif
-                <tr class="fs-5 fw-bold"><td>Tổng thanh toán</td><td class="text-end text-green">@money($quote->total())</td></tr>
+                <tr class="fs-5 fw-bold"><td class="border-0 pt-3">Tổng thanh toán</td><td class="text-end text-green border-0 pt-3">@money($quote->total())</td></tr>
             </table>
             @foreach($quote->notices as $notice)
                 <div class="alert alert-info small py-2">{{ $notice }}</div>

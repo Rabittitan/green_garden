@@ -218,3 +218,65 @@ a { text-underline-offset: 3px; }
     .gg-attrs { grid-template-columns: 1fr 1fr 1fr; }
     .gg-buybox { padding: 1.25rem; }
 }
+
+/* ================================================================ K7b: mua hàng + tài khoản */
+.gg-page-head { margin-bottom: 1.25rem; }
+.gg-page-head h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; margin: .15rem 0 0; }
+.gg-panel { background: #fff; border: 1px solid var(--gg-line); border-radius: var(--gg-radius); box-shadow: var(--gg-shadow); }
+.gg-panel-head { padding: 1rem 1.25rem; border-bottom: 1px solid var(--gg-line); font-weight: 700; display: flex; align-items: center; gap: .5rem; }
+.gg-panel-body { padding: 1.25rem; }
+@media (min-width: 992px) { .gg-sticky { position: sticky; top: 96px; } }
+
+/* Điều hướng khu tài khoản */
+.gg-account-nav { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .25rem; margin-bottom: 1.25rem; }
+.gg-account-nav a { white-space: nowrap; padding: .55rem 1rem; border-radius: 999px; background: #fff; border: 1px solid var(--gg-line);
+                    color: var(--gg-ink); text-decoration: none; font-weight: 600; font-size: .92rem; }
+.gg-account-nav a:hover { border-color: #a5d6a7; color: var(--gg-green); }
+.gg-account-nav a.active { background: var(--gg-green); border-color: var(--gg-green); color: #fff; }
+
+/* Giỏ hàng */
+.gg-cart-line { display: grid; grid-template-columns: 76px 1fr auto; gap: 1rem; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--gg-line); }
+.gg-cart-line:last-child { border-bottom: 0; }
+.gg-cart-line img { width: 76px; height: 76px; object-fit: cover; border-radius: 12px; background: var(--gg-green-50); }
+.gg-stepper { display: inline-flex; align-items: center; border: 1px solid var(--gg-line); border-radius: 999px; overflow: hidden; }
+.gg-stepper button { border: 0; background: transparent; width: 34px; height: 34px; font-weight: 700; color: var(--gg-ink); }
+.gg-stepper button:hover:not(:disabled) { background: var(--gg-green-50); color: var(--gg-green); }
+.gg-stepper button:disabled { opacity: .35; }
+.gg-stepper strong { min-width: 34px; text-align: center; }
+.gg-summary-row { display: flex; justify-content: space-between; padding: .35rem 0; }
+.gg-summary-total { border-top: 1px dashed var(--gg-line); margin-top: .5rem; padding-top: .75rem; font-size: 1.15rem; font-weight: 800; }
+
+/* Đặt hàng */
+.gg-step-title { display: flex; align-items: center; gap: .6rem; font-weight: 800; font-size: 1.05rem; margin-bottom: 1rem; }
+.gg-step-num { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; background: var(--gg-green); color: #fff; font-size: .85rem; }
+.gg-pay-option { position: relative; display: block; margin-bottom: .6rem; }
+.gg-pay-option .form-check-input { position: absolute; top: 1.15rem; left: 1rem; margin: 0; }
+.gg-pay-option label { display: block; padding: .9rem 1rem .9rem 2.75rem; border: 1.5px solid var(--gg-line); border-radius: 12px; cursor: pointer; background: #fff; }
+.gg-pay-option .form-check-input:checked + label { border-color: var(--gg-green); background: var(--gg-green-50); box-shadow: 0 0 0 3px rgba(46, 125, 50, .12); }
+
+/* Tiến trình đơn hàng */
+.gg-progress { display: flex; justify-content: space-between; position: relative; margin: .5rem 0 0; padding: 0; list-style: none; }
+.gg-progress::before { content: ""; position: absolute; top: 16px; left: 8%; right: 8%; height: 3px; background: var(--gg-line); }
+.gg-progress li { position: relative; flex: 1; text-align: center; font-size: .8rem; color: var(--gg-muted); }
+.gg-progress li span { width: 34px; height: 34px; margin: 0 auto .35rem; border-radius: 999px; display: grid; place-items: center;
+                       background: #fff; border: 3px solid var(--gg-line); position: relative; z-index: 1; font-size: .8rem; }
+.gg-progress li.done span { background: var(--gg-green); border-color: var(--gg-green); color: #fff; }
+.gg-progress li.current span { border-color: var(--gg-green); color: var(--gg-green); box-shadow: 0 0 0 4px rgba(46, 125, 50, .15); }
+.gg-progress li.done, .gg-progress li.current { color: var(--gg-ink); font-weight: 600; }
+.gg-timeline { list-style: none; padding: 0; margin: 0; border-left: 2px solid var(--gg-line); }
+.gg-timeline li { position: relative; padding: 0 0 .85rem 1rem; font-size: .88rem; }
+.gg-timeline li::before { content: ""; position: absolute; left: -7px; top: .3rem; width: 12px; height: 12px; border-radius: 999px; background: var(--gg-green); border: 2px solid #fff; }
+
+/* Hạng thành viên */
+.gg-tier-card { border-radius: 20px; color: #fff; padding: 1.75rem; background: linear-gradient(140deg, #43a047, var(--gg-green-dark)); box-shadow: var(--gg-shadow-lg); }
+.gg-tier-card .progress { background: rgba(255, 255, 255, .25); }
+.gg-tier-card .progress-bar { background: #fff; }
+.gg-avatar-lg { width: 80px; height: 80px; border-radius: 999px; display: inline-grid; place-items: center; font-size: 2rem; font-weight: 800;
+                background: linear-gradient(140deg, #43a047, var(--gg-green-dark)); color: #fff; }
+
+@media (max-width: 575.98px) {
+    .gg-cart-line { grid-template-columns: 60px 1fr; }
+    .gg-cart-line img { width: 60px; height: 60px; }
+    .gg-cart-line .gg-cart-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+    .gg-progress li { font-size: .7rem; }
+}

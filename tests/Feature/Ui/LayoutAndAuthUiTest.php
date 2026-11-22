@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Ui;
 
+use App\Enums\ActorType;
+use App\Enums\OrderStatus;
 use App\Models\Plant;
+use App\Services\OrderService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -84,6 +87,47 @@ class LayoutAndAuthUiTest extends TestCase
         $card = view('partials.plant-card', ['plant' => Plant::with('category')->findOrFail(1)])->render();
         $this->assertStringNotContainsString('Sắp hết hàng', $card);
         $this->assertStringNotContainsString('gg-stars', $card);
+    }
+
+    /** K7b: thanh tiến trình đơn chỉ suy ra từ trạng thái; tên bước không trùng nhãn trạng thái; đơn hủy không có tiến trình. */
+    public function test_order_progress_follows_status(): void
+    {
+        $orders = app(OrderService::class);
+        $order = $this->place();
+        $this->actingAs($this->customer());
+        $count = fn (string $html) => substr_count($html, '<li class="done">');
+
+        $html = $this->get(route('orders.show', $order))->assertOk()->getContent();
+        $this->assertStringContainsString('gg-progress', $html);
+        $this->assertSame(1, $count($html), 'Chờ xác nhận: đã qua mốc Đặt hàng');
+        preg_match('#<ol class="gg-progress">(.*?)</ol>#s', $html, $m);
+        foreach (OrderStatus::cases() as $status) {          // tên bước không được trùng nhãn trạng thái nào
+            $this->assertStringNotContainsString($status->label(), $m[1], "Khối tiến trình chứa nhãn trạng thái \"{$status->label()}\"");
+        }
+
+        $orders->confirm($order, $this->admin());
+        $orders->ship($order, 'GHN', 'T-1', $this->admin());
+        $this->assertSame(3, $count($this->get(route('orders.show', $order))->getContent()));
+        $orders->complete($order, $this->admin());
+        $this->assertSame(4, $count($this->get(route('orders.show', $order))->getContent()));
+
+        $cancelled = $this->place();
+        $orders->cancel($cancelled, ActorType::Staff, $this->admin(), 'Hết hàng');
+        $this->assertStringNotContainsString('gg-progress', $this->get(route('orders.show', $cancelled))->getContent());
+    }
+
+    /** K7b: trang đặt hàng giữ đủ id / tên ô mà luồng đặt hàng + test trình duyệt dựa vào; trang tài khoản có thanh điều hướng. */
+    public function test_checkout_contract_and_account_nav(): void
+    {
+        $this->actingAs($this->customer())->post(route('cart.add', 1), ['quantity' => 1]);
+        $html = $this->get(route('checkout.form'))->assertOk()->getContent();
+        foreach (['id="pm-cod"', 'id="submit-btn"', 'name="checkout_token"', 'name="expected_total"', 'name="coupon_code"',
+            'id="checkout-form"', 'data-field="address_line"', "getElementById('address-picker')", 'Đang đặt hàng...'] as $needle) {
+            $this->assertStringContainsString($needle, $html, "Trang đặt hàng thiếu {$needle}");
+        }
+        foreach (['profile.edit', 'orders.index', 'account.membership', 'addresses.index'] as $route) {
+            $this->assertStringContainsString('gg-account-nav', $this->get(route($route))->assertOk()->getContent(), $route);
+        }
     }
 
     /** Thương hiệu thống nhất là GreenGarden: không còn tên cũ ở bất cứ chỗ nào khách nhìn thấy (giao diện, mail, cấu hình). */

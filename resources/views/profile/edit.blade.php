@@ -2,17 +2,15 @@
 @section('title', 'Hồ sơ của tôi')
 
 @section('content')
-<h4 class="text-green fw-bold mb-3"><i class="fa fa-user-circle"></i> Hồ sơ của tôi</h4>
+@include('account._nav')
+<div class="gg-page-head"><h1><i class="fa fa-user-circle text-green"></i> Hồ sơ của tôi</h1></div>
 
 <div class="row g-4">
     {{-- ===== CỘT TRÁI: tóm tắt tài khoản ===== --}}
     <div class="col-lg-4">
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body text-center">
-                <div class="rounded-circle bg-green text-white d-inline-flex align-items-center justify-content-center fs-2 fw-bold mb-2"
-                     style="width:80px;height:80px">
-                    {{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}
-                </div>
+                <div class="gg-avatar-lg mb-2">{{ mb_strtoupper(mb_substr(trim($user->name), 0, 1)) }}</div>
                 <h5 class="fw-bold mb-0">{{ $user->name }}</h5>
                 <div class="text-muted small">{{ $user->email }}</div>
 
@@ -28,7 +26,7 @@
                 @endif
 
                 <div class="text-muted small mt-2">Thành viên từ @vndt($user->created_at)</div>
-                <a href="{{ route('account.membership') }}" class="badge bg-warning text-dark text-decoration-none mt-2"><i class="fa fa-crown"></i> Hạng {{ $user->tier->name }}</a>
+                <a href="{{ route('account.membership') }}" class="badge gg-tier text-decoration-none mt-2"><i class="fa fa-crown"></i> Hạng {{ $user->tier->name }}</a>
             </div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item d-flex justify-content-between"><span>Tổng số đơn</span><strong>{{ $stats['orders'] }}</strong></li>

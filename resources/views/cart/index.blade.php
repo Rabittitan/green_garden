@@ -2,53 +2,55 @@
 @section('title', 'Giỏ hàng')
 
 @section('content')
-<h4 class="text-green fw-bold mb-3"><i class="fa fa-shopping-cart"></i> Giỏ hàng của bạn</h4>
+<div class="gg-page-head">
+    <span class="gg-eyebrow">Mua sắm</span>
+    <h1><i class="fa fa-cart-shopping text-green"></i> Giỏ hàng của bạn</h1>
+</div>
 
 @if($lines->isEmpty())
-    <div class="alert alert-info">Giỏ hàng đang trống. <a href="{{ route('plants.index') }}">Mua sắm ngay</a></div>
+    <div class="text-center bg-white border rounded-4 py-5 px-3">
+        <div class="gg-auth-icon mx-auto"><i class="fa fa-cart-shopping"></i></div>
+        <h2 class="h5 fw-bold">Giỏ hàng đang trống.</h2>
+        <p class="text-muted">Hãy chọn vài chậu cây xanh cho không gian của bạn.</p>
+        <a href="{{ route('plants.index') }}" class="btn btn-green">Mua sắm ngay</a>
+    </div>
 @else
-    <div class="table-responsive">
-        <table class="table align-middle bg-white shadow-sm">
-            <thead class="table-success">
-                <tr><th>Sản phẩm</th><th>Đơn giá</th><th class="text-center">Số lượng</th><th>Thành tiền</th><th></th></tr>
-            </thead>
-            <tbody>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="gg-panel">
                 @foreach($lines as $id => $line)
-                    <tr>
-                        <td>
-                            <img src="{{ $line['plant']->image }}" width="60" height="60" class="rounded me-2" style="object-fit:cover"
-                                 onerror="this.onerror=null;this.src='https://placehold.co/60x60/e8f5e9/2e7d32?text=GL'">
-                            <a href="{{ route('plants.show', $id) }}" class="text-decoration-none text-dark">{{ $line['plant']->name }}</a>
-                            <div class="small text-muted">Còn {{ $line['plant']->stock }} cây</div>
-                        </td>
-                        <td>@money($line['plant']->price)</td>
-                        <td class="text-center">
-                            <form action="{{ route('cart.update', $id) }}" method="POST" class="d-inline-flex align-items-center gap-2">
+                    <div class="gg-cart-line">
+                        <img src="{{ $line['plant']->image }}" alt="{{ $line['plant']->name }}"
+                             onerror="this.onerror=null;this.src='https://placehold.co/76x76/e8f5e9/2e7d32?text=GG'">
+                        <div>
+                            <a href="{{ route('plants.show', $id) }}" class="fw-bold text-decoration-none text-dark">{{ $line['plant']->name }}</a>
+                            <div class="small text-muted">@money($line['plant']->price) · Còn {{ $line['plant']->stock }} cây</div>
+                        </div>
+                        <div class="gg-cart-actions d-flex align-items-center gap-3">
+                            <form action="{{ route('cart.update', $id) }}" method="POST" class="gg-stepper">
                                 @csrf
-                                <button name="action" value="decrease" class="btn btn-sm btn-outline-secondary">-</button>
+                                <button name="action" value="decrease" aria-label="Giảm">-</button>
                                 <strong>{{ $line['quantity'] }}</strong>
-                                <button name="action" value="increase" class="btn btn-sm btn-outline-secondary" @disabled($line['quantity'] >= $line['plant']->stock)>+</button>
+                                <button name="action" value="increase" aria-label="Tăng" @disabled($line['quantity'] >= $line['plant']->stock)>+</button>
                             </form>
-                        </td>
-                        <td class="fw-bold">@money($line['total'])</td>
-                        <td>
+                            <div class="fw-bold text-end" style="min-width: 110px">@money($line['total'])</div>
                             <form action="{{ route('cart.remove', $id) }}" method="POST">
                                 @csrf
-                                <button class="btn btn-sm btn-outline-danger" title="Xóa"><i class="fa fa-trash"></i></button>
+                                <button class="btn btn-sm btn-link text-danger" title="Xóa"><i class="fa fa-trash"></i></button>
                             </form>
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                 @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center">
-        <a href="{{ route('plants.index') }}" class="btn btn-outline-green">← Tiếp tục mua</a>
-        <div class="text-end">
-            <div class="fs-5">Tạm tính: <strong class="text-green">@money($subtotal)</strong></div>
-            <div class="small text-muted">Ưu đãi hạng thành viên, mã giảm giá và phí ship được tính ở bước đặt hàng.</div>
-            <a href="{{ route('checkout.form') }}" class="btn btn-green btn-lg mt-2">Tiến hành đặt hàng</a>
+            </div>
+            <a href="{{ route('plants.index') }}" class="btn btn-link text-green mt-2 px-0">← Tiếp tục mua</a>
+        </div>
+        <div class="col-lg-4">
+            <div class="gg-panel gg-panel-body gg-sticky">
+                <h2 class="h6 fw-bold mb-3">Tóm tắt</h2>
+                <div class="gg-summary-row"><span>Tạm tính</span><strong class="text-green">@money($subtotal)</strong></div>
+                <div class="small text-muted mt-2">Ưu đãi hạng thành viên, mã giảm giá và phí ship được tính ở bước đặt hàng.</div>
+                <a href="{{ route('checkout.form') }}" class="btn btn-green btn-lg w-100 mt-3">Tiến hành đặt hàng</a>
+            </div>
         </div>
     </div>
 @endif
