@@ -36,6 +36,12 @@ class PlantController extends Controller
             'element' => ['required', Rule::in(array_keys(Plant::ELEMENTS))],
             'image' => ['nullable', 'url', 'max:500'],
             'description' => ['nullable', 'string'],
+            'height' => ['nullable', 'string', 'max:60'],
+            'pot_size' => ['nullable', 'string', 'max:80'],
+            'growth_rate' => ['nullable', Rule::in(array_keys(Plant::GROWTH_RATES))],
+            'watering' => ['nullable', 'string', 'max:100'],
+            'growth_info' => ['nullable', 'string', 'max:5000'],
+            'care_guide' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }

@@ -357,3 +357,12 @@ a { text-underline-offset: 3px; }
     .gg-mini-kpis > div { flex: 1; min-width: 0; }
     .gg-chart { height: 220px; }
 }
+
+/* ================================================================ K8: thông tin chi tiết cây */
+.gg-specs > div { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px dashed var(--gg-line); }
+.gg-specs > div:last-child { border-bottom: 0; }
+.gg-specs dt { font-weight: 500; color: var(--gg-muted); }
+.gg-specs dd { margin: 0; font-weight: 600; text-align: right; }
+.gg-care { list-style: none; padding: 0; }
+.gg-care li { position: relative; padding: .35rem 0 .35rem 1.6rem; color: #4a564c; }
+.gg-care li::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; position: absolute; left: 0; top: .4rem; color: var(--gg-green); font-size: .85rem; }

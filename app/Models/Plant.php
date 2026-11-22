@@ -31,6 +31,12 @@ use LogicException;
  * @property string $element
  * @property string|null $image
  * @property string|null $description
+ * @property string|null $height
+ * @property string|null $pot_size
+ * @property string|null $growth_rate
+ * @property string|null $watering
+ * @property string|null $growth_info
+ * @property string|null $care_guide
  * @property int $rating_sum
  * @property int $rating_count
  * @property bool $is_active
@@ -46,6 +52,7 @@ class Plant extends Model
     protected $fillable = [
         'category_id', 'sku', 'name', 'slug', 'price', 'reorder_point',
         'light', 'element', 'image', 'description', 'is_active',
+        'height', 'pot_size', 'growth_rate', 'watering', 'growth_info', 'care_guide',
     ];
 
     private static int $ledgerDepth = 0;
@@ -87,6 +94,16 @@ class Plant extends Model
     const ELEMENTS = ['kim' => 'Kim', 'moc' => 'Mộc', 'thuy' => 'Thủy', 'hoa' => 'Hỏa', 'tho' => 'Thổ'];
 
     const LIGHTS = ['ua_bong' => 'Ưa bóng', 'ua_sang' => 'Ưa sáng'];
+
+    /** Tốc độ lớn (khớp CHECK chk_plants_growth_rate). */
+    const GROWTH_RATES = ['slow' => 'Chậm', 'medium' => 'Trung bình', 'fast' => 'Nhanh'];
+
+    /** Có ít nhất một thông tin chi tiết (để trang cây ẩn cả khối khi chưa nhập gì). */
+    public function hasDetails(): bool
+    {
+        return collect([$this->height, $this->pot_size, $this->growth_rate, $this->watering, $this->growth_info, $this->care_guide])
+            ->contains(fn ($v) => trim((string) $v) !== '');
+    }
 
     /** @return BelongsTo<Category, $this> */
     public function category(): BelongsTo

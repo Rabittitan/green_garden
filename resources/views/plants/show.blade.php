@@ -35,7 +35,13 @@
                     @if($plant->stock > 0) <strong class="text-success">Còn {{ $plant->stock }} cây</strong>
                     @else <strong class="text-danger">Hết hàng</strong> @endif
                 </div>
+                @if($plant->height)<div class="gg-attr"><small>Kích thước</small><strong>{{ $plant->height }}</strong></div>@endif
+                @if($plant->growth_rate)<div class="gg-attr"><small>Tốc độ lớn</small><strong>{{ \App\Models\Plant::GROWTH_RATES[$plant->growth_rate] }}</strong></div>@endif
+                @if($plant->watering)<div class="gg-attr"><small>Tưới nước</small><strong>{{ $plant->watering }}</strong></div>@endif
             </div>
+            @if($plant->hasDetails())
+                <a href="#chi-tiet" class="small text-green d-inline-block mb-2"><i class="fa fa-book-open"></i> Xem kích thước, quá trình sinh trưởng và cách chăm sóc</a>
+            @endif
 
             <p class="text-secondary">{{ $plant->description }}</p>
 
@@ -59,6 +65,54 @@
         </div>
     </div>
 </div>
+
+{{-- ===== THÔNG TIN CHI TIẾT (K8): mục nào trống thì ẩn ===== --}}
+@if($plant->hasDetails())
+    @php
+        // Cách chăm sóc: mỗi dòng một ý -> danh sách (bỏ gạch đầu dòng người nhập tự gõ)
+        $careLines = collect(preg_split('/\R/u', (string) $plant->care_guide))
+            ->map(fn ($l) => trim(preg_replace('/^[-•*+]\s*/u', '', trim($l))))->filter()->values();
+        $specs = array_filter([
+            'Danh mục' => $plant->category->name,
+            'Kích thước cây' => $plant->height,
+            'Chậu' => $plant->pot_size,
+            'Tốc độ lớn' => $plant->growth_rate ? \App\Models\Plant::GROWTH_RATES[$plant->growth_rate] : null,
+            'Tưới nước' => $plant->watering,
+            'Ánh sáng' => \App\Models\Plant::LIGHTS[$plant->light],
+            'Mệnh phong thủy' => \App\Models\Plant::ELEMENTS[$plant->element],
+            'Mã sản phẩm' => $plant->sku,
+        ], fn ($v) => $v !== null && $v !== '');
+    @endphp
+    <div class="gg-section-head" id="chi-tiet"><h2>Thông tin chi tiết</h2></div>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="gg-panel gg-panel-body h-100">
+                <h3 class="h6 fw-bold mb-3"><i class="fa fa-ruler-combined text-green"></i> Thông số</h3>
+                <dl class="gg-specs mb-0">
+                    @foreach($specs as $label => $value)
+                        <div><dt>{{ $label }}</dt><dd>{{ $value }}</dd></div>
+                    @endforeach
+                </dl>
+            </div>
+        </div>
+        <div class="col-lg-8 d-flex flex-column gap-4">
+            @if(trim((string) $plant->growth_info) !== '')
+                <div class="gg-panel gg-panel-body">
+                    <h3 class="h6 fw-bold mb-2"><i class="fa fa-seedling text-green"></i> Quá trình sinh trưởng</h3>
+                    <div class="text-secondary" style="white-space: pre-line">{{ trim($plant->growth_info) }}</div>
+                </div>
+            @endif
+            @if($careLines->isNotEmpty())
+                <div class="gg-panel gg-panel-body">
+                    <h3 class="h6 fw-bold mb-2"><i class="fa fa-hand-holding-droplet text-green"></i> Cách chăm sóc</h3>
+                    <ul class="gg-care mb-0">
+                        @foreach($careLines as $line)<li>{{ $line }}</li>@endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+    </div>
+@endif
 
 {{-- Cây cùng mệnh --}}
 @if($related->count())

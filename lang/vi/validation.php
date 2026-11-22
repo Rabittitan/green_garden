@@ -183,5 +183,11 @@ return [
         'category_id' => 'danh mục',
         'sku' => 'mã SKU',
         'amount' => 'số tiền',
+        'height' => 'kích thước cây',
+        'pot_size' => 'chậu',
+        'growth_rate' => 'tốc độ lớn',
+        'watering' => 'lịch tưới nước',
+        'growth_info' => 'quá trình sinh trưởng',
+        'care_guide' => 'cách chăm sóc',
     ],
 ];
