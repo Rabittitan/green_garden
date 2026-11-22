@@ -389,3 +389,15 @@ a { text-underline-offset: 3px; }
     .gg-table-stack td[data-label=""]::before { content: none; }
     .gg-table-stack td .btn { width: 100%; }
 }
+
+/* ================================================================ Tin tức: quản trị + nội dung bài */
+.gg-thumb { width: 64px; height: 44px; object-fit: cover; border-radius: 8px; display: inline-grid; place-items: center; }
+.gg-thumb-empty { background: var(--gg-green-50); color: var(--gg-muted); }
+.gg-editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; padding: .4rem; border: 1px solid var(--gg-line); border-bottom: 0; border-radius: 10px 10px 0 0; background: #f7faf7; }
+.gg-editor { border-top-left-radius: 0; border-top-right-radius: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92rem; line-height: 1.6; }
+.gg-checklist { max-height: 260px; overflow-y: auto; }
+.gg-article-body h2 { font-size: 1.35rem; font-weight: 800; margin: 1.6rem 0 .6rem; }
+.gg-article-body h3 { font-size: 1.15rem; font-weight: 700; margin: 1.3rem 0 .5rem; }
+.gg-article-body img { display: block; max-width: 100%; height: auto; margin: 1rem auto; }
+.gg-article-body ul, .gg-article-body ol { padding-left: 1.3rem; }
+.gg-article-body blockquote { border-left: 4px solid var(--gg-green); padding: .25rem 0 .25rem 1rem; color: var(--gg-muted); }

@@ -28,6 +28,9 @@ composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 echo "==> 4. Migrate (KHÔNG --seed: dữ liệu mẫu bị chặn ở production)"
 $PHP artisan migrate --force
 
+echo "==> 4b. Link public/storage -> storage/app/public (ảnh tin tức tải lên); đã có thì bỏ qua"
+[ -L public/storage ] || $PHP artisan storage:link
+
 echo "==> 5. Cache cấu hình / route / view / event"
 $PHP artisan optimize
 
