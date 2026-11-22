@@ -1,0 +1,129 @@
+/*
+ * GreenGarden — giao diện dùng chung (K3). Bổ sung cho Bootstrap 5, không cần build (Node).
+ * Mọi màu / bo góc / bóng đổ lấy từ biến bên dưới: đổi nhận diện chỉ cần sửa :root.
+ * GIỮ NGUYÊN các class cũ (.btn-green, .text-green, .bg-green, .plant-card, .hero, .footer...) vì 48 view đang dùng.
+ */
+:root {
+    --gg-green: #2e7d32;
+    --gg-green-dark: #1b5e20;
+    --gg-green-700: #256b29;
+    --gg-green-light: #e8f5e9;
+    --gg-green-50: #f3faf3;
+    --gg-accent: #f59e0b;
+    --gg-ink: #1f2d1f;
+    --gg-muted: #667366;
+    --gg-line: #e3ebe3;
+    --gg-bg: #f6f8f5;
+    --gg-radius: 14px;
+    --gg-radius-sm: 10px;
+    --gg-shadow: 0 1px 2px rgba(16, 40, 16, .06), 0 4px 16px rgba(16, 40, 16, .06);
+    --gg-shadow-lg: 0 10px 30px rgba(27, 94, 32, .18);
+    --gg-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+    /* Bootstrap dùng chung màu nhấn */
+    --bs-primary: var(--gg-green);
+    --bs-primary-rgb: 46, 125, 50;
+    --bs-link-color: var(--gg-green);
+    --bs-link-color-rgb: 46, 125, 50;
+    --bs-link-hover-color: var(--gg-green-dark);
+    --bs-body-font-family: var(--gg-font);
+    --bs-body-color: var(--gg-ink);
+    --bs-border-radius: var(--gg-radius-sm);
+    --bs-focus-ring-color: rgba(46, 125, 50, .25);
+}
+
+/* Tương thích tên biến cũ trong các view */
+:root { --green: var(--gg-green); --green-dark: var(--gg-green-dark); --green-light: var(--gg-green-light); }
+
+body { background: var(--gg-bg); color: var(--gg-ink); font-family: var(--gg-font); -webkit-font-smoothing: antialiased; }
+a { text-underline-offset: 3px; }
+::selection { background: var(--gg-green-light); }
+
+/* ---------------------------------------------------------------- màu / nút (class cũ) */
+.bg-green { background: var(--gg-green) !important; }
+.text-green { color: var(--gg-green) !important; }
+.btn-green { background: var(--gg-green); color: #fff; border: 0; font-weight: 600; border-radius: var(--gg-radius-sm); }
+.btn-green:hover, .btn-green:focus { background: var(--gg-green-dark); color: #fff; }
+.btn-green:focus-visible, .btn-outline-green:focus-visible { box-shadow: 0 0 0 .25rem var(--bs-focus-ring-color); }
+.btn-outline-green { border: 1px solid var(--gg-green); color: var(--gg-green); font-weight: 600; border-radius: var(--gg-radius-sm); }
+.btn-outline-green:hover { background: var(--gg-green); color: #fff; }
+.form-control:focus, .form-select:focus { border-color: #81c784; box-shadow: 0 0 0 .25rem var(--bs-focus-ring-color); }
+.form-check-input:checked { background-color: var(--gg-green); border-color: var(--gg-green); }
+.card { border-color: var(--gg-line); border-radius: var(--gg-radius); }
+.shadow-sm { box-shadow: var(--gg-shadow) !important; }
+.alert { border: 0; border-radius: var(--gg-radius-sm); box-shadow: var(--gg-shadow); }
+.page-link { color: var(--gg-green); }
+.active > .page-link, .page-link.active { background: var(--gg-green); border-color: var(--gg-green); }
+
+/* ---------------------------------------------------------------- thẻ cây / hero (class cũ) */
+.plant-card { transition: transform .2s, box-shadow .2s; border: 0; border-radius: var(--gg-radius); overflow: hidden; box-shadow: var(--gg-shadow); }
+.plant-card:hover { transform: translateY(-4px); box-shadow: var(--gg-shadow-lg); }
+.plant-card img { height: 210px; object-fit: cover; }
+.hero { background: linear-gradient(rgba(27, 94, 32, .78), rgba(46, 125, 50, .72)),
+        url('https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1600&q=80') center/cover; border-radius: var(--gg-radius); }
+
+/* ---------------------------------------------------------------- thanh thông báo trên cùng */
+.gg-topbar { background: var(--gg-green-dark); color: #c8e6c9; font-size: .825rem; }
+.gg-topbar a { color: #fff; text-decoration: none; }
+.gg-topbar strong { color: #fff; }
+
+/* ---------------------------------------------------------------- header */
+.gg-header { background: #fff; border-bottom: 1px solid var(--gg-line); }
+.gg-header .navbar-brand { color: var(--gg-green-dark); font-weight: 800; letter-spacing: -.02em; font-size: 1.35rem; }
+.gg-logo { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; margin-right: .4rem;
+           background: linear-gradient(135deg, #43a047, var(--gg-green-dark)); color: #fff; font-size: 1rem; vertical-align: -6px; }
+.gg-header .nav-link { color: var(--gg-ink); font-weight: 500; padding: .5rem .85rem !important; border-radius: 999px; white-space: nowrap; }
+.gg-header .nav-link:hover { color: var(--gg-green); background: var(--gg-green-50); }
+.gg-header .nav-link.active { color: var(--gg-green); background: var(--gg-green-light); font-weight: 600; }
+.gg-search { position: relative; flex: 1 1 180px; max-width: 340px; }
+.gg-search .form-control { border-radius: 999px; padding-left: 2.4rem; background: var(--gg-bg); border-color: var(--gg-line); }
+.gg-search .fa-magnifying-glass { position: absolute; left: .95rem; top: 50%; transform: translateY(-50%); color: var(--gg-muted); }
+.gg-icon-btn { position: relative; display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 999px;
+               color: var(--gg-ink); text-decoration: none; }
+.gg-icon-btn:hover { background: var(--gg-green-50); color: var(--gg-green); }
+.gg-count { position: absolute; top: 2px; right: 0; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px;
+            background: var(--gg-accent); color: #1f1300; font-size: .7rem; font-weight: 700; display: grid; place-items: center; }
+.gg-avatar { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 999px;
+             background: var(--gg-green-light); color: var(--gg-green-dark); font-weight: 700; font-size: .85rem; }
+.gg-username { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gg-tier { background: #fff4d6; color: #8a5a00; border: 1px solid #f3d48a; font-weight: 600; }
+.dropdown-menu { border: 1px solid var(--gg-line); border-radius: var(--gg-radius-sm); box-shadow: var(--gg-shadow-lg); padding: .4rem; }
+.dropdown-item { border-radius: 8px; padding: .5rem .75rem; }
+.dropdown-item:active { background: var(--gg-green); }
+
+/* ---------------------------------------------------------------- footer (class .footer giữ tương thích) */
+.footer, .gg-footer { background: var(--gg-green-dark); color: #c8e6c9; }
+.gg-footer h6 { color: #fff; font-weight: 700; margin-bottom: .9rem; }
+.gg-footer a { color: #c8e6c9; text-decoration: none; }
+.gg-footer a:hover { color: #fff; }
+.gg-footer li { margin-bottom: .45rem; }
+.gg-footer-bottom { border-top: 1px solid rgba(255, 255, 255, .12); color: #a5d6a7; font-size: .85rem; }
+
+/* ---------------------------------------------------------------- trang đăng nhập / đăng ký / mật khẩu */
+.gg-auth { max-width: 980px; margin: 1rem auto 2rem; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: var(--gg-shadow-lg); }
+.gg-auth-aside { position: relative; color: #fff; padding: 2.75rem 2.25rem;
+                 background: radial-gradient(circle at 20% 0%, rgba(255, 255, 255, .16), transparent 45%),
+                             linear-gradient(150deg, #43a047 0%, var(--gg-green) 45%, var(--gg-green-dark) 100%); }
+.gg-auth-aside h2 { font-weight: 800; letter-spacing: -.02em; }
+.gg-auth-aside p { color: #e8f5e9; }
+.gg-auth-aside .gg-leaf { position: absolute; right: -30px; bottom: -40px; font-size: 13rem; opacity: .1; }
+.gg-benefit { display: flex; gap: .75rem; align-items: flex-start; margin-bottom: 1rem; }
+.gg-benefit i { flex: 0 0 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, .16); }
+.gg-auth-main { padding: 2.5rem 2.25rem; }
+.gg-auth-main h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+.gg-auth-main .form-control { padding: .7rem .9rem; }
+.gg-auth-main .btn-green { padding: .75rem; }
+.gg-auth-icon { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 1.5rem;
+                background: var(--gg-green-light); color: var(--gg-green); margin-bottom: 1rem; }
+.gg-divider { display: flex; align-items: center; gap: .75rem; color: var(--gg-muted); font-size: .85rem; }
+.gg-divider::before, .gg-divider::after { content: ""; flex: 1; height: 1px; background: var(--gg-line); }
+@media (max-width: 767.98px) {
+    .gg-auth { border-radius: var(--gg-radius); margin-top: .25rem; }
+    .gg-auth-main { padding: 1.75rem 1.25rem; }
+    .gg-search { max-width: none; }
+}
+
+/* Giảm chuyển động cho người dùng bật "reduce motion" */
+@media (prefers-reduced-motion: reduce) {
+    .plant-card, .plant-card:hover { transition: none; transform: none; }
+}
