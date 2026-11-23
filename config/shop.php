@@ -47,6 +47,21 @@ return [
         'account_name' => env('SHOP_BANK_ACCOUNT_NAME', 'GREENGARDEN SHOP'),
     ],
 
+    // Trang chủ: mục "Sản phẩm hot" = cây bán chạy nhất trong N ngày (đơn đã đặt, chưa hủy / hoàn)
+    'home' => [
+        'hot_days' => 30,
+        'hot_limit' => 8,
+    ],
+
+    // Thông tin người bán in trên hóa đơn bán lẻ (trang "In hóa đơn" của đơn hàng). Đây KHÔNG phải hóa đơn GTGT.
+    'seller' => [
+        'name' => env('SHOP_SELLER_NAME', 'GreenGarden Shop'),
+        'address' => env('SHOP_SELLER_ADDRESS', ''),
+        'phone' => env('SHOP_SELLER_PHONE', ''),
+        'email' => env('SHOP_SELLER_EMAIL', ''),
+        'tax_code' => env('SHOP_SELLER_TAX_CODE', ''),
+    ],
+
     // Địa chỉ nhận hàng trả về (hiện trong email + trang đơn khi khách yêu cầu trả hàng)
     'return_address' => env('SHOP_RETURN_ADDRESS', 'GreenGarden Shop - 12 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh - 0900 000 001'),
 

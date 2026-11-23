@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\Plant;
 use App\Services\ArticleService;
+use App\Services\ImageStorage;
 use App\Support\Format;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -19,9 +20,6 @@ use Illuminate\Validation\Rule;
 /** Quản lý tin tức: nhân viên + quản trị viên đăng bài, ảnh bìa, ảnh trong bài, hẹn giờ, gắn cây liên quan. */
 class ArticleController extends Controller
 {
-    /** Ảnh: JPG/PNG/WEBP/GIF (không nhận SVG: có thể chứa mã), tối đa 4MB, cạnh dài tối đa 6000px. */
-    private const IMAGE_RULES = ['image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096', 'dimensions:max_width=6000,max_height=6000'];
-
     public function __construct(private ArticleService $articles) {}
 
     public function index(Request $request): View
@@ -92,7 +90,7 @@ class ArticleController extends Controller
     /** Nút "Chèn ảnh" trong trình soạn: tải 1 ảnh, trả về đường dẫn + đoạn Markdown để chèn vào nội dung. */
     public function uploadImage(Request $request): JsonResponse
     {
-        $request->validate(['image' => ['required', ...self::IMAGE_RULES]], [], ['image' => 'ảnh']);
+        $request->validate(['image' => ['required', ...ImageStorage::RULES]], [], ['image' => 'ảnh']);
         try {
             $url = $this->articles->storeImage($request->file('image'));
         } catch (BusinessException $e) {
@@ -114,7 +112,7 @@ class ArticleController extends Controller
             'content' => ['required', 'string', 'max:20000'],
             'status' => ['required', Rule::in(['draft', 'published'])],
             'published_at' => ['nullable', 'date'],
-            'cover' => ['nullable', ...self::IMAGE_RULES],
+            'cover' => ['nullable', ...ImageStorage::RULES],
             'image_url' => ['nullable', 'url:https', 'max:255'],
             'plant_ids' => ['nullable', 'array'], 'plant_ids.*' => ['integer', 'exists:plants,id'],
         ], [], [

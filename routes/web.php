@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GoodsReceiptController as AdminGoodsReceiptController;
+use App\Http\Controllers\Admin\HomeSlideController as AdminHomeSlideController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
@@ -91,6 +92,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/don-hang/{order:code}/thanh-toan', [OrderController::class, 'pay'])->name('orders.pay')->middleware('throttle:20,1');
     Route::post('/don-hang/{order:code}/huy', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('/don-hang/{order:code}/tra-hang', [OrderController::class, 'requestReturn'])->name('orders.return');
+    Route::post('/don-hang/{order:code}/ghi-chu', [OrderController::class, 'updateNote'])->name('orders.note');
+    Route::get('/don-hang/{order:code}/hoa-don', [OrderController::class, 'invoice'])->name('orders.invoice');
 
     // Trình duyệt quay về từ VNPay: chỉ hiển thị
     Route::get('/thanh-toan/vnpay/ket-qua', [PaymentController::class, 'vnpayReturn'])->name('payment.vnpay.return');
@@ -123,6 +126,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('orders.confirm');
     Route::post('/orders/{order}/ship', [AdminOrderController::class, 'ship'])->name('orders.ship');
     Route::post('/orders/{order}/complete', [AdminOrderController::class, 'complete'])->name('orders.complete');
@@ -148,6 +152,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Tin tức: nhân viên + quản trị đăng bài, ảnh bìa / ảnh trong bài
     Route::post('/articles/images', [AdminArticleController::class, 'uploadImage'])->name('articles.images');
     Route::resource('articles', AdminArticleController::class);
+    // Slide ảnh đầu trang chủ
+    Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
 
     // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho
     Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);

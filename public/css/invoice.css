@@ -1,0 +1,41 @@
+/* Hóa đơn bán lẻ: in khổ A4, không phụ thuộc CDN */
+* { box-sizing: border-box; }
+body { margin: 0; background: #eef2ee; color: #1f2d1f; font: 14px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+.inv-actions { max-width: 210mm; margin: 16px auto 0; padding: 0 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.inv-actions a { color: #2e7d32; text-decoration: none; font-weight: 600; }
+.inv-actions button { background: #2e7d32; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+.inv { position: relative; max-width: 210mm; margin: 12px auto 32px; background: #fff; padding: 18mm 16mm; box-shadow: 0 4px 20px rgba(0,0,0,.08); overflow: hidden; }
+.inv-head { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #2e7d32; padding-bottom: 12px; }
+.inv-brand { font-size: 22px; font-weight: 800; color: #2e7d32; }
+.inv-title { text-align: right; }
+.inv-title h1 { margin: 0 0 4px; font-size: 20px; letter-spacing: .04em; }
+.inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 16px 0; }
+.inv-parties h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #667366; margin: 0 0 4px; }
+.inv-note { background: #fff8e1; border-left: 4px solid #f9a825; padding: 8px 12px; margin: 0 0 16px; white-space: pre-line; }
+.inv-table, .inv-sum { width: 100%; border-collapse: collapse; }
+.inv-table th { text-align: left; font-size: 12px; text-transform: uppercase; color: #667366; border-bottom: 1px solid #cfd8cf; padding: 6px 4px; }
+.inv-table td { border-bottom: 1px solid #eef2ee; padding: 8px 4px; vertical-align: top; }
+.inv-sum { width: 60%; margin: 12px 0 0 auto; }
+.inv-sum td { padding: 4px; }
+.inv-sum .total td { font-size: 17px; font-weight: 800; border-top: 2px solid #1f2d1f; padding-top: 8px; }
+.inv-sum .due td { font-weight: 700; color: #b3261e; }
+.r, .inv-table th.r { text-align: right; white-space: nowrap; }
+.muted { color: #667366; font-size: 12px; }
+.inv-foot { margin-top: 24px; border-top: 1px dashed #cfd8cf; padding-top: 10px; text-align: center; }
+.inv-foot p { margin: 2px 0; }
+.inv-stamp { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); font-size: 48px; font-weight: 900; color: rgba(179, 38, 30, .16); border: 6px solid rgba(179, 38, 30, .16); padding: 6px 24px; white-space: nowrap; pointer-events: none; }
+@media (max-width: 640px) {
+    .inv { padding: 20px 14px; margin: 8px; }
+    .inv-head, .inv-parties { display: block; }
+    .inv-title { text-align: left; margin-top: 10px; }
+    .inv-parties > div + div { margin-top: 12px; }
+    .inv-sum { width: 100%; }
+    .inv-table { font-size: 13px; }
+    .inv-stamp { font-size: 28px; }
+}
+@media print {
+    @page { size: A4; margin: 12mm; }
+    body { background: #fff; }
+    .no-print { display: none !important; }
+    .inv { box-shadow: none; margin: 0; max-width: none; padding: 0; }
+}

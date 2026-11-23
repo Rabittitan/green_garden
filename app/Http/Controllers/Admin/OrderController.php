@@ -54,6 +54,12 @@ class OrderController extends Controller
         ]);
     }
 
+    /** Hóa đơn bán lẻ để in kèm hàng (chỉ đọc). */
+    public function invoice(Order $order): View
+    {
+        return view('invoices.order', ['order' => $order->load(['items', 'tier']), 'backUrl' => route('admin.orders.show', $order)]);
+    }
+
     public function confirm(Request $request, Order $order): RedirectResponse
     {
         return $this->run(fn () => $this->orders->confirm($order, $request->user()), 'Đã xác nhận đơn.');

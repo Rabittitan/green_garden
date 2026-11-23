@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -20,6 +19,8 @@ use Illuminate\Support\Str;
 class ArticleService
 {
     public const IMAGE_DIR = 'articles';
+
+    public function __construct(private ImageStorage $images) {}
 
     /**
      * @param  array{title: string, summary: string, content: string, status: string, published_at?: string|null, image_url?: string|null}  $data
@@ -90,19 +91,10 @@ class ArticleService
         $this->deleteStored($image);
     }
 
-    /** Lưu 1 ảnh (bìa hoặc chèn trong bài), trả về đường dẫn công khai "/storage/articles/…". Tên file do server tự đặt. */
+    /** Lưu 1 ảnh (bìa hoặc chèn trong bài), trả về đường dẫn công khai "/storage/articles/…". */
     public function storeImage(UploadedFile $file): string
     {
-        $ext = match ($file->getMimeType()) {
-            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif',
-            default => throw new BusinessException('Chỉ nhận ảnh JPG, PNG, WEBP hoặc GIF.'),
-        };
-        $path = $file->storeAs(self::IMAGE_DIR.'/'.now()->format('Y/m'), Str::uuid().'.'.$ext, 'public');
-        if ($path === false) {
-            throw new BusinessException('Không lưu được ảnh, vui lòng thử lại.');
-        }
-
-        return '/storage/'.$path;
+        return $this->images->store($file, self::IMAGE_DIR);
     }
 
     /**
@@ -130,10 +122,7 @@ class ArticleService
 
     private function deleteStored(?string $publicPath): void
     {
-        $prefix = '/storage/'.self::IMAGE_DIR.'/';
-        if ($publicPath !== null && str_starts_with($publicPath, $prefix) && ! str_contains($publicPath, '..')) {
-            Storage::disk('public')->delete(substr($publicPath, strlen('/storage/')));
-        }
+        $this->images->delete($publicPath, self::IMAGE_DIR);
     }
 
     private function uniqueSlug(string $title): string

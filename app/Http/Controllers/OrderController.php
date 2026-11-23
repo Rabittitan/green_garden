@@ -69,6 +69,27 @@ class OrderController extends Controller
         return redirect()->route('orders.show', $order)->with('success', 'Đã hủy đơn hàng.');
     }
 
+    public function updateNote(Request $request, Order $order): RedirectResponse
+    {
+        Gate::authorize('view', $order);
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:1000']], [], ['note' => 'ghi chú']);
+        try {
+            $this->orders->updateNote($order, $request->user(), $data['note'] ?? null);
+        } catch (BusinessException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('orders.show', $order)->with('success', 'Đã lưu ghi chú cho shop.');
+    }
+
+    /** Hóa đơn bán lẻ để in / lưu PDF (chỉ đọc: không chạy hủy đơn quá hạn như trang chi tiết). */
+    public function invoice(Order $order): View
+    {
+        Gate::authorize('view', $order);
+
+        return view('invoices.order', ['order' => $order->load(['items', 'tier']), 'backUrl' => route('orders.show', $order)]);
+    }
+
     public function requestReturn(Request $request, Order $order): RedirectResponse
     {
         Gate::authorize('requestReturn', $order);

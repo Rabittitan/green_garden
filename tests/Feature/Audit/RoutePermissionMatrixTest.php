@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Article;
 use App\Models\Comment;
 use App\Models\Coupon;
+use App\Models\HomeSlide;
 use App\Models\Order;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -43,7 +44,7 @@ class RoutePermissionMatrixTest extends TestCase
             'order' => $order->id, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id,
             'user' => User::factory()->create()->id,                       // khách riêng: route khóa / đổi hạng không ảnh hưởng khách đang thử quyền
             'payment' => $order->payments()->sole()->id, 'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id,
-            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id,
+            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id,
         ];
     }
 
@@ -115,6 +116,7 @@ class RoutePermissionMatrixTest extends TestCase
         $cases = [
             ['GET', route('orders.show', $order)], ['POST', route('orders.pay', $order)],
             ['POST', route('orders.cancel', $order), ['reason' => 'x']], ['POST', route('orders.return', $order), ['reason' => 'x']],
+            ['POST', route('orders.note', $order), ['note' => 'ghi đè']], ['GET', route('orders.invoice', $order)],
             ['PUT', route('addresses.update', $fx['address']), $this->shipping()],
             ['POST', route('addresses.default', $fx['address'])], ['DELETE', route('addresses.destroy', $fx['address'])],
             ['DELETE', route('comments.destroy', $fx['comment'])],
@@ -125,5 +127,6 @@ class RoutePermissionMatrixTest extends TestCase
         }
         $this->assertSame(1, $this->customer()->addresses()->count(), 'Địa chỉ của chủ bị người khác xóa');
         $this->assertNotNull(Comment::find($fx['comment']));
+        $this->assertNull($order->fresh()->note, 'Người khác sửa được ghi chú đơn');
     }
 }
