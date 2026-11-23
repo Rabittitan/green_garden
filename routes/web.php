@@ -91,6 +91,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/don-hang/{order:code}/thanh-toan', [OrderController::class, 'pay'])->name('orders.pay')->middleware('throttle:20,1');
     Route::post('/don-hang/{order:code}/huy', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('/don-hang/{order:code}/tra-hang', [OrderController::class, 'requestReturn'])->name('orders.return');
+    Route::post('/don-hang/{order:code}/ghi-chu', [OrderController::class, 'updateNote'])->name('orders.note');
+    Route::get('/don-hang/{order:code}/hoa-don', [OrderController::class, 'invoice'])->name('orders.invoice');
 
     // Trình duyệt quay về từ VNPay: chỉ hiển thị
     Route::get('/thanh-toan/vnpay/ket-qua', [PaymentController::class, 'vnpayReturn'])->name('payment.vnpay.return');
@@ -123,6 +125,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('orders.confirm');
     Route::post('/orders/{order}/ship', [AdminOrderController::class, 'ship'])->name('orders.ship');
     Route::post('/orders/{order}/complete', [AdminOrderController::class, 'complete'])->name('orders.complete');

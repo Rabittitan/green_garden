@@ -19,9 +19,10 @@
         <a href="{{ route('orders.index') }}" class="text-green text-decoration-none small"><i class="fa fa-arrow-left"></i> Đơn hàng của tôi</a>
         <h1 class="h3 fw-bold mt-1 mb-0">Đơn hàng {{ $order->code }}</h1>
     </div>
-    <div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
         <span class="badge rounded-pill bg-{{ $order->status->color() }} fs-6">{{ $order->status->label() }}</span>
         <span class="badge rounded-pill bg-{{ $order->payment_status->color() }} fs-6">{{ $order->payment_status->label() }}</span>
+        <a href="{{ route('orders.invoice', $order) }}" class="btn btn-sm btn-outline-green" target="_blank" rel="noopener"><i class="fa fa-print"></i> In hóa đơn</a>
     </div>
 </div>
 
@@ -81,12 +82,29 @@
             <h2 class="h6 fw-bold">Thông tin giao hàng</h2>
             <div>{{ $order->recipient_name }} · {{ $order->phone }}</div>
             <div>{{ $order->full_address }}</div>
-            @if($order->note) <div class="text-muted mt-2">Ghi chú: {{ $order->note }}</div> @endif
             <div class="text-muted mt-2">Ngày đặt: @vndt($order->placed_at)</div>
             <div class="text-muted">Thanh toán: {{ $order->payment_method->label() }}</div>
             @if($order->tracking_code)
                 <div class="mt-2">Vận chuyển: <strong>{{ $order->shipping_carrier }}</strong> · Mã vận đơn <strong>{{ $order->tracking_code }}</strong></div>
             @endif
+        </div>
+
+        {{-- Ghi chú cho shop: sửa được tới khi shop xác nhận đơn --}}
+        <div class="gg-panel gg-panel-body mb-3" id="ghi-chu">
+            <h2 class="h6 fw-bold"><i class="fa fa-note-sticky text-green"></i> Ghi chú cho shop</h2>
+            @can('updateNote', $order)
+                <form action="{{ route('orders.note', $order) }}" method="POST">
+                    @csrf
+                    <label class="visually-hidden" for="order-note">Ghi chú cho shop</label>
+                    <textarea id="order-note" name="note" rows="3" maxlength="1000" class="form-control mb-2 @error('note') is-invalid @enderror"
+                              placeholder="VD: giao giờ hành chính, gọi trước khi giao, gói làm quà...">{{ old('note', $order->note) }}</textarea>
+                    @error('note') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <button class="btn btn-sm btn-green">Lưu ghi chú</button>
+                    <span class="small text-muted ms-1">Sửa được tới khi shop xác nhận đơn.</span>
+                </form>
+            @else
+                <div class="{{ $order->note ? '' : 'text-muted' }}" style="white-space: pre-line">{{ $order->note ?: 'Không có ghi chú.' }}</div>
+            @endcan
         </div>
 
         <div class="gg-panel gg-panel-body mb-3">

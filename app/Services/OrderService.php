@@ -371,6 +371,33 @@ class OrderService
     // ================================================================ tiện ích
 
     /** Chạy $fn với đơn đã khóa dòng (đọc lại trong transaction: chặn bấm đúp / 2 admin cùng thao tác). */
+    /**
+     * Khách thêm / sửa ghi chú cho shop (giờ giao, lời nhắn...). Chỉ khi shop CHƯA xác nhận đơn
+     * (chờ thanh toán / chờ xác nhận): sau đó shop đã soạn hàng theo ghi chú cũ, đổi nữa dễ bị bỏ sót.
+     * Không đụng tiền, kho hay trạng thái. Khóa dòng đơn: không ghi đè lẫn nhau với lúc shop xác nhận.
+     */
+    public function updateNote(Order $order, User $by, ?string $note): Order
+    {
+        return $this->locked($order, function (Order $o) use ($by, $note) {
+            if ($o->user_id !== $by->id) {
+                throw new BusinessException('Bạn chỉ sửa được ghi chú đơn của mình.');
+            }
+            if (! in_array($o->status, self::NOTE_EDITABLE, true)) {
+                throw new BusinessException('Shop đã xác nhận đơn nên không sửa ghi chú được nữa. Vui lòng liên hệ shop nếu cần thay đổi.');
+            }
+            $note = trim((string) $note);
+            if (mb_strlen($note) > 1000) {
+                throw new BusinessException('Ghi chú tối đa 1000 ký tự.');
+            }
+            $o->update(['note' => $note === '' ? null : $note]);
+
+            return $o;
+        });
+    }
+
+    /** Trạng thái còn cho khách sửa ghi chú. */
+    public const NOTE_EDITABLE = [OrderStatus::PendingPayment, OrderStatus::Pending];
+
     private function locked(Order $order, callable $fn): mixed
     {
         return DB::transaction(function () use ($order, $fn) {

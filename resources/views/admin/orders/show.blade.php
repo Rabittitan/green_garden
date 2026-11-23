@@ -6,13 +6,21 @@
 @use('App\Enums\PaymentMethod', 'PM')
 @php $isAdmin = auth()->user()->isAdmin(); @endphp
 <a href="{{ route('admin.orders.index') }}" class="text-green text-decoration-none"><i class="fa fa-arrow-left"></i> Danh sách đơn</a>
-<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2 mb-3">
     <h4 class="fw-bold mb-0">Đơn {{ $order->code }}
         <span class="badge bg-{{ $order->status->color() }} fs-6">{{ $order->status->label() }}</span>
         <span class="badge bg-{{ $order->payment_status->color() }} fs-6">{{ $order->payment_status->label() }}</span>
     </h4>
-    <div class="text-muted">Đặt lúc @vndt($order->placed_at)</div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted">Đặt lúc @vndt($order->placed_at)</span>
+        <a href="{{ route('admin.orders.invoice', $order) }}" class="btn btn-sm btn-outline-secondary text-nowrap" target="_blank" rel="noopener"><i class="fa fa-print"></i> In hóa đơn</a>
+    </div>
 </div>
+{{-- Ghi chú khách gửi shop: để nổi bật, tránh bỏ sót khi soạn / giao hàng --}}
+@if($order->note)
+    <div class="alert alert-warning d-flex gap-2 align-items-start"><i class="fa fa-note-sticky mt-1"></i>
+        <div><strong>Ghi chú của khách:</strong> <span style="white-space: pre-line">{{ $order->note }}</span></div></div>
+@endif
 
 <div class="row g-4">
     {{-- ===== CỘT TRÁI: thông tin + thao tác ===== --}}
@@ -24,7 +32,6 @@
             <h6 class="fw-bold mt-3">Giao tới</h6>
             <div>{{ $order->recipient_name }} · {{ $order->phone }}</div>
             <div>{{ $order->full_address }}</div>
-            @if($order->note) <div class="text-muted mt-1">Ghi chú: {{ $order->note }}</div> @endif
             <div class="mt-2">Thanh toán: <strong>{{ $order->payment_method->label() }}</strong></div>
             @if($order->status === S::PendingPayment)
                 <div class="text-warning">Giữ hàng tới @vndt($order->payment_expires_at)</div>

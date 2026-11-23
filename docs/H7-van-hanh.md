@@ -60,6 +60,7 @@ Cài cron, supervisor, nginx theo 3 file mẫu trong `deploy/` (đổi `shop.exa
 | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_URL` | lấy từ VNPay | thiếu → thanh toán online tự ẩn |
 | `SHOP_BANK_ACCOUNT_NO` (+ tên/ngân hàng) | số TK thật | trống → ẩn phương thức chuyển khoản |
 | `SHOP_RETURN_ADDRESS` | địa chỉ nhận hàng trả | in trong email trả hàng |
+| `SHOP_SELLER_NAME`, `SHOP_SELLER_ADDRESS`, `SHOP_SELLER_PHONE`, `SHOP_SELLER_EMAIL`, `SHOP_SELLER_TAX_CODE` | thông tin người bán thật | in trên **hóa đơn bán lẻ** của đơn hàng; dòng nào để trống thì không in. Đây không phải hóa đơn GTGT |
 
 Kiểm tra nhanh sau khi sửa `.env`: `php artisan optimize && php artisan about` (mục Environment phải là production, Debug OFF).
 

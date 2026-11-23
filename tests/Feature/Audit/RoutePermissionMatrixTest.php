@@ -115,6 +115,7 @@ class RoutePermissionMatrixTest extends TestCase
         $cases = [
             ['GET', route('orders.show', $order)], ['POST', route('orders.pay', $order)],
             ['POST', route('orders.cancel', $order), ['reason' => 'x']], ['POST', route('orders.return', $order), ['reason' => 'x']],
+            ['POST', route('orders.note', $order), ['note' => 'ghi đè']], ['GET', route('orders.invoice', $order)],
             ['PUT', route('addresses.update', $fx['address']), $this->shipping()],
             ['POST', route('addresses.default', $fx['address'])], ['DELETE', route('addresses.destroy', $fx['address'])],
             ['DELETE', route('comments.destroy', $fx['comment'])],
@@ -125,5 +126,6 @@ class RoutePermissionMatrixTest extends TestCase
         }
         $this->assertSame(1, $this->customer()->addresses()->count(), 'Địa chỉ của chủ bị người khác xóa');
         $this->assertNotNull(Comment::find($fx['comment']));
+        $this->assertNull($order->fresh()->note, 'Người khác sửa được ghi chú đơn');
     }
 }
