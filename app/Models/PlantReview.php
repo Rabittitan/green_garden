@@ -74,10 +74,4 @@ class PlantReview extends Model
     {
         return $this->belongsToMany(User::class, 'review_votes')->withPivot('created_at');
     }
-
-    /** Mọi đánh giá đều gắn dòng đơn đã hoàn thành (order_item_id NOT NULL), nên luôn là "Đã mua hàng". */
-    public function getIsVerifiedPurchaseAttribute(): bool
-    {
-        return true;
-    }
 }

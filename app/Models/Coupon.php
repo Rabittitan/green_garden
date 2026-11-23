@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\CouponScope;
 use App\Enums\CouponType;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -105,18 +104,6 @@ class Coupon extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * @param  Builder<static>  $q
-     * @return Builder<static>
-     */
-    public function scopeUsableNow(Builder $q): Builder
-    {
-        return $q->where('is_active', true)
-            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now()))
-            ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'));
     }
 
     /** Đã có người dùng thì không cho đổi code / loại / giá trị (chỉ được tắt hoặc xóa mềm). */

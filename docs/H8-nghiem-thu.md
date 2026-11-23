@@ -1,6 +1,6 @@
 # H8 — Báo cáo nghiệm thu GreenGarden Shop
 
-**Ngày:** 17/11/2026 · **Nhánh:** `claude/sweet-archimedes-sb7rwp` · **Môi trường chuẩn:** PHP 8.4 + MySQL 8.0 (CI GitHub Actions) · Laravel 12.71
+**Ngày:** 17/11/2026, cập nhật số liệu 23/11/2026 · **Nhánh:** `claude/sweet-archimedes-sb7rwp` · **Môi trường chuẩn:** PHP 8.4 + MySQL 8.0 (CI GitHub Actions) · Laravel 12.71
 
 ## Kết luận
 
@@ -8,11 +8,11 @@
 
 | Chỉ số | Kết quả |
 |---|---|
-| Test tự động (MySQL thật) | **370 test qua**, 34.661 assertion, ~100 giây |
+| Test tự động (MySQL thật) | **455 test qua**, 45.460 assertion, ~2 phút (lúc nghiệm thu 17/11: 370 test) |
 | Larastan level 6 | 0 lỗi |
 | Pint (định dạng) | sạch |
 | `composer audit` | 0 lỗ hổng |
-| Kịch bản trình duyệt 3 vai trò | **12/12 bước đạt**; không có lỗi JS, lỗi 5xx hay vi phạm CSP |
+| Kịch bản trình duyệt 3 vai trò | **15/15 bước đạt** (lúc nghiệm thu: 12 bước; thêm sổ địa chỉ, đăng tin có ảnh, admin trên điện thoại); không có lỗi JS, lỗi 5xx hay vi phạm CSP |
 | `shop:reconcile` sau kịch bản trình duyệt | **8/8 ✓** (3 đơn, 5 giao dịch, 21 bút toán kho) |
 
 ---
@@ -21,12 +21,12 @@
 
 | Mã | Tiêu chí | Bằng chứng | Kết quả |
 |---|---|---|---|
-| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 370 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
+| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 455 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
 | **C2** | Toàn vẹn dữ liệu | `shop:reconcile` (8 bất biến: kho = sổ kho, tiền thu/hoàn = payments, giảm giá dòng = đơn, lượt mã, điểm đánh giá, lượt hữu ích, đơn quá hạn, chi tiêu hạng) chạy ở 3 chỗ: trong ma trận trạng thái (sau mỗi ô), trên CI (DB mới + seed), và sau kịch bản trình duyệt. Schema chỉ đổi một lần sau khi chốt, có duyệt của chủ shop: K8 (22/11/2026) thêm 6 cột thông tin chi tiết vào `plants`, đều cho phép trống, kèm CHECK `chk_plants_growth_rate`; không đụng tiền, kho hay đơn | ✅ |
-| **C3** | Đồng thời | 11 kịch bản đua bằng **tiến trình PHP thật**, gồm: tranh cây cuối, bấm đúp nhiều tab, IPN đua với hết hạn, hủy đua với đặt mới, mã chứng từ, nhập kho đua với đặt hàng, đánh giá trùng, nhân viên hủy đua với IPN, giao đua với hủy, 2 admin cùng xác nhận hoàn tiền, 3 admin cùng xác nhận đơn. Kết quả: không tồn âm, không thu tiền 2 lần, không deadlock | ✅ |
+| **C3** | Đồng thời | 12 kịch bản đua bằng **tiến trình PHP thật**, gồm: tranh cây cuối, bấm đúp nhiều tab, IPN đua với hết hạn, hủy đua với đặt mới, mã chứng từ, nhập kho đua với đặt hàng, đánh giá trùng, nhân viên hủy đua với IPN, giao đua với hủy, 2 admin cùng xác nhận hoàn tiền, 3 admin cùng xác nhận đơn, **admin sửa phạm vi mã giảm giá đúng lúc khách đặt hàng bằng mã đó (nhóm B, 11/2026)**. Kết quả: không tồn âm, không thu tiền 2 lần, không deadlock | ✅ |
 | **C4** | Luồng khép kín | `OrderStateMatrixTest`: 12 hành động × 9 trạng thái = 108 ô. Ô được phép phải chạy xong và đối soát sạch; ô bị cấm phải không để lại tác dụng phụ. Mọi trạng thái đều tới được, và mọi trạng thái chưa kết thúc đều có lối ra. Kịch bản trình duyệt đi qua đủ các nút bấm thật của cả 3 vai trò | ✅ |
-| **C5** | Phân quyền & bảo mật | Phân quyền: `RoutePermissionMatrixTest` tự đọc **62 route admin** và thử từng route với 4 vai trò; 404 và 403 không làm lộ id có tồn tại hay không. **Mới ở H8:** `AcceptanceCrawlTest` mở **mọi route GET × 4 vai trò** và chứng minh không route GET nào ghi DB. Test này đã được kiểm ngược: cài thử một lệnh ghi DB vào trang chủ thì test đỏ. IPN sai chữ ký không thay đổi gì. Khi `APP_DEBUG=false`, trang lỗi không lộ chi tiết. Có header bảo mật, CSP, giới hạn tần suất đăng nhập, chặn open redirect | ✅ |
-| **C6** | Hiệu năng | `QueryBudgetTest`: 19 trang chính, mỗi trang ≤ 15 câu SQL, và số câu **không tăng** khi dữ liệu tăng. Ngoài production bật `preventLazyLoading` (cả bộ test không vướng lần nào). Mọi trang danh sách có thể phình đều đã phân trang; các danh sách không phân trang đều có giới hạn: 4 hạng, giỏ hàng, danh mục, và **sổ địa chỉ (mới đặt trần 10 ở H8)** | ✅ |
+| **C5** | Phân quyền & bảo mật | Phân quyền: `RoutePermissionMatrixTest` tự đọc **71 route admin** và thử từng route với 4 vai trò; 404 và 403 không làm lộ id có tồn tại hay không. **Mới ở H8:** `AcceptanceCrawlTest` mở **mọi route GET × 4 vai trò** và chứng minh không route GET nào ghi DB. Test này đã được kiểm ngược: cài thử một lệnh ghi DB vào trang chủ thì test đỏ. IPN sai chữ ký không thay đổi gì. Khi `APP_DEBUG=false`, trang lỗi không lộ chi tiết. Có header bảo mật, CSP, giới hạn tần suất đăng nhập, chặn open redirect | ✅ |
+| **C6** | Hiệu năng | `QueryBudgetTest`: 20 trang chính, mỗi trang ≤ 15 câu SQL, và số câu **không tăng** khi dữ liệu tăng. Ngoài production bật `preventLazyLoading` (cả bộ test không vướng lần nào). Mọi trang danh sách có thể phình đều đã phân trang; các danh sách không phân trang đều có giới hạn: 4 hạng, giỏ hàng, danh mục, và **sổ địa chỉ (mới đặt trần 10 ở H8)** | ✅ |
 | **C7** | Vận hành | `docs/H7-van-hanh.md` + `deploy/`: cron `schedule:run`, queue worker (supervisor), sao lưu/khôi phục kèm diễn tập, deploy/rollback, checklist `.env`, IPN VNPay. Mọi callback thanh toán được ghi vào `payment_webhook_logs` (chữ ký, mã kết quả, IP thật) | ✅ (*) |
 | **C8** | Chất lượng code | Pint sạch · Larastan level 6: 0 lỗi · CI GitHub (Test + Larastan) xanh, chặn merge khi đỏ · `composer audit` trong CI (đã bắt được 7 lỗ hổng Symfony ở H7) | ✅ |
 | **C9** | Trải nghiệm | Crawler: **không trang nào trả 500**, với mọi route GET × 4 vai trò. Trang lỗi 403/404/419/429/500/503 bằng tiếng Việt. Email ở **mọi mốc tiền**: đặt hàng, đã thanh toán, **giao thành công/đã thu COD (mới)**, hủy (kèm số tiền sẽ hoàn), **tiền đến sau khi đơn đã hủy (mới)**, đã hoàn tiền; cùng với hướng dẫn trả hàng và lên hạng. Email chỉ gửi sau khi commit, gửi lỗi không làm hỏng giao dịch | ✅ |
@@ -54,13 +54,31 @@
   - Mở trang đơn **đã quá hạn thanh toán** thì đơn tự hủy. Đây đúng là việc cron vẫn làm mỗi phút, không ai lợi dụng được để làm gì khác.
 - **Quy tắc giữ nguyên:** đơn VNPay bỏ dở vẫn giữ lượt dùng mã "đơn đầu tiên" cho tới khi đơn hết hạn (B9). Mục đích là chống lạm dụng; thông báo lỗi có ghi rõ.
 
+## Thay đổi sau nghiệm thu (18–23/11/2026)
+
+Mỗi đợt đều chạy lại đủ: toàn bộ test trên MySQL, Larastan, Pint, kịch bản trình duyệt, `shop:reconcile`; lỗi sửa đều có test đỏ trên code cũ.
+
+| Đợt | Nội dung | Ghi chú kiểm chứng |
+|---|---|---|
+| Rà soát A, C, U1 | Dùng `Format::money`, enum, `isAdmin()`, scope Payment; test đối chiếu 3 công thức chi tiêu; khoảng giá bộ lọc `100k ≤ p < 300k`… | Không đổi hành vi; `PriceRangeFilterTest` 11 mốc biên |
+| Nhóm B | Admin sửa mã giảm giá: khóa `plants → coupons`, xét "đã dùng" sau khi khóa, thử lại khi deadlock | Test đua: logic cũ đỏ 3/3 (đổi được luật của mã đã có người dùng), mới xanh 5/5 |
+| M1, L6 | Xóa code chết `Coupon::scopeUsableNow()` (lệch biên với quy tắc thật) và `PlantReview::getIsVerifiedPurchaseAttribute()` (luôn `true`) | Không còn chỗ nào tham chiếu; M2 giữ nguyên theo quyết định chủ shop |
+| K1–K3 | Tiếng Việt toàn hệ thống, quên mật khẩu + mail bảo mật, giao diện nền tảng, đổi tên GreenGarden | Chống dò email, link dùng 1 lần, đăng xuất phiên cũ |
+| K7 | Giao diện cửa hàng, mua hàng, tài khoản, quản trị | Khung admin không phụ thuộc CDN |
+| K8 | Thông tin chi tiết cây (**đổi schema có duyệt**: 6 cột cho phép trống) | Có `down()`, đã thử rollback |
+| K9 | Địa chỉ chọn Tỉnh → Phường/xã theo địa giới 01/07/2025 (34 tỉnh, 3.321 xã) | Không đổi schema; dữ liệu đối chiếu 2 nguồn độc lập |
+| K10 | Dashboard doanh thu có biểu đồ theo ngày (giờ VN) | Tổng theo ngày = thẻ doanh thu |
+| K11 | Đánh giá đăng ngay (chủ shop duyệt), trang đơn hoàn thành mời đánh giá | Bài bị gỡ mà sửa lại thì chờ duyệt |
+| Admin điện thoại | 13 trang admin không tràn ngang ở 390px, có/không có CDN | Bước mới trong kịch bản trình duyệt |
+| Tin tức | Admin đăng bài, ảnh tải lên, Markdown an toàn, nháp / hẹn giờ | Chặn SVG, HTML, `javascript:`; cần `storage:link` khi triển khai |
+
 ## Chưa kiểm được trong môi trường này (không tính là đạt)
 
 | Hạng mục | Lý do | Cách kiểm khi triển khai |
 |---|---|---|
 | VNPay sandbox thật | Không có mã merchant/khóa; sandbox không truy cập được từ máy này | `docs/H7-van-hanh.md` mục 4: 3 kịch bản (thành công, khách hủy, quá 15 phút), sau mỗi kịch bản xem `payment_webhook_logs` và chạy `shop:reconcile` |
-| Script `deploy/`, nginx, supervisor, cron | Không có máy chủ thật | Chạy `deploy.sh` trên staging; diễn tập `restore-db.sh` |
-| Tải CSS/JS/font/ảnh từ CDN thật | Máy này bị chặn internet; kịch bản trình duyệt dùng CDN giả (CSP vẫn được kiểm, và đã kiểm ngược: CSP sai thì bắt được) | Chạy `roles.e2e.cjs` **không** có `E2E_STUB_CDN` trên máy có internet |
+| Script `deploy/`, nginx, supervisor, cron | Không có máy chủ thật | Chạy `deploy.sh` trên staging (kể cả bước `storage:link` và khối nginx `/storage/` mới); diễn tập `restore-db.sh` |
+| Tải CSS/JS/font/ảnh từ CDN thật (Bootstrap, Font Awesome, Chart.js) | Máy này bị chặn internet; kịch bản trình duyệt dùng CDN giả (CSP vẫn được kiểm, và đã kiểm ngược: CSP sai thì bắt được) | Chạy `roles.e2e.cjs` **không** có `E2E_STUB_CDN` trên máy có internet |
 | Gửi email qua SMTP thật | Test dùng mail giả | Đặt hàng thử trên staging với SMTP thật |
 | Kịch bản trình duyệt trong CI | Hiện chạy tay (cần server + dữ liệu mẫu) | Có thể thêm job CI riêng nếu cần |
 | PHP 8.4 ở máy dev | Máy này chỉ có PHP 8.3; kết quả chuẩn là của CI chạy PHP 8.4 | Đã có trên CI |
@@ -68,6 +86,8 @@
 ## Để giai đoạn sau (đã thống nhất từ kế hoạch v2)
 
 Trả một phần đơn hàng · API hoàn tiền tự động của VNPay · cổng MoMo · hóa đơn VAT · nhiều kho.
+
+Hạn chế đã biết (ưu tiên thấp): ảnh chèn **trong nội dung** bài tin tức không tự xóa khi sửa/xóa bài (ảnh bìa thì có), file thừa chỉ tốn dung lượng.
 
 ## Tóm tắt các giai đoạn
 
