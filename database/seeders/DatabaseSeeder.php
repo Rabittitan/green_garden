@@ -113,7 +113,7 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Củ Chi, TP.HCM', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
         ]);
 
-        // ===== 6. Thông tin chi tiết cây mẫu + bài viết =====
-        $this->call([PlantDetailSeeder::class, ArticleSeeder::class]);
+        // ===== 6. Thông tin chi tiết cây mẫu + bài viết + slide trang chủ =====
+        $this->call([PlantDetailSeeder::class, ArticleSeeder::class, HomeSlideSeeder::class]);
     }
 }

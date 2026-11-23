@@ -1,4 +1,4 @@
-{{-- Thẻ hiển thị 1 cây. Nhận biến $plant (đã nạp sẵn category). Số sao / tồn kho lấy từ cột của cây: không truy vấn thêm.
+{{-- Thẻ hiển thị 1 cây. Nhận biến $plant (đã nạp sẵn category), tùy chọn $sold (số đã bán gần đây: hiện nhãn "Hot"). Số sao / tồn kho lấy từ cột của cây: không truy vấn thêm.
      onerror: ảnh lỗi thì hiện ảnh dự phòng --}}
 <div class="card plant-card h-100">
     <a href="{{ route('plants.show', $plant->id) }}" class="gg-card-media">
@@ -8,6 +8,9 @@
             <span class="gg-card-flag gg-flag-out">Hết hàng</span>
         @elseif($plant->stock <= $plant->reorder_point)
             <span class="gg-card-flag gg-flag-low">Sắp hết hàng</span>
+        @endif
+        @if(! empty($sold))
+            <span class="gg-card-flag gg-flag-hot"><i class="fa fa-fire"></i> Đã bán {{ $sold }}</span>
         @endif
     </a>
     <div class="card-body d-flex flex-column">

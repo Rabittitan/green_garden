@@ -20,6 +20,7 @@
             ['admin.reviews.index', 'admin.reviews.*', 'fa-star', 'Đánh giá'],
             ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp'],
             ['admin.articles.index', 'admin.articles.*', 'fa-newspaper', 'Tin tức'],
+            ['admin.slides.index', 'admin.slides.*', 'fa-images', 'Slide trang chủ'],
         ],
         'Kho & nhập hàng' => [
             ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh'],

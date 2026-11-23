@@ -46,9 +46,16 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     await customer.goto(B + '/dat-hang'); await customer.check('#pm-cod');
     await click(customer, '#submit-btn'); orderUrl = customer.url(); await expect(customer, 'Chờ xác nhận');
   });
+  // ===== KHÁCH: ghi chú cho shop (trước khi shop xác nhận) + in hóa đơn
+  await step('khách: thêm ghi chú cho shop, mở hóa đơn bán lẻ', async () => {
+    await customer.fill('#order-note', 'Giao giờ hành chính E2E'); await click(customer, '#ghi-chu button');
+    await expect(customer, 'Đã lưu ghi chú cho shop.');
+    await customer.goto(orderUrl + '/hoa-don'); await expect(customer, 'HÓA ĐƠN BÁN LẺ'); await expect(customer, 'Giao giờ hành chính E2E');
+    if (!(await customer.isVisible('#print-btn'))) throw new Error('thiếu nút in');
+  });
   // ===== NHÂN VIÊN: xử lý đơn
   await step('nhân viên: xác nhận -> giao -> hoàn thành', async () => {
-    await staff.goto(B + '/admin/orders'); await click(staff, 'text=Chi tiết');
+    await staff.goto(B + '/admin/orders'); await click(staff, 'text=Chi tiết'); await expect(staff, 'Ghi chú của khách:');
     await click(staff, 'text=Xác nhận đơn');
     await staff.fill('input[name=shipping_carrier]', 'GHN'); await staff.fill('input[name=tracking_code]', 'E2E-STAFF');
     await click(staff, 'text=Giao cho vận chuyển'); await click(staff, 'text=Giao thành công'); await expect(staff, 'Đơn đã hoàn thành');
@@ -77,6 +84,14 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     await staff.goto(B + '/admin/reviews'); await expect(staff, 'Cây khỏe, đóng gói kỹ'); await expect(staff, 'Từ chối');
     await staff.goto(B + '/admin/comments'); await staff.fill('input[name=content]', 'Khoảng 1 năm bạn nhé.'); await click(staff, 'button:has-text("Trả lời")');
     await customer.goto(B + '/cay-canh/1'); await expect(customer, 'Shop trả lời'); await expect(customer, '5</strong>/5');
+  });
+  // ===== NHÂN VIÊN: slide trang chủ (tắt 1 slide -> trang chủ bớt 1)
+  await step('nhân viên: tắt 1 slide -> trang chủ còn 4 slide, vẫn có mục sản phẩm hot', async () => {
+    await staff.goto(B + '/admin/slides'); await click(staff, '.gg-panel >> nth=0 >> text=Sửa');
+    await staff.uncheck('#is_active'); await click(staff, 'button:has-text("Lưu slide")'); await expect(staff, 'Đã cập nhật slide.');
+    await customer.goto(B + '/'); const n = await customer.$$eval('.gg-slide', l => l.length);
+    if (n !== 4) throw new Error('số slide trên trang chủ: ' + n);
+    await expect(customer, 'Sản phẩm hot');
   });
   // ===== NHÂN VIÊN: đăng tin tức có ảnh (tải ảnh lên qua nút "Chèn ảnh" + ảnh bìa)
   await step('nhân viên: viết bài, chèn ảnh, đăng -> khách đọc được, ảnh hiện', async () => {
@@ -139,7 +154,7 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
   });
   await step('quản trị trên điện thoại (390px): các trang danh sách không tràn ngang', async () => {
     await admin.setViewportSize({ width: 390, height: 844 });
-    for (const u of ['/admin', '/admin/orders', '/admin/articles', '/admin/plants', '/admin/inventory', '/admin/coupons', '/admin/customers', '/admin/tiers', '/admin/purchase-requests', '/admin/goods-receipts', '/admin/suppliers']) {
+    for (const u of ['/admin', '/admin/orders', '/admin/articles', '/admin/slides', '/admin/plants', '/admin/inventory', '/admin/coupons', '/admin/customers', '/admin/tiers', '/admin/purchase-requests', '/admin/goods-receipts', '/admin/suppliers']) {
       await admin.goto(B + u); const w = await admin.evaluate(() => document.documentElement.scrollWidth);
       if (w > 391) throw new Error(u + ' tràn ngang: ' + w + 'px');
     }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GoodsReceiptController as AdminGoodsReceiptController;
+use App\Http\Controllers\Admin\HomeSlideController as AdminHomeSlideController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
@@ -151,6 +152,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Tin tức: nhân viên + quản trị đăng bài, ảnh bìa / ảnh trong bài
     Route::post('/articles/images', [AdminArticleController::class, 'uploadImage'])->name('articles.images');
     Route::resource('articles', AdminArticleController::class);
+    // Slide ảnh đầu trang chủ
+    Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
 
     // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho
     Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);

@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Article;
 use App\Models\Comment;
 use App\Models\Coupon;
+use App\Models\HomeSlide;
 use App\Models\Order;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -43,7 +44,7 @@ class RoutePermissionMatrixTest extends TestCase
             'order' => $order->id, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id,
             'user' => User::factory()->create()->id,                       // khách riêng: route khóa / đổi hạng không ảnh hưởng khách đang thử quyền
             'payment' => $order->payments()->sole()->id, 'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id,
-            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id,
+            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id,
         ];
     }
 

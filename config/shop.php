@@ -47,6 +47,12 @@ return [
         'account_name' => env('SHOP_BANK_ACCOUNT_NAME', 'GREENGARDEN SHOP'),
     ],
 
+    // Trang chủ: mục "Sản phẩm hot" = cây bán chạy nhất trong N ngày (đơn đã đặt, chưa hủy / hoàn)
+    'home' => [
+        'hot_days' => 30,
+        'hot_limit' => 8,
+    ],
+
     // Thông tin người bán in trên hóa đơn bán lẻ (trang "In hóa đơn" của đơn hàng). Đây KHÔNG phải hóa đơn GTGT.
     'seller' => [
         'name' => env('SHOP_SELLER_NAME', 'GreenGarden Shop'),

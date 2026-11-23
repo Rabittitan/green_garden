@@ -7,7 +7,38 @@
 @endphp
 
 @section('content')
-{{-- Banner --}}
+{{-- Slide đầu trang (Admin → Slide trang chủ). Chưa bật slide nào: hiện banner mặc định.
+     Slider tự viết (public/js/slider.js + CSS cuộn bắt điểm): không cần CDN; không có JS vẫn vuốt / cuộn được. --}}
+@if($slides->isNotEmpty())
+    <section class="gg-slider mb-4" data-gg-slider aria-roledescription="carousel" aria-label="Ảnh nổi bật">
+        <div class="gg-slider-track" data-track tabindex="0">
+            @foreach($slides as $i => $slide)
+                <div class="gg-slide" role="group" aria-roledescription="slide" aria-label="{{ $i + 1 }} / {{ $slides->count() }}">
+                    <img src="{{ $slide->image }}" alt="{{ $slide->title ?? 'Ảnh nổi bật '.($i + 1) }}" @if($i > 0) loading="lazy" @endif
+                         onerror="this.onerror=null;this.src='https://placehold.co/1600x600/2e7d32/ffffff?text=GreenGarden'">
+                    @if($slide->title || $slide->subtitle || $slide->link_url)
+                        <div class="gg-slide-caption">
+                            @if($slide->title)<h2>{{ $slide->title }}</h2>@endif
+                            @if($slide->subtitle)<p>{{ $slide->subtitle }}</p>@endif
+                            @if($slide->link_url)
+                                <a href="{{ $slide->link_url }}" class="btn btn-light text-green">{{ $slide->button_label ?: 'Xem ngay' }} <i class="fa fa-arrow-right ms-1"></i></a>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+        @if($slides->count() > 1)
+            <button type="button" class="gg-slider-nav prev" data-prev aria-label="Ảnh trước"><i class="fa fa-chevron-left"></i></button>
+            <button type="button" class="gg-slider-nav next" data-next aria-label="Ảnh sau"><i class="fa fa-chevron-right"></i></button>
+            <div class="gg-slider-dots" data-dots>
+                @foreach($slides as $i => $slide)
+                    <button type="button" aria-label="Ảnh {{ $i + 1 }}" @if($i === 0) aria-current="true" @endif></button>
+                @endforeach
+            </div>
+        @endif
+    </section>
+@else
 <section class="hero gg-hero text-white mb-4">
     <div class="row">
         <div class="col-lg-8 col-xl-7">
@@ -22,6 +53,8 @@
     </div>
 </section>
 
+@endif
+
 {{-- Cam kết: số liệu lấy từ cấu hình shop --}}
 <div class="gg-usp mb-2">
     <div class="gg-usp-item"><i class="fa fa-truck-fast"></i>
@@ -31,6 +64,20 @@
     <div class="gg-usp-item"><i class="fa fa-hand-holding-dollar"></i>
         <div><strong>Thanh toán khi nhận hàng</strong><br><small>Nhận cây, kiểm tra rồi mới trả tiền</small></div></div>
 </div>
+
+{{-- Sản phẩm hot: bán chạy nhất trong 30 ngày (HomeController::hotPlants) --}}
+@if($hotPlants->isNotEmpty())
+    <div class="gg-section-head" id="san-pham-hot">
+        <div><span class="gg-eyebrow">Bán chạy</span><h2><i class="fa fa-fire text-danger"></i> Sản phẩm hot</h2>
+            <p>Được mua nhiều nhất {{ config('shop.home.hot_days') }} ngày qua</p></div>
+        <a href="{{ route('plants.index') }}">Xem tất cả <i class="fa fa-arrow-right"></i></a>
+    </div>
+    <div class="row g-3 mb-2" data-testid="hot-plants">
+        @foreach($hotPlants as $plant)
+            <div class="col-6 col-md-4 col-lg-3">@include('partials.plant-card', ['plant' => $plant, 'sold' => $hotSold[$plant->id] ?? 0])</div>
+        @endforeach
+    </div>
+@endif
 
 {{-- Chọn cây theo mệnh --}}
 <div class="gg-section-head" id="chon-theo-menh">
@@ -82,4 +129,5 @@
         <div class="col-md-4">@include('partials.article-card', ['article' => $article])</div>
     @endforeach
 </div>
+<script src="{{ asset('js/slider.js') }}?v={{ @filemtime(public_path('js/slider.js')) }}"></script>
 @endsection

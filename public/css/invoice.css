@@ -19,7 +19,7 @@ body { margin: 0; background: #eef2ee; color: #1f2d1f; font: 14px/1.5 -apple-sys
 .inv-sum td { padding: 4px; }
 .inv-sum .total td { font-size: 17px; font-weight: 800; border-top: 2px solid #1f2d1f; padding-top: 8px; }
 .inv-sum .due td { font-weight: 700; color: #b3261e; }
-.r { text-align: right; white-space: nowrap; }
+.r, .inv-table th.r { text-align: right; white-space: nowrap; }
 .muted { color: #667366; font-size: 12px; }
 .inv-foot { margin-top: 24px; border-top: 1px dashed #cfd8cf; padding-top: 10px; text-align: center; }
 .inv-foot p { margin: 2px 0; }
