@@ -366,3 +366,38 @@ a { text-underline-offset: 3px; }
 .gg-care { list-style: none; padding: 0; }
 .gg-care li { position: relative; padding: .35rem 0 .35rem 1.6rem; color: #4a564c; }
 .gg-care li::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; position: absolute; left: 0; top: .4rem; color: var(--gg-green); font-size: .85rem; }
+
+/* ================================================================ Bảng admin trên màn hình nhỏ (không phụ thuộc Bootstrap CDN) */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gg-admin-main { min-width: 0; }                         /* cột nội dung được co lại, không bị bảng đẩy rộng ra */
+@media (max-width: 991.98px) {
+    /* Bảng không bọc table-responsive: tự cuộn ngang trong khung của nó, trang không tràn */
+    .gg-admin-content table.table:not(.gg-table-stack) { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-responsive > table.table { display: table; }
+}
+/* Bảng xếp thành thẻ trên điện thoại: mỗi dòng 1 thẻ, mỗi ô 1 hàng "nhãn: giá trị" (nhãn lấy từ data-label) */
+@media (max-width: 767.98px) {
+    .gg-table-stack thead { display: none; }
+    .gg-table-stack, .gg-table-stack tbody, .gg-table-stack tr, .gg-table-stack td { display: block; width: 100%; }
+    .gg-table-stack tr { background: #fff; border: 1px solid var(--gg-line); border-radius: 12px; padding: .5rem .85rem; margin-bottom: .75rem; box-shadow: var(--gg-shadow); }
+    /* Lưới 2 cột: nhãn bên trái; nội dung ô (có thể nhiều dòng: tên + SĐT, nhãn + phương thức) xếp chồng bên phải */
+    .gg-table-stack td { display: grid; grid-template-columns: auto 1fr; column-gap: 1rem; justify-items: end; align-items: center; padding: .4rem 0; border: 0; text-align: right; background: transparent; }
+    .gg-table-stack td > * { grid-column: 2; }
+    .gg-table-stack td + td { border-top: 1px dashed var(--gg-line); }
+    .gg-table-stack td::before { content: attr(data-label); grid-column: 1; grid-row: 1 / span 3; align-self: start; padding-top: .1rem; color: var(--gg-muted); font-size: .82rem; font-weight: 600; text-align: left; }
+    .gg-table-stack td[data-label=""] { display: block; text-align: center; }
+    .gg-table-stack td[data-label=""]::before { content: none; }
+    .gg-table-stack td .btn { width: 100%; }
+}
+
+/* ================================================================ Tin tức: quản trị + nội dung bài */
+.gg-thumb { width: 64px; height: 44px; object-fit: cover; border-radius: 8px; display: inline-grid; place-items: center; }
+.gg-thumb-empty { background: var(--gg-green-50); color: var(--gg-muted); }
+.gg-editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; padding: .4rem; border: 1px solid var(--gg-line); border-bottom: 0; border-radius: 10px 10px 0 0; background: #f7faf7; }
+.gg-editor { border-top-left-radius: 0; border-top-right-radius: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92rem; line-height: 1.6; }
+.gg-checklist { max-height: 260px; overflow-y: auto; }
+.gg-article-body h2 { font-size: 1.35rem; font-weight: 800; margin: 1.6rem 0 .6rem; }
+.gg-article-body h3 { font-size: 1.15rem; font-weight: 700; margin: 1.3rem 0 .5rem; }
+.gg-article-body img { display: block; max-width: 100%; height: auto; margin: 1rem auto; }
+.gg-article-body ul, .gg-article-body ol { padding-left: 1.3rem; }
+.gg-article-body blockquote { border-left: 4px solid var(--gg-green); padding: .25rem 0 .25rem 1rem; color: var(--gg-muted); }

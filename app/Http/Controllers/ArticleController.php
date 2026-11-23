@@ -22,7 +22,7 @@ class ArticleController extends Controller
     public function show(int $id): View
     {
         // Tìm bài theo id, không thấy thì tự trả về trang 404
-        $article = Article::published()->findOrFail($id);
+        $article = Article::published()->with(['author', 'plants'])->findOrFail($id);
 
         // Lấy 3 bài khác (trừ bài đang xem) để gợi ý đọc tiếp
         $others = Article::published()->where('id', '!=', $article->id)->latest('published_at')->take(3)->get();

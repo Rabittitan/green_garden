@@ -1,6 +1,6 @@
 /*
  * Kịch bản trình duyệt 3 vai trò (khách / nhân viên / quản trị) — H5, bổ sung H8 (CSP, thanh toán lại, trang lỗi).
- * Chuẩn bị: php artisan migrate:fresh --seed ; tạo nhân viên staff@greenlife.test / 123456 ;
+ * Chuẩn bị: php artisan migrate:fresh --seed ; php artisan storage:link ; tạo nhân viên staff@greenlife.test / 123456 ;
  *           PAYMENT_GATEWAY=fake, APP_ENV=local ; php artisan serve
  * (Máy không có internet: thêm E2E_STUB_CDN=1 để giả lập CDN, vẫn kiểm được CSP)
  * Chạy:     npm i -D playwright && npx playwright install chromium && APP_URL=http://127.0.0.1:8000 node tests/Browser/roles.e2e.cjs
@@ -78,6 +78,22 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     await staff.goto(B + '/admin/comments'); await staff.fill('input[name=content]', 'Khoảng 1 năm bạn nhé.'); await click(staff, 'button:has-text("Trả lời")');
     await customer.goto(B + '/cay-canh/1'); await expect(customer, 'Shop trả lời'); await expect(customer, '5</strong>/5');
   });
+  // ===== NHÂN VIÊN: đăng tin tức có ảnh (tải ảnh lên qua nút "Chèn ảnh" + ảnh bìa)
+  await step('nhân viên: viết bài, chèn ảnh, đăng -> khách đọc được, ảnh hiện', async () => {
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');   // ảnh PNG 1×1
+    await staff.goto(B + '/admin/articles/create');
+    await staff.fill('#title', 'Bài E2E: chăm cây mùa mưa'); await staff.fill('#summary', 'Tóm tắt bài E2E');
+    await staff.fill('#content', 'Mùa mưa cần giảm tưới.\n\n## Lưu ý\n\n- Kê chậu cao');
+    await staff.setInputFiles('[data-md-image]', { name: 'trong-bai.png', mimeType: 'image/png', buffer: png });
+    await staff.waitForFunction(() => document.querySelector('#content').value.includes('](/storage/articles/'), null, { timeout: 5000 });
+    await staff.setInputFiles('#cover', { name: 'bia.png', mimeType: 'image/png', buffer: png });
+    await staff.check('#st-pub'); await click(staff, '#article-form button.btn-green.w-100'); await expect(staff, 'Đã đăng bài.');
+    await customer.goto(B + '/tin-tuc'); await expect(customer, 'Bài E2E: chăm cây mùa mưa');
+    await customer.click('text=Bài E2E: chăm cây mùa mưa'); await customer.waitForLoadState();
+    await expect(customer, '<h2>Lưu ý</h2>');
+    const imgs = await customer.$$eval('.gg-article-cover img, .gg-article-body img', l => l.map(i => i.complete && i.naturalWidth > 0 && i.getAttribute('src').startsWith('/storage/articles/')));
+    if (imgs.length !== 2 || imgs.includes(false)) throw new Error('ảnh bài viết không hiện: ' + JSON.stringify(imgs));
+  });
   await step('nhân viên: lập yêu cầu nhập từ cây dưới ngưỡng, gửi duyệt, KHÔNG tự duyệt được', async () => {
     await staff.goto(B + '/admin/purchase-requests'); await click(staff, 'text=Lập từ cây dưới ngưỡng');
     await click(staff, 'button:has-text("Gửi duyệt")'); await expect(staff, 'Chờ quản trị viên khác người lập duyệt');
@@ -120,6 +136,14 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     await customer.goto(B + '/cay-canh/5'); await click(customer, 'form[action*="gio-hang/them"] button');
     await customer.goto(B + '/dat-hang'); await customer.fill('input[name=coupon_code]', 'e2e15');
     await click(customer, 'form[action$="ap-ma"] button'); await expect(customer, 'Mã E2E15');
+  });
+  await step('quản trị trên điện thoại (390px): các trang danh sách không tràn ngang', async () => {
+    await admin.setViewportSize({ width: 390, height: 844 });
+    for (const u of ['/admin', '/admin/orders', '/admin/articles', '/admin/plants', '/admin/inventory', '/admin/coupons', '/admin/customers', '/admin/tiers', '/admin/purchase-requests', '/admin/goods-receipts', '/admin/suppliers']) {
+      await admin.goto(B + u); const w = await admin.evaluate(() => document.documentElement.scrollWidth);
+      if (w > 391) throw new Error(u + ' tràn ngang: ' + w + 'px');
+    }
+    await admin.setViewportSize({ width: 1280, height: 720 });
   });
   await step('trang lỗi tiếng Việt (404, 403) có CSS, không lộ chi tiết', async () => {
     const r = await customer.goto(B + '/khong-co-trang-nay'); if (r.status() !== 404) throw new Error('404? ' + r.status());

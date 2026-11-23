@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -47,6 +49,39 @@ class Article extends Model
     public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
+    }
+
+    /**
+     * Nội dung bài -> HTML an toàn. Soạn bằng Markdown (đậm, tiêu đề, danh sách, ảnh ![mô tả](đường dẫn), link).
+     * HTML gõ tay bị BỎ (html_input=strip), link javascript:/vbscript:/file: bị chặn; xuống 1 dòng = <br> như trước
+     * (bài cũ là chữ thuần, các đoạn cách nhau 1 dòng trống, hiển thị không đổi).
+     */
+    public function renderedContent(): HtmlString
+    {
+        $html = Str::markdown($this->content, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+            'max_nesting_level' => 20,
+            'renderer' => ['soft_break' => "<br>\n"],
+        ]);
+
+        // Ảnh trong bài: tải chậm, không tràn khung
+        return new HtmlString(str_replace('<img ', '<img loading="lazy" class="img-fluid rounded-3" ', $html));
+    }
+
+    /** Đã bấm "Đăng" nhưng chưa tới giờ hẹn. */
+    public function isScheduled(): bool
+    {
+        return $this->status === 'published' && $this->published_at !== null && $this->published_at->isFuture();
+    }
+
+    public function statusLabel(): string
+    {
+        return match (true) {
+            $this->status === 'draft' => 'Nháp',
+            $this->isScheduled() => 'Hẹn giờ',
+            default => 'Đã đăng',
+        };
     }
 
     /**

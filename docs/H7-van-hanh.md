@@ -8,7 +8,7 @@ Tài liệu cho người triển khai và trực vận hành. Mọi lệnh chạ
 
 | Thành phần | Phiên bản | Ghi chú |
 |---|---|---|
-| PHP | **≥ 8.4.1** (FPM) | extension: `pdo_mysql`, `mbstring`, `intl`, `bcmath`, `xml`, `curl`, `zip` |
+| PHP | **≥ 8.4.1** (FPM) | extension: `pdo_mysql`, `mbstring`, `intl`, `bcmath`, `xml`, `curl`, `zip`, `fileinfo`. `php.ini`: `upload_max_filesize = 8M`, `post_max_size = 10M` (ảnh tin tức tối đa 4MB) |
 | MySQL | **≥ 8.0.16** (hoặc MariaDB ≥ 10.4) | bắt buộc: schema dùng CHECK constraint + cột sinh có UNIQUE. Migration tự dừng nếu engine thấp hơn |
 | Nginx | bất kỳ bản còn hỗ trợ | mẫu: `deploy/nginx-greenlife.conf` |
 | Supervisor | | giữ queue worker gửi mail: `deploy/supervisor-greenlife-worker.conf` |
@@ -32,6 +32,7 @@ Sửa `.env` theo **checklist production** (mục 3), rồi:
 mysql -e "CREATE DATABASE green_life CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 php artisan migrate --force                 # KHÔNG --seed: seeder mẫu tự chặn ở production
 php artisan shop:create-admin chu@shop.vn --name="Chủ shop"   # hỏi mật khẩu ẩn, tối thiểu 10 ký tự có chữ+số
+php artisan storage:link                    # public/storage -> storage/app/public (ảnh tin tức tải lên)
 php artisan optimize
 sudo chown -R www-data:www-data storage bootstrap/cache
 ```
@@ -106,6 +107,7 @@ Lỗi SMTP **không** làm hỏng đặt hàng/thanh toán: mail chỉ được 
 ## 6. Sao lưu & khôi phục
 
 - `deploy/backup-db.sh`: `mysqldump --single-transaction` (không khóa bảng, site vẫn chạy), nén gzip, kiểm tra file nén, giữ 14 ngày (`KEEP_DAYS`). Thông tin đăng nhập MySQL đặt trong `~/.my.cnf` của user chạy cron (quyền 600), **không** ghi trong script.
+- **Ảnh tin tức tải lên** nằm ở `storage/app/public/articles/` (không có trong bản dump DB): sao lưu thư mục này cùng lịch, ví dụ `tar czf /var/backups/greenlife/uploads-$(date +%F).tgz -C /var/www/greenlife/storage/app public`.
 - Chép bản sao lưu ra **ngoài máy chủ** (S3/Google Drive/máy khác) — mất máy là mất cả DB lẫn bản sao lưu nếu để cùng chỗ.
 - **Diễn tập khôi phục hằng tháng** (sao lưu chưa từng khôi phục thử = chưa có sao lưu):
 

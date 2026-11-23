@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
@@ -143,6 +144,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/comments', [AdminCommentController::class, 'index'])->name('comments.index');
     Route::post('/comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
     Route::post('/comments/{comment}/toggle', [AdminCommentController::class, 'toggle'])->name('comments.toggle');
+
+    // Tin tức: nhân viên + quản trị đăng bài, ảnh bìa / ảnh trong bài
+    Route::post('/articles/images', [AdminArticleController::class, 'uploadImage'])->name('articles.images');
+    Route::resource('articles', AdminArticleController::class);
 
     // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho
     Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);

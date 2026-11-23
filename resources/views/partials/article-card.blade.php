@@ -5,7 +5,7 @@
              onerror="this.onerror=null;this.src='https://placehold.co/800x400/e8f5e9/2e7d32?text=GreenGarden'">
     </a>
     <div class="card-body d-flex flex-column">
-        <small class="text-muted"><i class="fa fa-calendar"></i> {{ $article->created_at->format('d/m/Y') }}</small>
+        <small class="text-muted"><i class="fa fa-calendar"></i> {{ \App\Support\Format::datetime($article->published_at ?? $article->created_at, 'd/m/Y') }}</small>
         <h3 class="gg-card-title fs-6 mt-1">
             <a href="{{ route('news.show', $article->id) }}">{{ $article->title }}</a>
         </h3>

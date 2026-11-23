@@ -6,6 +6,7 @@ use App\Enums\CouponScope;
 use App\Enums\CouponType;
 use App\Enums\OrderStatus;
 use App\Enums\RedemptionStatus;
+use App\Exceptions\BusinessException;
 use App\Exceptions\CouponNotApplicableException;
 use App\Models\Category;
 use App\Models\Coupon;
@@ -15,6 +16,8 @@ use App\Models\User;
 use App\Services\Pricing\QuoteLine;
 use App\Support\Allocator;
 use App\Support\Format;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Phiếu giảm giá.
@@ -23,9 +26,48 @@ use App\Support\Format;
  *  - applyToLines():    tính + phân bổ tiền giảm vào các dòng (percent / fixed)
  *  - shippingDiscount() : tiền giảm phí ship (free_shipping)
  *  - redeem() / release(): ghi nhận / trả lượt — gọi trong transaction đã khóa coupon
+ *  - update():          admin sửa mã (khóa plants -> coupons như checkout; mã đã dùng thì giữ nguyên "luật")
  */
 class CouponService
 {
+    /** Mã đã có người dùng: chỉ được đổi các cột này (không đổi code / loại / giá trị / phạm vi). */
+    public const EDITABLE_WHEN_LOCKED = ['name', 'description', 'usage_limit', 'usage_limit_per_user', 'starts_at', 'ends_at', 'is_active'];
+
+    public function __construct(private InventoryService $inventory) {}
+
+    /**
+     * Admin sửa mã (nhóm B). Thứ tự khóa giống checkout / hủy đơn (ADR-003): plants (id tăng dần) -> coupons.
+     * Trước đây khóa coupons rồi mới chạm plants (khóa ngoại khi sync coupon_plants) -> deadlock với checkout.
+     * "Đã có người dùng" được xét MỘT lần, SAU khi khóa dòng mã, nên không thể lệch giữa lúc đổi luật và lúc đổi phạm vi.
+     *
+     * @param  array<string, mixed>  $attrs
+     * @param  array<int, int>  $plantIds
+     * @param  array<int, int>  $categoryIds
+     */
+    public function update(Coupon $coupon, array $attrs, array $plantIds, array $categoryIds): Coupon
+    {
+        return DB::transaction(function () use ($coupon, $attrs, $plantIds, $categoryIds) {
+            $this->inventory->lockPlants($plantIds);                         // khóa ngoại coupon_plants sẽ cần các dòng plants này
+            $locked = Coupon::whereKey($coupon->id)->lockForUpdate()->firstOrFail();
+            $isLocked = $locked->isLocked();
+
+            if ($isLocked) {                                                 // đã có người dùng: giữ nguyên "luật" giảm giá
+                $attrs = Arr::only($attrs, self::EDITABLE_WHEN_LOCKED);
+            }
+            // used_count đọc SAU khi khóa: có khách vừa dùng mã trong lúc admin mở form -> báo lỗi thay vì vi phạm CHECK (lỗi 500)
+            if (isset($attrs['usage_limit']) && (int) $attrs['usage_limit'] < $locked->used_count) {
+                throw new BusinessException("Tổng lượt không được nhỏ hơn số lượt đã dùng ({$locked->used_count}).");
+            }
+            $locked->update($attrs);
+            if (! $isLocked) {
+                $locked->plants()->sync($plantIds);
+                $locked->categories()->sync($categoryIds);
+            }
+
+            return $locked;
+        }, 3);                                                               // thử lại khi deadlock, như mọi luồng ghi khác
+    }
+
     public function find(string $code, bool $lock = false): Coupon
     {
         $query = Coupon::where('code', Coupon::normalizeCode($code));

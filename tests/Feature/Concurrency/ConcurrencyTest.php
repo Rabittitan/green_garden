@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PurchaseRequestStatus;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -158,6 +159,37 @@ class ConcurrencyTest extends TestCase
         $this->assertSame(5, collect($results)->where('ok', true)->count());
         $this->assertSame(30 + 20 - 4, $this->stock(1));
         $this->assertLedgerConsistent();
+    }
+
+    /**
+     * Nhóm B: admin thêm cây vào phạm vi mã (sync coupon_plants -> khóa ngoại cần dòng plants) đúng lúc nhiều khách
+     * đặt hàng cây đó bằng chính mã đó (checkout khóa plants -> coupons). Code cũ khóa coupons trước -> deadlock 1213.
+     * Yêu cầu: không lỗi hệ thống; khi mã đã có người dùng thì luật (giá trị) và phạm vi KHÔNG bị đổi nửa vời.
+     */
+    public function test_admin_editing_coupon_scope_while_customers_check_out_with_it(): void
+    {
+        for ($round = 0; $round < 3; $round++) {
+            $coupon = Coupon::create(['code' => 'RACE'.$round, 'name' => 'Race', 'type' => 'percent', 'value' => 10,
+                'scope' => 'plants', 'usage_limit_per_user' => 5]);
+            $coupon->plants()->sync([1, 3, 5]);
+            $users = User::factory()->count(3)->create();
+            $jobs = $users->map(fn ($u) => ['place', (string) $u->id, json_encode([3 => 1, 5 => 1]), (string) Str::uuid(), 'cod', 'RACE'.$round])->all();
+            $jobs[] = ['coupon-update', (string) $coupon->id, json_encode([1, 3, 5, 7, 12]), '20'];
+            $jobs[] = ['coupon-update', (string) $coupon->id, json_encode([1, 3, 5, 9]), '30'];
+            $results = $this->race($jobs);                                  // race() đã chặn mọi lỗi không phải nghiệp vụ (vd deadlock)
+
+            $coupon->refresh();
+            $placed = collect($results)->take(3)->where('ok', true)->count();
+            $this->assertSame($placed, $coupon->used_count);
+            $scope = $coupon->plants()->pluck('plants.id')->sort()->values()->all();
+            if ($placed > 0 && $coupon->value === 10) {                      // khách dùng trước admin: luật + phạm vi giữ nguyên
+                $this->assertSame([1, 3, 5], $scope);
+            } else {                                                         // admin sửa trước: luật và phạm vi đổi CÙNG NHAU
+                $this->assertContains([$coupon->value, $scope], [[20, [1, 3, 5, 7, 12]], [30, [1, 3, 5, 9]]]);
+            }
+        }
+        $this->assertLedgerConsistent();
+        $this->artisan('shop:reconcile')->assertSuccessful();
     }
 
     /** Bấm "Gửi đánh giá" nhiều lần cùng lúc: đúng 1 đánh giá, không lỗi UNIQUE (lỗi cũ trong ReviewService). */
