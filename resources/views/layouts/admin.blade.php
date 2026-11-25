@@ -37,6 +37,7 @@
             ['admin.coupons.index', 'admin.coupons.*', 'fa-ticket', 'Mã giảm giá', 'admin'],
             ['admin.customers.index', 'admin.customers.*', 'fa-users', 'Khách hàng', 'admin'],
             ['admin.tiers.index', 'admin.tiers.*', 'fa-crown', 'Hạng thành viên', 'admin'],
+            ['admin.shipping-zones.index', 'admin.shipping-zones.*', 'fa-truck-fast', 'Phí vận chuyển', 'admin'],
             ['admin.staff.index', 'admin.staff.*', 'fa-id-badge', 'Nhân viên', 'admin'],
         ],
     ];

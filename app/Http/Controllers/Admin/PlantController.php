@@ -40,6 +40,7 @@ class PlantController extends Controller
             'description' => ['nullable', 'string'],
             'height' => ['nullable', 'string', 'max:60'],
             'pot_size' => ['nullable', 'string', 'max:80'],
+            'weight_grams' => ['nullable', 'integer', 'between:1,200000'],
             'growth_rate' => ['nullable', Rule::in(array_keys(Plant::GROWTH_RATES))],
             'watering' => ['nullable', 'string', 'max:100'],
             'growth_info' => ['nullable', 'string', 'max:5000'],

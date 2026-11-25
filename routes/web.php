@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
 use App\Http\Controllers\Admin\PurchaseRequestController as AdminPurchaseRequestController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
 use App\Http\Controllers\Admin\StaffController as AdminStaffController;
 use App\Http\Controllers\Admin\StockCountController as AdminStockCountController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
@@ -118,6 +119,7 @@ Route::middleware(['auth', 'throttle:20,1'])->group(function () {
 // ===== ĐẶT HÀNG: đăng nhập + đã xác thực email =====
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dat-hang', [CheckoutController::class, 'form'])->name('checkout.form');
+    Route::get('/dat-hang/phi-ship', [CheckoutController::class, 'shippingQuote'])->name('checkout.shipping-quote')->middleware('throttle:60,1');
     Route::post('/dat-hang/ap-ma', [CheckoutController::class, 'applyCoupon'])->name('checkout.coupon.apply')->middleware('throttle:20,1');
     Route::post('/dat-hang/bo-ma', [CheckoutController::class, 'removeCoupon'])->name('checkout.coupon.remove');
     Route::post('/dat-hang', [CheckoutController::class, 'store'])->name('checkout.store')->middleware('throttle:10,1');
@@ -209,6 +211,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('/customers/{user}', [AdminCustomerController::class, 'show'])->name('customers.show');
         Route::post('/customers/{user}/tier', [AdminCustomerController::class, 'setTier'])->name('customers.tier');
         Route::post('/customers/{user}/toggle-active', [AdminCustomerController::class, 'toggleActive'])->name('customers.toggle');
+        // Phí vận chuyển theo vùng + cân nặng
+        Route::resource('shipping-zones', AdminShippingZoneController::class)->except(['show'])->parameters(['shipping-zones' => 'shippingZone']);
         Route::get('/tiers', [AdminTierController::class, 'index'])->name('tiers.index');
         Route::put('/tiers', [AdminTierController::class, 'update'])->name('tiers.update');
 

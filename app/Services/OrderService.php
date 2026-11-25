@@ -90,7 +90,7 @@ class OrderService
                 // 5. Khóa mã + báo giá THẬT (cùng công thức với trang xem trước)
                 $coupon = $data->couponCode !== null && trim($data->couponCode) !== ''
                     ? $this->coupons->find($data->couponCode, lock: true) : null;
-                $quote = $this->pricing->quote($user, $items, $coupon);
+                $quote = $this->pricing->quote($user, $items, $coupon, $data->shipping['province']);   // phí ship theo vùng của tỉnh nhận hàng
 
                 // 6. Khách phải đồng ý đúng con số sẽ trả
                 if ($data->expectedTotal !== null && $quote->total() !== $data->expectedTotal) {

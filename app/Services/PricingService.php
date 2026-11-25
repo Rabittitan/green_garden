@@ -21,7 +21,8 @@ use App\Support\Allocator;
  *   3. coupon_discount   = theo mã, tính trên (dòng − giảm hạng của dòng) trong phạm vi mã → phân bổ
  *        mã KHÔNG cộng dồn với hạng: tính cả 2 phương án, chọn phương án lợi hơn cho khách
  *        (bằng nhau thì giữ ưu đãi hạng để khách không tốn lượt dùng mã)
- *   4. shipping_fee      = phí theo (tiền hàng sau giảm) và ngưỡng miễn ship của hạng
+ *   4. shipping_fee      = 0 nếu tiền hàng sau giảm đạt ngưỡng miễn ship của hạng; ngược lại theo VÙNG của tỉnh nhận hàng
+ *                          + tổng khối lượng đóng gói (ShippingFeeCalculator; chưa cấu hình vùng -> đồng giá)
  *   5. shipping_discount = mã free_shipping (≤ phí ship)
  *   6. total             = subtotal − member − coupon + shipping_fee − shipping_discount
  *
@@ -42,7 +43,7 @@ class PricingService
      *
      * @param  array<int,int>  $cart  plant_id => quantity
      */
-    public function quoteCart(User $user, array $cart, ?string $couponCode = null): Quote
+    public function quoteCart(User $user, array $cart, ?string $couponCode = null, ?string $province = null): Quote
     {
         $plants = Plant::whereIn('id', array_keys($cart))->get()->keyBy('id');
         $flash = $this->flashSales->activeItems(array_map('intval', array_keys($cart)));   // xem trước: không khóa
@@ -56,11 +57,11 @@ class PricingService
         }
         $coupon = $couponCode !== null && trim($couponCode) !== '' ? $this->coupons->find($couponCode) : null;
 
-        return $this->quote($user, $items, $coupon);
+        return $this->quote($user, $items, $coupon, $province);
     }
 
     /** @param list<array{plant: Plant, quantity: int, flash?: FlashSaleItem|null}> $items */
-    public function quote(User $user, array $items, ?Coupon $coupon = null): Quote
+    public function quote(User $user, array $items, ?Coupon $coupon = null, ?string $province = null): Quote
     {
         if ($items === []) {
             throw new BusinessException('Giỏ hàng đang trống!');
@@ -74,18 +75,18 @@ class PricingService
         $flashNotices = $this->flashNotices($items);
 
         if ($coupon === null) {
-            return $this->scenario($user, $items, withMember: true, coupon: null, notices: $flashNotices);
+            return $this->scenario($user, $items, province: $province, withMember: true, coupon: null, notices: $flashNotices);
         }
 
         $this->coupons->assertUsable($coupon, $user, $this->freshLines($items));
 
         if ($coupon->combinable_with_tier) {
-            $quote = $this->scenario($user, $items, withMember: true, coupon: $coupon, notices: $flashNotices);
+            $quote = $this->scenario($user, $items, province: $province, withMember: true, coupon: $coupon, notices: $flashNotices);
         } else {
-            $memberOnly = $this->scenario($user, $items, withMember: true, coupon: null);
-            $couponOnly = $this->scenario($user, $items, withMember: false, coupon: $coupon, notices: $flashNotices);
+            $memberOnly = $this->scenario($user, $items, province: $province, withMember: true, coupon: null);
+            $couponOnly = $this->scenario($user, $items, province: $province, withMember: false, coupon: $coupon, notices: $flashNotices);
             if ($memberOnly->total() <= $couponOnly->total() && $memberOnly->memberDiscount() > 0) {
-                return $this->scenario($user, $items, withMember: true, coupon: null, notices: [...$flashNotices,
+                return $this->scenario($user, $items, province: $province, withMember: true, coupon: null, notices: [...$flashNotices,
                     "Mã {$coupon->code} không cộng dồn với ưu đãi hạng {$user->tier->name}; hệ thống giữ ưu đãi hạng vì có lợi hơn cho bạn.",
                 ]);
             }
@@ -103,7 +104,7 @@ class PricingService
      * @param  list<array{plant: Plant, quantity: int, flash?: FlashSaleItem|null}>  $items
      * @param  list<string>  $notices
      */
-    private function scenario(User $user, array $items, bool $withMember, ?Coupon $coupon, array $notices = []): Quote
+    private function scenario(User $user, array $items, ?string $province, bool $withMember, ?Coupon $coupon, array $notices = []): Quote
     {
         $tier = $user->tier;
         $lines = $this->freshLines($items);
@@ -117,7 +118,8 @@ class PricingService
 
         $couponDiscount = $coupon ? $this->coupons->applyToLines($coupon, $lines) : 0;
         $merchandise = $subtotal - $memberDiscount - $couponDiscount;
-        $fee = $this->shipping->fee($merchandise, $tier);
+        $weight = array_sum(array_map(fn (QuoteLine $l) => ($l->plant->weight_grams ?? (int) config('shop.shipping.default_weight_grams')) * $l->quantity, $lines));
+        $fee = $this->shipping->fee($merchandise, $tier, $province, $weight);
         $shippingDiscount = $coupon ? $this->coupons->shippingDiscount($coupon, $fee) : 0;
 
         return new Quote(

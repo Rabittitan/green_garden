@@ -136,6 +136,12 @@
             @error('pot_size') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
         <div class="col-md-3 mb-3">
+            <label class="form-label" for="weight_grams">Khối lượng đóng gói (gram)</label>
+            <input type="number" id="weight_grams" name="weight_grams" min="1" max="200000" value="{{ old('weight_grams', $plant->weight_grams ?? '') }}" class="form-control @error('weight_grams') is-invalid @enderror" placeholder="Để trống = {{ config('shop.shipping.default_weight_grams') }} g">
+            @error('weight_grams') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <div class="form-text">Gồm chậu + đất + thùng; dùng để tính phí ship theo cân nặng.</div>
+        </div>
+        <div class="col-md-3 mb-3">
             <label class="form-label" for="growth_rate">Tốc độ lớn</label>
             <select id="growth_rate" name="growth_rate" class="form-select @error('growth_rate') is-invalid @enderror">
                 <option value="">-- Chưa nhập --</option>

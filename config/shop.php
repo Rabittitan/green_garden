@@ -18,6 +18,8 @@ return [
         'base_fee' => (int) env('SHOP_SHIPPING_FEE', 30000),
         // Miễn phí ship khi (tiền hàng sau giảm) >= ngưỡng. Hạng thành viên có thể có ngưỡng riêng thấp hơn.
         'free_min_order' => (int) env('SHOP_FREE_SHIPPING_MIN', 500000),
+        // Khối lượng đóng gói mặc định của 1 cây khi chưa nhập (gram) — dùng cho phí ship theo vùng + cân nặng
+        'default_weight_grams' => 1000,
     ],
 
     'payment' => [

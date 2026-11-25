@@ -453,3 +453,4 @@ a { text-underline-offset: 3px; }
 .gg-flash-bar > em { position: absolute; inset: 0; display: grid; place-items: center; font-size: .72rem; font-style: normal; font-weight: 700; color: #4a1406; }
 .gg-flash-box { background: #fff1ee; border: 1px solid #ffccbc; border-radius: 12px; padding: .7rem .9rem; }
 @media print { .no-print, .gg-admin-sidebar, .gg-admin-top { display: none !important; } .gg-admin-content { padding: 0; } }
+.gg-province-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .15rem .75rem; max-height: 460px; overflow-y: auto; }
