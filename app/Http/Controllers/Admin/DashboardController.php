@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Enums\StaffPermission;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -34,8 +36,25 @@ class DashboardController extends Controller
     /** Kỳ mặc định (cũng là độ dài biểu đồ khi mở trang). */
     public const TREND_DAYS = 30;
 
-    public function index(Request $request): View
+    /** Trang đầu của từng nhóm quyền: nhân viên không có quyền "Thống kê" được đưa tới mục đầu tiên mình dùng được. */
+    public const LANDING = [
+        'orders' => 'admin.orders.index', 'catalog' => 'admin.plants.index', 'inventory' => 'admin.inventory.index',
+        'purchasing' => 'admin.purchase-requests.index', 'reviews' => 'admin.reviews.index', 'content' => 'admin.articles.index',
+    ];
+
+    public function index(Request $request): View|RedirectResponse
     {
+        $user = $request->user();
+        if (! $user->hasPermission(StaffPermission::Reports)) {
+            foreach (self::LANDING as $perm => $route) {
+                if ($user->hasPermission($perm)) {
+                    return redirect()->route($route);
+                }
+            }
+
+            return view('admin.no-permission');
+        }
+
         $key = array_key_exists((string) $request->query('ky'), self::PERIODS) ? (string) $request->query('ky') : (string) self::TREND_DAYS;
         $tz = (string) config('shop.display_timezone');
         $today = now($tz)->startOfDay();

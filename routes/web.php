@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
 use App\Http\Controllers\Admin\PurchaseRequestController as AdminPurchaseRequestController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Admin\StaffController as AdminStaffController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TierController as AdminTierController;
 use App\Http\Controllers\ArticleController;
@@ -118,51 +119,65 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // ===== QUẢN TRỊ =====
-// 'admin'       : nhân viên + quản trị (xử lý đơn, kho, cây)
-// 'admin:admin' : chỉ quản trị (mã giảm giá, hạng, khách hàng, tiền: xác nhận chuyển khoản / hoàn tiền)
+// 'admin'          : nhân viên + quản trị
+// 'admin:<quyền>'  : quản trị, hoặc nhân viên được cấp nhóm quyền đó (App\Enums\StaffPermission; trang Nhân viên)
+// 'admin:admin'    : chỉ quản trị (mã giảm giá, hạng, khách hàng, nhân viên, tiền: xác nhận chuyển khoản / hoàn tiền, duyệt nhập)
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    // Trang đầu: nhân viên không có quyền "Thống kê" được chuyển tới mục đầu tiên mình được dùng
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('plants', AdminPlantController::class)->except(['show']);
 
-    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
-    Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
-    Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('orders.confirm');
-    Route::post('/orders/{order}/ship', [AdminOrderController::class, 'ship'])->name('orders.ship');
-    Route::post('/orders/{order}/complete', [AdminOrderController::class, 'complete'])->name('orders.complete');
-    Route::post('/orders/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
-    Route::post('/orders/{order}/returning', [AdminOrderController::class, 'returning'])->name('orders.returning');
-    Route::post('/orders/{order}/receive-return', [AdminOrderController::class, 'receiveReturn'])->name('orders.receive-return');
-    Route::post('/orders/{order}/cancel-return', [AdminOrderController::class, 'cancelReturn'])->name('orders.cancel-return');
+    Route::middleware('admin:catalog')->group(function () {
+        Route::resource('plants', AdminPlantController::class)->except(['show']);
+    });
 
-    Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
-    Route::get('/inventory/{plant}', [AdminInventoryController::class, 'show'])->name('inventory.show');
-    Route::post('/inventory/{plant}/damage', [AdminInventoryController::class, 'damage'])->name('inventory.damage');
+    Route::middleware('admin:orders')->group(function () {
+        Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
+        Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('orders.confirm');
+        Route::post('/orders/{order}/ship', [AdminOrderController::class, 'ship'])->name('orders.ship');
+        Route::post('/orders/{order}/complete', [AdminOrderController::class, 'complete'])->name('orders.complete');
+        Route::post('/orders/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('/orders/{order}/returning', [AdminOrderController::class, 'returning'])->name('orders.returning');
+        Route::post('/orders/{order}/receive-return', [AdminOrderController::class, 'receiveReturn'])->name('orders.receive-return');
+        Route::post('/orders/{order}/cancel-return', [AdminOrderController::class, 'cancelReturn'])->name('orders.cancel-return');
+    });
+
+    Route::middleware('admin:inventory')->group(function () {
+        Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
+        Route::get('/inventory/{plant}', [AdminInventoryController::class, 'show'])->name('inventory.show');
+        Route::post('/inventory/{plant}/damage', [AdminInventoryController::class, 'damage'])->name('inventory.damage');
+    });
 
     // Đánh giá + hỏi đáp
-    Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
-    Route::post('/reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->name('reviews.moderate');
-    Route::post('/reviews/{review}/reply', [AdminReviewController::class, 'reply'])->name('reviews.reply');
-    Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
-    Route::get('/comments', [AdminCommentController::class, 'index'])->name('comments.index');
-    Route::post('/comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
-    Route::post('/comments/{comment}/toggle', [AdminCommentController::class, 'toggle'])->name('comments.toggle');
+    Route::middleware('admin:reviews')->group(function () {
+        Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
+        Route::post('/reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->name('reviews.moderate');
+        Route::post('/reviews/{review}/reply', [AdminReviewController::class, 'reply'])->name('reviews.reply');
+        Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+        Route::get('/comments', [AdminCommentController::class, 'index'])->name('comments.index');
+        Route::post('/comments/{comment}/reply', [AdminCommentController::class, 'reply'])->name('comments.reply');
+        Route::post('/comments/{comment}/toggle', [AdminCommentController::class, 'toggle'])->name('comments.toggle');
+    });
 
-    // Tin tức: nhân viên + quản trị đăng bài, ảnh bìa / ảnh trong bài
-    Route::post('/articles/images', [AdminArticleController::class, 'uploadImage'])->name('articles.images');
-    Route::resource('articles', AdminArticleController::class);
-    // Slide ảnh đầu trang chủ
-    Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
+    // Tin tức (ảnh bìa / ảnh trong bài) + slide ảnh đầu trang chủ
+    Route::middleware('admin:content')->group(function () {
+        Route::post('/articles/images', [AdminArticleController::class, 'uploadImage'])->name('articles.images');
+        Route::resource('articles', AdminArticleController::class);
+        Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
+    });
 
-    // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho
-    Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);
-    Route::post('/purchase-requests/from-low-stock', [AdminPurchaseRequestController::class, 'fromLowStock'])->name('purchase-requests.from-low-stock');
-    Route::resource('purchase-requests', AdminPurchaseRequestController::class)->except(['destroy']);
-    Route::post('/purchase-requests/{purchase_request}/transition', [AdminPurchaseRequestController::class, 'transition'])->name('purchase-requests.transition');
-    Route::post('/purchase-requests/{purchase_request}/order', [AdminPurchaseRequestController::class, 'order'])->name('purchase-requests.order');
-    Route::resource('goods-receipts', AdminGoodsReceiptController::class)->only(['index', 'create', 'store', 'show']);
-    Route::post('/goods-receipts/{goods_receipt}/complete', [AdminGoodsReceiptController::class, 'complete'])->name('goods-receipts.complete');
-    Route::post('/goods-receipts/{goods_receipt}/cancel', [AdminGoodsReceiptController::class, 'cancel'])->name('goods-receipts.cancel');
+    // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho (duyệt yêu cầu: nhóm admin:admin bên dưới)
+    Route::middleware('admin:purchasing')->group(function () {
+        Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);
+        Route::post('/purchase-requests/from-low-stock', [AdminPurchaseRequestController::class, 'fromLowStock'])->name('purchase-requests.from-low-stock');
+        Route::resource('purchase-requests', AdminPurchaseRequestController::class)->except(['destroy']);
+        Route::post('/purchase-requests/{purchase_request}/transition', [AdminPurchaseRequestController::class, 'transition'])->name('purchase-requests.transition');
+        Route::post('/purchase-requests/{purchase_request}/order', [AdminPurchaseRequestController::class, 'order'])->name('purchase-requests.order');
+        Route::resource('goods-receipts', AdminGoodsReceiptController::class)->only(['index', 'create', 'store', 'show']);
+        Route::post('/goods-receipts/{goods_receipt}/complete', [AdminGoodsReceiptController::class, 'complete'])->name('goods-receipts.complete');
+        Route::post('/goods-receipts/{goods_receipt}/cancel', [AdminGoodsReceiptController::class, 'cancel'])->name('goods-receipts.cancel');
+    });
 
     Route::middleware('admin:admin')->group(function () {
         // Kiểm kê (điều chỉnh tồn theo số đếm) là việc của quản trị viên; nhân viên chỉ ghi hư hỏng / cây chết
@@ -180,5 +195,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/customers/{user}/toggle-active', [AdminCustomerController::class, 'toggleActive'])->name('customers.toggle');
         Route::get('/tiers', [AdminTierController::class, 'index'])->name('tiers.index');
         Route::put('/tiers', [AdminTierController::class, 'update'])->name('tiers.update');
+
+        // Nhân viên: tạo tài khoản, cấp nhóm quyền, khóa / mở, đặt lại mật khẩu
+        Route::resource('staff', AdminStaffController::class)->except(['show', 'destroy'])->parameters(['staff' => 'staff']);
     });
 });

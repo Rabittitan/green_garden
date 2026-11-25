@@ -37,7 +37,7 @@ CI (`.github/workflows/ci.yml`) runs PHP 8.4 + a MySQL 8 service. Steps: Pint �
 - CHECK constraints are added with `App\Support\DbCheck`. Money equations are written additively, e.g. `total + discounts = subtotal + shipping_fee`, so they never underflow UNSIGNED columns.
 - Generated STORED columns with UNIQUE enforce "at most one". Examples: `payments.success_charge_key` (at most one successful charge per order) and `user_addresses.default_key` (at most one default address).
 - The DB connection forces `time_zone=+00:00`.
-- The schema is frozen by default: a schema change needs the owner's explicit approval. Approved changes so far are **additive new migration files** only (`2026_11_22_000100` plant detail columns, `2026_11_23_000100` `home_slides`); never edit an existing migration. Record any new one in `docs/H8-nghiem-thu.md` (criterion C2).
+- The schema is frozen by default: a schema change needs the owner's explicit approval. Approved changes so far are **additive new migration files** only (`2026_11_22_000100` plant detail columns, `2026_11_23_000100` `home_slides`, `2026_11_25_000100` `users.permissions`); never edit an existing migration. Record any new one in `docs/H8-nghiem-thu.md` (criterion C2).
 
 **Concurrency** (`docs/adr/003`): the isolation level is READ COMMITTED, and correctness comes from explicit `lockForUpdate()` calls taken in a **fixed order**:
 - Sales: `users → orders → plants (id ASC, via InventoryService::lockPlants) → coupons → payments`.
@@ -91,8 +91,8 @@ Overdue unpaid orders are cancelled by `orders:expire-unpaid`, which runs every 
 
 **Roles**:
 - `users.role` is `customer|staff|admin`.
-- Routes in `admin.*` use the `admin` middleware (staff + admin).
-- Money and policy actions additionally use `admin:admin`: confirming bank transfers, refunds, approving or rejecting purchase requests, coupons, tiers, customers.
+- Routes in `admin.*` use the `admin` middleware (staff + admin). Staff areas are further grouped by `admin:<permission>` (`App\Enums\StaffPermission`: reports, orders, catalog, inventory, purchasing, reviews, content). `users.permissions` (JSON) lists a staff member's groups; `NULL` means all staff groups (accounts created before permissions existed). Admins always pass. Admins manage staff at Admin → Nhân viên (`StaffService`). `RoutePermissionMatrixTest` checks every permission-grouped route automatically.
+- Money and policy actions additionally use `admin:admin`: confirming bank transfers, refunds, approving or rejecting purchase requests, stock counts, coupons, tiers, customers, staff. Purchase requests are created by staff only (`PurchaseService` refuses admins).
 - Purchase requests follow a 4-eyes rule: the creator cannot approve their own request.
 - Middleware priority runs `EnsureUserIsActive` → `AdminMiddleware` *before* route-model binding. As a result, unauthorized users get 403 whether or not the id exists (no id probing).
 - Customer resources are owner-only via `OrderPolicy`, plus owner checks in controllers.
