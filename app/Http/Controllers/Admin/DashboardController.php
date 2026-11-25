@@ -39,7 +39,7 @@ class DashboardController extends Controller
     /** Trang đầu của từng nhóm quyền: nhân viên không có quyền "Thống kê" được đưa tới mục đầu tiên mình dùng được. */
     public const LANDING = [
         'orders' => 'admin.orders.index', 'catalog' => 'admin.plants.index', 'inventory' => 'admin.inventory.index',
-        'purchasing' => 'admin.purchase-requests.index', 'reviews' => 'admin.reviews.index', 'content' => 'admin.articles.index',
+        'purchasing' => 'admin.purchase-requests.index', 'reviews' => 'admin.reviews.index', 'content' => 'admin.articles.index', 'flash_sales' => 'admin.flash-sales.index',
     ];
 
     public function index(Request $request): View|RedirectResponse

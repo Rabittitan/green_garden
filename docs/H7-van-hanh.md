@@ -86,7 +86,7 @@ Kiểm tra nhanh sau khi sửa `.env`: `php artisan optimize && php artisan abou
 |---|---|---|---|
 | `orders:expire-unpaid` | mỗi phút | hủy đơn VNPay quá 15 phút / chuyển khoản quá 24h chưa trả, **trả hàng về kho** | hàng bị giữ mãi, khách khác không mua được |
 | `membership:record-spend` | mỗi giờ | đơn đã qua 7 ngày đổi trả → cộng chi tiêu, tự lên hạng | khách không được lên hạng |
-| `shop:reconcile` | 02:17 hằng ngày | đối soát 8 bất biến kho / tiền / mã / hạng / đánh giá | không phát hiện lệch dữ liệu |
+| `shop:reconcile` | 02:17 hằng ngày | đối soát 9 bất biến kho / tiền / mã / hạng / đánh giá / suất flash sale | không phát hiện lệch dữ liệu |
 | `payments:prune-webhook-logs` | 03:23 | xóa log callback > 180 ngày | bảng log phình |
 | `queue:prune-failed --hours=720` | 03:41 | xóa job lỗi > 30 ngày | |
 | `deploy/backup-db.sh` | 01:15 | sao lưu DB (mục 6) | |

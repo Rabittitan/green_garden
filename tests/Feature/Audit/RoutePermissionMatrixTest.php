@@ -8,6 +8,7 @@ use App\Models\Article;
 use App\Models\Comment;
 use App\Models\Coupon;
 use App\Models\CouponGiftRule;
+use App\Models\FlashSale;
 use App\Models\HomeSlide;
 use App\Models\Order;
 use App\Models\Plant;
@@ -46,7 +47,7 @@ class RoutePermissionMatrixTest extends TestCase
             'order' => $order->id, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id,
             'user' => User::factory()->create()->id,                       // khách riêng: route khóa / đổi hạng không ảnh hưởng khách đang thử quyền
             'payment' => $order->payments()->sole()->id, 'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id,
-            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
+            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'flashSale' => tap(new FlashSale(['name' => 'FS', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDays(2)]), fn ($f) => $f->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'submitted'])->save())->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
         ];
     }
 

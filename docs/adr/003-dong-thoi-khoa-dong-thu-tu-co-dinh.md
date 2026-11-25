@@ -7,7 +7,7 @@ Có những tình huống tranh chấp có thật: nhiều khách cùng mua cây
 
 ## Decision
 - Mức cô lập **READ COMMITTED** (`config/database.php`).
-- Tính đúng đắn **không dựa vào snapshot**. Mọi luồng ghi đều khóa dòng bằng `lockForUpdate()` theo **một thứ tự cố định**: `users → orders → plants (id tăng dần) → coupons → payments`. Riêng nhập hàng: `goods_receipts → purchase_requests → plants → purchase_request_items`.
+- Tính đúng đắn **không dựa vào snapshot**. Mọi luồng ghi đều khóa dòng bằng `lockForUpdate()` theo **một thứ tự cố định**: `users → orders → plants (id tăng dần) → flash_sale_items (id tăng dần, từ 11/2026) → coupons → payments`. Riêng nhập hàng: `goods_receipts → purchase_requests → plants → purchase_request_items`.
 - Lưu ý khóa ngầm: chèn dòng con có khóa ngoại sẽ khóa S dòng cha. Ví dụ admin sửa phạm vi mã (`coupon_plants`) chạm tới `plants`, nên `CouponService::update` khóa `plants` (qua `InventoryService::lockPlants`) **trước** `coupons`. Bản cũ khóa `coupons` trước nên deadlock với checkout (nhóm B, 11/2026).
 - Mọi transaction chạy qua `DB::transaction(fn, 3)` để tự thử lại khi gặp deadlock.
 - Chống bấm đúp: khóa dòng user, kết hợp `checkout_token` dùng một lần và UNIQUE ở DB.

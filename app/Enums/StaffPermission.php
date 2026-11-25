@@ -16,6 +16,7 @@ enum StaffPermission: string
     case Purchasing = 'purchasing';
     case Reviews = 'reviews';
     case Content = 'content';
+    case FlashSales = 'flash_sales';
 
     public function label(): string
     {
@@ -27,6 +28,7 @@ enum StaffPermission: string
             self::Purchasing => 'Nhập hàng (yêu cầu nhập, phiếu nhập, nhà cung cấp)',
             self::Reviews => 'Đánh giá & hỏi đáp',
             self::Content => 'Tin tức & slide trang chủ',
+            self::FlashSales => 'Flash sale (tạo, gửi duyệt)',
         };
     }
 

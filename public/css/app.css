@@ -443,3 +443,12 @@ a { text-underline-offset: 3px; }
 .gg-coupon-body { padding: .7rem .9rem; flex: 1; border-left: 2px dashed var(--gg-line); }
 .gg-coupon-code { display: inline-block; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; letter-spacing: .06em;
     background: var(--gg-green-50); border: 1px dashed var(--gg-green); color: var(--gg-green); border-radius: 8px; padding: .1rem .5rem; user-select: all; }
+
+/* ================================================================ Flash sale */
+.gg-flash { background: linear-gradient(180deg, #fff1ee 0%, rgba(255,241,238,0) 100%); border-radius: var(--gg-radius); padding: 1rem 1rem 1.25rem; margin-top: 1.5rem; }
+.gg-countdown { background: #d84315; color: #fff; border-radius: 999px; padding: .35rem .9rem; font-size: .9rem; white-space: nowrap; }
+.gg-countdown strong { font-variant-numeric: tabular-nums; }
+.gg-flash-bar { position: relative; height: 18px; background: #ffd9cf; border-radius: 999px; overflow: hidden; }
+.gg-flash-bar > span { display: block; height: 100%; background: #d84315; }
+.gg-flash-bar > em { position: absolute; inset: 0; display: grid; place-items: center; font-size: .72rem; font-style: normal; font-weight: 700; color: #4a1406; }
+.gg-flash-box { background: #fff1ee; border: 1px solid #ffccbc; border-radius: 12px; padding: .7rem .9rem; }

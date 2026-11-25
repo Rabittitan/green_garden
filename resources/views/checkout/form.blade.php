@@ -93,7 +93,9 @@
                 @foreach($quote->lines as $line)
                     <li class="list-group-item px-0">
                         <div class="d-flex justify-content-between">
-                            <span>{{ $line->plant->name }} <span class="text-muted">× {{ $line->quantity }}</span></span>
+                            <span>{{ $line->plant->name }} <span class="text-muted">× {{ $line->quantity }}</span>
+                                @if($line->flashItem)<span class="badge bg-danger"><i class="fa fa-bolt"></i> Sale</span>
+                                    <div class="small text-muted"><s>@money($line->listPrice())</s> → <span class="text-danger">@money($line->unitPrice)</span></div>@endif</span>
                             <span>@money($line->subtotal())</span>
                         </div>
                         @if($line->memberDiscount + $line->couponDiscount > 0)

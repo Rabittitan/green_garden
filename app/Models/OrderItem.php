@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $order_id
  * @property int $plant_id
+ * @property int|null $flash_sale_item_id
  * @property string $plant_name
  * @property string $plant_sku
  * @property int $unit_price

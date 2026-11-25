@@ -96,6 +96,8 @@ Artisan::command('shop:reconcile', function () {
         'Đơn chờ thanh toán quá hạn > 10 phút' => "SELECT id FROM orders WHERE status = 'pending_payment' AND payment_expires_at < NOW() - INTERVAL 10 MINUTE",
         'Tổng chi tiêu khách lệch' => 'SELECT u.id FROM users u WHERE u.lifetime_spend <> (SELECT COALESCE(SUM(GREATEST(0, CAST(o.paid_amount AS SIGNED) - CAST(o.refunded_amount AS SIGNED)
                                       - (CAST(o.shipping_fee AS SIGNED) - CAST(o.shipping_discount AS SIGNED)))),0) FROM orders o WHERE o.user_id = u.id AND o.spend_recorded_at IS NOT NULL)',
+        'Suất flash sale đã bán lệch đơn hàng' => "SELECT f.id FROM flash_sale_items f WHERE f.sold_count <> (SELECT COALESCE(SUM(i.quantity),0) FROM order_items i
+                                      JOIN orders o ON o.id = i.order_id WHERE i.flash_sale_item_id = f.id AND o.status <> 'cancelled')",
     ];
     $failed = 0;
     foreach ($checks as $label => $sql) {

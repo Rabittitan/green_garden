@@ -24,7 +24,15 @@
                              onerror="this.onerror=null;this.src='https://placehold.co/76x76/e8f5e9/2e7d32?text=GG'">
                         <div>
                             <a href="{{ route('plants.show', $id) }}" class="fw-bold text-decoration-none text-dark">{{ $line['plant']->name }}</a>
-                            <div class="small text-muted">@money($line['plant']->price) · Còn {{ $line['plant']->stock }} cây</div>
+                            <div class="small text-muted">
+                                @if($line['unit'] < $line['plant']->price)
+                                    <span class="badge bg-danger"><i class="fa fa-bolt"></i> Flash sale</span>
+                                    <strong class="text-danger">@money($line['unit'])</strong> <s>@money($line['plant']->price)</s>
+                                @else
+                                    @money($line['plant']->price)
+                                    @if($line['flash'])<span class="text-danger">(flash sale chỉ còn {{ $line['flash']->remaining() }} suất)</span>@endif
+                                @endif
+                                · Còn {{ $line['plant']->stock }} cây</div>
                         </div>
                         <div class="gg-cart-actions d-flex align-items-center gap-3">
                             <form action="{{ route('cart.update', $id) }}" method="POST" class="gg-stepper">

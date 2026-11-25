@@ -9,7 +9,9 @@ use App\Enums\PaymentStatus;
 use App\Enums\PurchaseRequestStatus;
 use App\Models\Coupon;
 use App\Models\CouponGiftRule;
+use App\Models\FlashSale;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Plant;
 use App\Models\PlantReview;
 use App\Models\Supplier;
@@ -212,6 +214,23 @@ class ConcurrencyTest extends TestCase
         $this->assertSame(4, collect($results)->sum('result'));
         $this->assertSame(4, Coupon::where('gift_rule_id', $rule->id)->count());
         $this->assertSame(4, Coupon::where('gift_rule_id', $rule->id)->distinct()->count('source_order_id'));
+    }
+
+    /** Đợt 4: 5 khách tranh 2 suất flash sale cuối -> đúng 2 cây bán giá sale, sold_count khớp, không bán lố suất. */
+    public function test_customers_racing_for_last_flash_sale_slots(): void
+    {
+        $sale = new FlashSale(['name' => 'Race', 'starts_at' => now()->subHour(), 'ends_at' => now()->addHour()]);
+        $sale->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'approved', 'approved_by' => $this->admin()->id, 'approved_at' => now()])->save();
+        $item = $sale->items()->create(['plant_id' => 3, 'sale_price' => 99000, 'quantity_limit' => 2]);
+        $users = User::factory()->count(5)->create();
+        $results = $this->race($users->map(fn ($u) => ['place', (string) $u->id, json_encode([3 => 1]), (string) Str::uuid()])->all());
+
+        $this->assertSame(5, collect($results)->where('ok', true)->count());                  // ai cũng đặt được, quá suất thì giá thường
+        $this->assertSame(2, $item->refresh()->sold_count);
+        $this->assertSame(2, OrderItem::where('flash_sale_item_id', $item->id)->where('unit_price', 99000)->count());
+        $this->assertSame(3, OrderItem::where('plant_id', 3)->whereNull('flash_sale_item_id')->where('unit_price', Plant::find(3)->price)->count());
+        $this->assertLedgerConsistent();
+        $this->artisan('shop:reconcile')->assertSuccessful();
     }
 
     /** Bấm "Gửi đánh giá" nhiều lần cùng lúc: đúng 1 đánh giá, không lỗi UNIQUE (lỗi cũ trong ReviewService). */

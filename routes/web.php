@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CouponGiftRuleController as AdminCouponGiftRuleController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FlashSaleController as AdminFlashSaleController;
 use App\Http\Controllers\Admin\GoodsReceiptController as AdminGoodsReceiptController;
 use App\Http\Controllers\Admin\HomeSlideController as AdminHomeSlideController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
@@ -170,6 +171,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
     });
 
+    // Flash sale: nhân viên tạo / sửa / gửi duyệt / hủy đợt chưa duyệt (duyệt, từ chối: nhóm admin:admin bên dưới)
+    Route::middleware('admin:flash_sales')->group(function () {
+        Route::resource('flash-sales', AdminFlashSaleController::class)->except(['destroy'])->parameters(['flash-sales' => 'flashSale']);
+        Route::post('/flash-sales/{flashSale}/submit', [AdminFlashSaleController::class, 'submit'])->name('flash-sales.submit');
+        Route::post('/flash-sales/{flashSale}/cancel', [AdminFlashSaleController::class, 'cancel'])->name('flash-sales.cancel');
+    });
+
     // Nhập hàng: nhân viên lập yêu cầu / phiếu nhập, nhập kho (duyệt yêu cầu: nhóm admin:admin bên dưới)
     Route::middleware('admin:purchasing')->group(function () {
         Route::resource('suppliers', AdminSupplierController::class)->only(['index', 'store', 'edit', 'update']);
@@ -201,6 +209,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/customers/{user}/toggle-active', [AdminCustomerController::class, 'toggleActive'])->name('customers.toggle');
         Route::get('/tiers', [AdminTierController::class, 'index'])->name('tiers.index');
         Route::put('/tiers', [AdminTierController::class, 'update'])->name('tiers.update');
+
+        Route::post('/flash-sales/{flashSale}/approve', [AdminFlashSaleController::class, 'approve'])->name('flash-sales.approve');
+        Route::post('/flash-sales/{flashSale}/reject', [AdminFlashSaleController::class, 'reject'])->name('flash-sales.reject');
 
         // Nhân viên: tạo tài khoản, cấp nhóm quyền, khóa / mở, đặt lại mật khẩu
         Route::resource('staff', AdminStaffController::class)->except(['show', 'destroy'])->parameters(['staff' => 'staff']);

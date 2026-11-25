@@ -6,15 +6,17 @@ use App\Enums\CommentStatus;
 use App\Models\Category;
 use App\Models\Plant;
 use App\Models\PlantReview;
+use App\Services\FlashSaleService;
 use App\Services\ReviewService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PlantController extends Controller
 {
     // Danh sách cây + bộ lọc (danh mục, giá, ánh sáng, mệnh, từ khóa)
-    public function index(Request $request): View
+    public function index(Request $request, FlashSaleService $flashSales): View
     {
         // Bắt đầu câu truy vấn, nạp sẵn danh mục
         $query = Plant::with('category')->active();             // chỉ cây đang bán
@@ -63,19 +65,24 @@ class PlantController extends Controller
         // Lấy danh mục để vẽ ô lọc bên trái
         $categories = Category::active()->orderBy('sort_order')->get();
 
+        // Flash sale đang chạy cho các cây của trang này (1 câu SQL)
+        $flashMap = $flashSales->activeItems($plants->pluck('id')->all());
+
         // Gửi sang view
-        return view('plants.index', compact('plants', 'categories'));
+        return view('plants.index', compact('plants', 'categories', 'flashMap'));
     }
 
     // Chi tiết 1 cây
-    public function show(int $id, ReviewService $reviewService): View
+    public function show(int $id, ReviewService $reviewService, FlashSaleService $flashSales): View
     {
-        $plant = Plant::with('category')->active()->findOrFail($id);   // cây ngừng bán -> 404
+        $plant = Plant::active()->findOrFail($id);                     // cây ngừng bán -> 404
         $user = auth()->user();
 
         // Cây cùng mệnh (nạp sẵn danh mục: tránh N+1 trong partial)
-        $related = Plant::with('category')->active()->where('element', $plant->element)
+        $related = Plant::active()->where('element', $plant->element)
             ->where('id', '!=', $plant->id)->take(4)->get();
+        // Nạp danh mục cho cây chính + cây liên quan trong CÙNG 1 câu (trang này sát ngân sách 15 câu SQL)
+        (new EloquentCollection([$plant, ...$related->all()]))->load('category');
 
         $reviews = $plant->approvedReviews()->with('user')->orderByDesc('helpful_count')->latest('id')
             ->simplePaginate(5, ['*'], 'review_page')->withQueryString();       // không cần COUNT: tổng đã có ở rating_count
@@ -85,7 +92,10 @@ class PlantController extends Controller
             ->with(['user', 'replies' => fn ($q) => $q->where('status', CommentStatus::Published->value)->with('user')])
             ->orderByDesc('id')->simplePaginate(10, ['*'], 'qa_page')->withQueryString();
 
+        $flashMap = $flashSales->activeItems([$plant->id, ...$related->pluck('id')->all()]);
+
         return view('plants.show', [
+            'flash' => $flashMap->get($plant->id), 'flashMap' => $flashMap,
             'plant' => $plant, 'related' => $related, 'reviews' => $reviews, 'distribution' => $distribution, 'comments' => $comments,
             'myReview' => $user ? PlantReview::where('user_id', $user->id)->where('plant_id', $plant->id)->first() : null,
             'canReview' => $user && $reviewService->proofOfPurchase($user, $plant->id) !== null,

@@ -20,7 +20,7 @@ php artisan test tests/Feature/Services/PaymentServiceTest.php
 php artisan test --filter=test_late_payment_on_cancelled_order_tells_customer_about_refund
 vendor/bin/pint --test                                      # formatting (CI blocks on failure)
 vendor/bin/phpstan analyse --memory-limit=1G                # Larastan level 6, must stay at 0 errors (CI blocks)
-php artisan shop:reconcile                                  # 8 data invariants; exit 1 on any mismatch
+php artisan shop:reconcile                                  # 9 data invariants; exit 1 on any mismatch
 ```
 
 Browser E2E (manual, not in CI): `tests/Browser/roles.e2e.cjs` (17 steps across customer / staff / admin, including a 390px no-horizontal-overflow check of admin pages). Setup instructions are in the file header (needs `php artisan storage:link` for uploaded images). Use `.cjs`, because `package.json` sets `"type": "module"`. Add `E2E_STUB_CDN=1` on machines without internet: CSP is still checked.
@@ -37,10 +37,10 @@ CI (`.github/workflows/ci.yml`) runs PHP 8.4 + a MySQL 8 service. Steps: Pint �
 - CHECK constraints are added with `App\Support\DbCheck`. Money equations are written additively, e.g. `total + discounts = subtotal + shipping_fee`, so they never underflow UNSIGNED columns.
 - Generated STORED columns with UNIQUE enforce "at most one". Examples: `payments.success_charge_key` (at most one successful charge per order) and `user_addresses.default_key` (at most one default address).
 - The DB connection forces `time_zone=+00:00`.
-- The schema is frozen by default: a schema change needs the owner's explicit approval. Approved changes so far are **additive new migration files** only (`2026_11_22_000100` plant detail columns, `2026_11_23_000100` `home_slides`, `2026_11_25_000100` `users.permissions`, `2026_11_25_000200` coupon gifts); never edit an existing migration. Record any new one in `docs/H8-nghiem-thu.md` (criterion C2).
+- The schema is frozen by default: a schema change needs the owner's explicit approval. Approved changes so far are **additive new migration files** only (`2026_11_22_000100` plant detail columns, `2026_11_23_000100` `home_slides`, `2026_11_25_000100` `users.permissions`, `2026_11_25_000200` coupon gifts, `2026_11_25_000300` flash sales); never edit an existing migration. Record any new one in `docs/H8-nghiem-thu.md` (criterion C2).
 
 **Concurrency** (`docs/adr/003`): the isolation level is READ COMMITTED, and correctness comes from explicit `lockForUpdate()` calls taken in a **fixed order**:
-- Sales: `users → orders → plants (id ASC, via InventoryService::lockPlants) → coupons → payments`.
+- Sales: `users → orders → plants (id ASC, via InventoryService::lockPlants) → flash_sale_items (id ASC) → coupons → payments`.
 - Purchasing: `goods_receipts → purchase_requests → plants → purchase_request_items`.
 - Every write flow runs inside `DB::transaction(fn, 3)`, which retries on deadlock.
 - `MembershipService` locks `users` before `orders` and must not be called nested inside an order transaction. That is why `confirmRefund` calls `refreshUser` *after* its own transaction.
@@ -91,7 +91,7 @@ Overdue unpaid orders are cancelled by `orders:expire-unpaid`, which runs every 
 
 **Roles**:
 - `users.role` is `customer|staff|admin`.
-- Routes in `admin.*` use the `admin` middleware (staff + admin). Staff areas are further grouped by `admin:<permission>` (`App\Enums\StaffPermission`: reports, orders, catalog, inventory, purchasing, reviews, content). `users.permissions` (JSON) lists a staff member's groups; `NULL` means all staff groups (accounts created before permissions existed). Admins always pass. Admins manage staff at Admin → Nhân viên (`StaffService`). `RoutePermissionMatrixTest` checks every permission-grouped route automatically.
+- Routes in `admin.*` use the `admin` middleware (staff + admin). Staff areas are further grouped by `admin:<permission>` (`App\Enums\StaffPermission`: reports, orders, catalog, inventory, purchasing, reviews, content, flash_sales). `users.permissions` (JSON) lists a staff member's groups; `NULL` means all staff groups (accounts created before permissions existed). Admins always pass. Admins manage staff at Admin → Nhân viên (`StaffService`). `RoutePermissionMatrixTest` checks every permission-grouped route automatically.
 - Money and policy actions additionally use `admin:admin`: confirming bank transfers, refunds, approving or rejecting purchase requests, stock counts, coupons, tiers, customers, staff. Purchase requests are created by staff only (`PurchaseService` refuses admins).
 - Purchase requests follow a 4-eyes rule: the creator cannot approve their own request.
 - Middleware priority runs `EnsureUserIsActive` → `AdminMiddleware` *before* route-model binding. As a result, unauthorized users get 403 whether or not the id exists (no id probing).
@@ -104,6 +104,7 @@ Business parameters (shipping fee, payment hold time, return window, bank info, 
 - Orders: customers may edit `orders.note` only while `pending_payment`/`pending` (`OrderService::updateNote`, `OrderService::NOTE_EDITABLE`). Invoices (`orders.invoice`, `admin.orders.invoice`, view `invoices/order`) are read-only pages and must not call `expireIfOverdue`.
 - Addresses use the post-01/07/2025 divisions: province → ward from `public/data/vn-dvhc-2025.json` (34 provinces, 3,321 wards), read by `App\Support\VnDivisions` on the server and by `public/js/address.js` in the browser. There is no district level any more: `AddressRules::prepare()` stores the province name in the required `district` column, and `full_address` hides that duplicate. Old 3-level rows are kept as they are.
 - Admin coupon edits go through `CouponService::update`; once a coupon has a redemption only `CouponService::EDITABLE_WHEN_LOCKED` fields may change.
+- Flash sales (`FlashSaleService`): staff create and submit, admins approve, reject or cancel. Admins cannot create a sale, and the same plant cannot be in two approved sales that overlap in time. While a sale runs, `PricingService` uses `sale_price` as the line's unit price (tier discount and coupon still apply on top), but only if the remaining quota covers the line's whole quantity; otherwise it uses the normal price and adds a notice. Placing an order locks `flash_sale_items` and increments `sold_count`, and `order_items.flash_sale_item_id` records the slot. Cancelling releases it. `shop:reconcile` checks `sold_count` against non-cancelled order lines.
 - Coupon wallet ("Mã của tôi", `account.coupons`): `coupons.owner_user_id` marks a personal coupon. `CouponService::assertUsable` rejects anyone else, and otherwise it is a normal coupon (usage_limit 1, released on cancel). `CouponGiftService` issues them from `coupon_gift_rules`, via the hourly job `coupons:issue-gifts`. Only completed orders past the return window, completed after the rule was created, qualify. `UNIQUE(gift_rule_id, source_order_id)` prevents double gifts. Admins can also gift manually from the customer page.
 - Dashboard revenue (`Admin/DashboardController::NET_GOODS`) is goods after discounts minus refunds of completed orders, excluding shipping, bucketed by `completed_at` in `shop.display_timezone`. The daily chart and the revenue card share that one expression.
 - "Hot products" on the home page are the best sellers over `shop.home.hot_days`, counting only `pending/confirmed/shipping/completed` orders of active plants (`HomeController::hotPlants`).

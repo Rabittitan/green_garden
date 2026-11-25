@@ -70,7 +70,7 @@
 
         <div class="row g-3">
             @forelse($plants as $plant)
-                <div class="col-6 col-md-4">@include('partials.plant-card', ['plant' => $plant])</div>
+                <div class="col-6 col-md-4">@include('partials.plant-card', ['plant' => $plant, 'flash' => $flashMap[$plant->id] ?? null])</div>
             @empty
                 <div class="col-12">
                     <div class="text-center bg-white border rounded-4 py-5 px-3">

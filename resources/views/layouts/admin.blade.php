@@ -23,6 +23,7 @@
             ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp', 'reviews'],
             ['admin.articles.index', 'admin.articles.*', 'fa-newspaper', 'Tin tức', 'content'],
             ['admin.slides.index', 'admin.slides.*', 'fa-images', 'Slide trang chủ', 'content'],
+            ['admin.flash-sales.index', 'admin.flash-sales.*', 'fa-bolt', 'Flash sale', 'flash_sales'],
         ],
         'Kho & nhập hàng' => [
             ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh', 'catalog'],

@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Article;
 use App\Models\Coupon;
 use App\Models\CouponGiftRule;
+use App\Models\FlashSale;
 use App\Models\HomeSlide;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -58,7 +59,7 @@ class AcceptanceCrawlTest extends TestCase
         return [
             'order' => $order, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id, 'user' => $this->customer()->id,
             'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id, 'goods_receipt' => $receipt->id,
-            'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
+            'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'flashSale' => tap(new FlashSale(['name' => 'FS', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDays(2)]), fn ($f) => $f->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'submitted'])->save())->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
             'token' => 'token-dat-lai-mat-khau-khong-hop-le',               // trang đặt lại mật khẩu: chỉ hiện form, không ghi DB
         ];
     }
