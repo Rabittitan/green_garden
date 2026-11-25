@@ -133,6 +133,17 @@
                     <input type="text" name="coupon_code" class="form-control" placeholder="Nhập mã giảm giá" value="{{ old('coupon_code') }}" maxlength="40">
                     <button class="btn btn-outline-green">Áp dụng</button>
                 </form>
+                @if($myCoupons->isNotEmpty())
+                    <div class="small fw-semibold mt-2">Mã của bạn:</div>
+                    <div class="d-flex flex-wrap gap-1 mt-1" data-testid="my-coupons">
+                        @foreach($myCoupons as $c)
+                            <form action="{{ route('checkout.coupon.apply') }}" method="POST">@csrf
+                                <input type="hidden" name="coupon_code" value="{{ $c->code }}">
+                                <button class="btn btn-sm btn-outline-success" title="Hạn đến @vndt($c->ends_at)"><i class="fa fa-gift"></i> {{ $c->code }} · {{ $c->benefitText() }}</button>
+                            </form>
+                        @endforeach
+                    </div>
+                @endif
             @endif
 
             @if($nextTier)

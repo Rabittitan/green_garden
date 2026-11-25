@@ -4,6 +4,7 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
+use App\Http\Controllers\Admin\CouponGiftRuleController as AdminCouponGiftRuleController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GoodsReceiptController as AdminGoodsReceiptController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\CouponWalletController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MembershipController;
@@ -81,6 +83,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/tai-khoan', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/tai-khoan/mat-khau', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::get('/tai-khoan/hang-thanh-vien', [MembershipController::class, 'show'])->name('account.membership');
+    Route::get('/tai-khoan/ma-giam-gia', [CouponWalletController::class, 'index'])->name('account.coupons');
 
     Route::get('/tai-khoan/dia-chi', [AddressController::class, 'index'])->name('addresses.index');
     Route::post('/tai-khoan/dia-chi', [AddressController::class, 'store'])->name('addresses.store');
@@ -189,6 +192,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/payments/{payment}/confirm-refund', [AdminOrderController::class, 'confirmRefund'])->name('payments.confirm-refund');
 
         Route::resource('coupons', AdminCouponController::class)->except(['show']);
+        // Quà tặng khi mua: luật tặng mã tự động + tặng tay cho 1 khách
+        Route::resource('coupon-gifts', AdminCouponGiftRuleController::class)->only(['index', 'create', 'store', 'edit', 'update'])->parameters(['coupon-gifts' => 'rule']);
+        Route::post('/customers/{user}/gift', [AdminCouponGiftRuleController::class, 'giftToCustomer'])->name('customers.gift');
         Route::get('/customers', [AdminCustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{user}', [AdminCustomerController::class, 'show'])->name('customers.show');
         Route::post('/customers/{user}/tier', [AdminCustomerController::class, 'setTier'])->name('customers.tier');

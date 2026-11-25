@@ -9,6 +9,7 @@ use App\Exceptions\BusinessException;
 use App\Exceptions\CouponNotApplicableException;
 use App\Exceptions\PriceChangedException;
 use App\Http\Requests\PlaceOrderRequest;
+use App\Models\Coupon;
 use App\Models\UserAddress;
 use App\Services\CartService;
 use App\Services\OrderService;
@@ -65,6 +66,8 @@ class CheckoutController extends Controller
             'methods' => PaymentMethod::available(),
             'token' => session(self::TOKEN_KEY),
             'nextTier' => $user->tier->next(),
+            // "Mã của tôi" còn dùng được: bấm để áp nhanh (hạn gần nhất trước)
+            'myCoupons' => Coupon::walletUsable($user->id)->orderBy('ends_at')->take(5)->get(),
         ]);
     }
 

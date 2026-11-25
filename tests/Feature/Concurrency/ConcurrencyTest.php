@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PurchaseRequestStatus;
 use App\Models\Coupon;
+use App\Models\CouponGiftRule;
 use App\Models\Order;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -17,6 +18,7 @@ use App\Services\OrderService;
 use App\Services\PurchaseService;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Process\Process;
@@ -190,6 +192,26 @@ class ConcurrencyTest extends TestCase
         }
         $this->assertLedgerConsistent();
         $this->artisan('shop:reconcile')->assertSuccessful();
+    }
+
+    /** Đợt 3: nhiều tiến trình phát quà cùng lúc (cron chồng nhau) -> mỗi đơn đủ điều kiện được tặng ĐÚNG 1 mã. */
+    public function test_gift_issuing_runs_in_parallel_without_duplicates(): void
+    {
+        $rule = CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 20000, 'valid_days' => 30]);
+        $rule->forceFill(['created_at' => now()->subDays(30)])->save();
+        $orders = app(OrderService::class);
+        foreach (range(1, 4) as $i) {
+            $o = $this->place(User::factory()->create(), [1 => 1]);
+            $orders->confirm($o, $this->admin());
+            $orders->ship($o, 'GHN', 'G'.$i, $this->admin());
+            $orders->complete($o, $this->admin());
+        }
+        DB::table('orders')->update(['completed_at' => now()->subDays(10)]);
+
+        $results = $this->race(array_fill(0, 4, ['issue-gifts']));
+        $this->assertSame(4, collect($results)->sum('result'));
+        $this->assertSame(4, Coupon::where('gift_rule_id', $rule->id)->count());
+        $this->assertSame(4, Coupon::where('gift_rule_id', $rule->id)->distinct()->count('source_order_id'));
     }
 
     /** Bấm "Gửi đánh giá" nhiều lần cùng lúc: đúng 1 đánh giá, không lỗi UNIQUE (lỗi cũ trong ReviewService). */

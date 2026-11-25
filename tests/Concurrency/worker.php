@@ -13,6 +13,7 @@ use App\Models\GoodsReceipt;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\CouponGiftService;
 use App\Services\CouponService;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\OrderService;
@@ -55,6 +56,7 @@ try {
 
             return 'ok';
         })(),
+        'issue-gifts' => app(CouponGiftService::class)->issueDueGifts(),
         'review' => app(ReviewService::class)->submit(User::findOrFail((int) $args[0]), (int) $args[1], 5, null, 'Song song')->id,
         'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::findOrFail((int) $args[0]))?->code,
         'ipn' => (function () use ($args) {

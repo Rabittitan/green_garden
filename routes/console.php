@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Models\PaymentWebhookLog;
 use App\Models\User;
+use App\Services\CouponGiftService;
 use App\Services\MembershipService;
 use App\Services\OrderService;
 use App\Services\ReviewService;
@@ -32,6 +33,10 @@ Artisan::command('orders:expire-unpaid', function (OrderService $orders) {
 Artisan::command('membership:record-spend', function (MembershipService $membership) {
     $this->info('Đã chốt chi tiêu cho '.$membership->recordDueSpend(1000).' đơn.');
 })->purpose('Cộng các đơn đã qua hạn đổi trả vào tổng chi tiêu, tự lên hạng');
+
+Artisan::command('coupons:issue-gifts', function (CouponGiftService $gifts) {
+    $this->info('Đã tặng '.$gifts->issueDueGifts(500).' mã giảm giá theo luật tặng.');
+})->purpose('Tặng mã vào ví khách cho các đơn đã qua hạn đổi trả, đủ điều kiện luật tặng');
 
 Artisan::command('membership:recalculate-all', function (MembershipService $membership) {
     $this->info('Đã nâng hạng '.$membership->recalculateAll().' khách.');
@@ -109,6 +114,7 @@ Artisan::command('shop:reconcile', function () {
 
 Schedule::command('orders:expire-unpaid')->everyMinute()->withoutOverlapping();
 Schedule::command('membership:record-spend')->hourly()->withoutOverlapping();
+Schedule::command('coupons:issue-gifts')->hourly()->withoutOverlapping();
 Schedule::command('payments:prune-webhook-logs')->dailyAt('03:23')->timezone('Asia/Ho_Chi_Minh');
 Schedule::command('shop:reconcile')->dailyAt('02:17')->timezone('Asia/Ho_Chi_Minh');
 // Job lỗi (mail gửi hỏng 3 lần) giữ 30 ngày để còn queue:retry, sau đó dọn

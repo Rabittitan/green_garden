@@ -22,11 +22,15 @@ use Illuminate\Validation\Validator;
 /** Mã giảm giá. Mã đã có người dùng thì KHÓA code / loại / giá trị / phạm vi (chỉ đổi thời hạn, lượt, bật tắt). */
 class CouponController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $coupons = Coupon::withTrashed()->with('minTier')->latest('id')->paginate(20);
+        // Mã tặng riêng (ví khách) để ở tab riêng cho danh sách mã chung không bị lấp
+        $gifted = $request->query('loai') === 'tang';
+        $coupons = Coupon::withTrashed()->with(['minTier', 'owner'])
+            ->when($gifted, fn ($q) => $q->whereNotNull('owner_user_id'), fn ($q) => $q->whereNull('owner_user_id'))
+            ->latest('id')->paginate(20)->withQueryString();
 
-        return view('admin.coupons.index', compact('coupons'));
+        return view('admin.coupons.index', compact('coupons', 'gifted'));
     }
 
     public function create(): View

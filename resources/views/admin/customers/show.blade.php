@@ -24,6 +24,12 @@
             <button class="btn btn-warning">Đổi hạng</button>
             <small class="text-muted mt-1">Hạng tự động chỉ đi lên; đổi tay được cả lên và xuống, có lưu lịch sử.</small>
         </form>
+        {{-- Tặng tay 1 mã riêng vào "Mã của tôi" của khách (kèm email báo) --}}
+        <form action="{{ route('admin.customers.gift', $customer) }}" method="POST" class="card card-body shadow-sm mb-3" id="tang-ma">@csrf
+            <h6 class="fw-bold"><i class="fa fa-gift text-green"></i> Tặng mã cho khách</h6>
+            @include('admin.coupon-gifts._fields', ['g' => null])
+            <button class="btn btn-green btn-sm mt-2">Tặng mã</button>
+        </form>
         <form action="{{ route('admin.customers.toggle', $customer) }}" method="POST" class="mb-3">@csrf
             <button class="btn btn-sm {{ $customer->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}">{{ $customer->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}</button>
         </form>

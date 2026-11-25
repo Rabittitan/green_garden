@@ -5,6 +5,7 @@ namespace Tests\Feature\Audit;
 use App\Enums\PaymentMethod;
 use App\Models\Article;
 use App\Models\Coupon;
+use App\Models\CouponGiftRule;
 use App\Models\HomeSlide;
 use App\Models\Plant;
 use App\Models\PlantReview;
@@ -57,7 +58,7 @@ class AcceptanceCrawlTest extends TestCase
         return [
             'order' => $order, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id, 'user' => $this->customer()->id,
             'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id, 'goods_receipt' => $receipt->id,
-            'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'staff' => User::factory()->staff()->create()->id,
+            'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
             'token' => 'token-dat-lai-mat-khau-khong-hop-le',               // trang đặt lại mật khẩu: chỉ hiện form, không ghi DB
         ];
     }

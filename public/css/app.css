@@ -434,3 +434,12 @@ a { text-underline-offset: 3px; }
 .gg-mini-stat small { display: block; color: var(--gg-muted); font-weight: 600; font-size: .78rem; }
 .gg-mini-stat strong { font-size: 1.1rem; }
 .gg-meters-money li { grid-template-columns: minmax(0, 7.5rem) 1fr 6.5rem; }
+
+/* ================================================================ Ví mã giảm giá */
+.gg-coupon { display: flex; background: #fff; border: 1px solid var(--gg-line); border-radius: 14px; overflow: hidden; box-shadow: var(--gg-shadow); height: 100%; }
+.gg-coupon-left { flex: 0 0 64px; display: grid; place-items: center; background: var(--gg-green); color: #fff; font-size: 1.4rem;
+    background-image: radial-gradient(circle at 100% 0, transparent 8px, transparent 9px), radial-gradient(circle at 100% 100%, transparent 8px, transparent 9px); }
+.gg-coupon-public .gg-coupon-left { background: #f9a825; }
+.gg-coupon-body { padding: .7rem .9rem; flex: 1; border-left: 2px dashed var(--gg-line); }
+.gg-coupon-code { display: inline-block; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; letter-spacing: .06em;
+    background: var(--gg-green-50); border: 1px dashed var(--gg-green); color: var(--gg-green); border-radius: 8px; padding: .1rem .5rem; user-select: all; }

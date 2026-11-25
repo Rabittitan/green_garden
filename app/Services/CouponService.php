@@ -85,6 +85,10 @@ class CouponService
         if (! $coupon->is_active) {
             throw new CouponNotApplicableException('Mã giảm giá đã ngừng áp dụng.');
         }
+        // Mã tặng riêng (ví mã của khách): chỉ chủ ví dùng được
+        if ($coupon->owner_user_id !== null && $coupon->owner_user_id !== $user->id) {
+            throw new CouponNotApplicableException('Mã này là quà tặng riêng của một tài khoản khác.');
+        }
         if ($coupon->starts_at?->isFuture()) {
             throw new CouponNotApplicableException('Mã giảm giá chưa tới thời gian sử dụng.');
         }
