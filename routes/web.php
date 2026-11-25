@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PlantController as AdminPlantController;
 use App\Http\Controllers\Admin\PurchaseRequestController as AdminPurchaseRequestController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\StaffController as AdminStaffController;
+use App\Http\Controllers\Admin\StockCountController as AdminStockCountController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TierController as AdminTierController;
 use App\Http\Controllers\ArticleController;
@@ -191,8 +192,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     });
 
     Route::middleware('admin:admin')->group(function () {
-        // Kiểm kê (điều chỉnh tồn theo số đếm) là việc của quản trị viên; nhân viên chỉ ghi hư hỏng / cây chết
-        Route::post('/inventory/{plant}/count', [AdminInventoryController::class, 'count'])->name('inventory.count');
+        // Phiếu kiểm kê (nghiệp vụ riêng, dạng báo cáo) là việc của quản trị viên; nhân viên chỉ ghi hư hỏng / cây chết
+        Route::resource('stock-counts', AdminStockCountController::class)->only(['index', 'store', 'show', 'update'])->parameters(['stock-counts' => 'stockCount']);
+        Route::post('/stock-counts/{stockCount}/cancel', [AdminStockCountController::class, 'cancel'])->name('stock-counts.cancel');
         Route::post('/purchase-requests/{purchase_request}/approve', [AdminPurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
         Route::post('/purchase-requests/{purchase_request}/reject', [AdminPurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
         Route::post('/orders/{order}/confirm-transfer', [AdminOrderController::class, 'confirmTransfer'])->name('orders.confirm-transfer');

@@ -9,15 +9,11 @@
 <div class="row g-3 mb-4">
     @if(auth()->user()->isAdmin())
     <div class="col-md-6">
-        <form action="{{ route('admin.inventory.count', $plant) }}" method="POST" class="card card-body shadow-sm">@csrf
+        <div class="card card-body shadow-sm h-100">
             <h6 class="fw-bold">Kiểm kê</h6>
-            <p class="small text-muted mb-2">Nhập SỐ ĐẾM THỰC TẾ. Hệ thống tự tính chênh lệch theo tồn tại thời điểm lưu (không ghi đè số vừa bán).</p>
-            <div class="input-group">
-                <input type="number" name="counted" min="0" class="form-control" placeholder="Số đếm được" required>
-                <input name="reason" class="form-control" placeholder="Ghi chú (kiểm kê cuối tháng...)" required>
-                <button class="btn btn-green">Lưu</button>
-            </div>
-        </form>
+            <p class="small text-muted mb-2">Kiểm kê làm bằng <strong>phiếu kiểm kê</strong> (chốt số trên sổ, nhập số đếm, xem chênh lệch rồi mới điều chỉnh kho).</p>
+            <a href="{{ route('admin.stock-counts.index') }}" class="btn btn-outline-green align-self-start"><i class="fa fa-clipboard-check"></i> Phiếu kiểm kê</a>
+        </div>
     </div>
     @endif
     <div class="col-md-6">

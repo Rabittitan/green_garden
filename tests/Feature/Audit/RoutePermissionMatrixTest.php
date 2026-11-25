@@ -13,6 +13,7 @@ use App\Models\HomeSlide;
 use App\Models\Order;
 use App\Models\Plant;
 use App\Models\PlantReview;
+use App\Models\StockCount;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\UserAddress;
@@ -47,7 +48,7 @@ class RoutePermissionMatrixTest extends TestCase
             'order' => $order->id, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id,
             'user' => User::factory()->create()->id,                       // khách riêng: route khóa / đổi hạng không ảnh hưởng khách đang thử quyền
             'payment' => $order->payments()->sole()->id, 'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id,
-            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'flashSale' => tap(new FlashSale(['name' => 'FS', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDays(2)]), fn ($f) => $f->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'submitted'])->save())->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
+            'goods_receipt' => $receipt->id, 'comment' => $comment->id, 'review' => $review->id, 'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'stockCount' => tap(new StockCount(['code' => 'KK-TEST-0001']), fn ($c) => $c->forceFill(['created_by' => User::where('role', 'admin')->first()->id, 'status' => 'draft'])->save())->id, 'flashSale' => tap(new FlashSale(['name' => 'FS', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDays(2)]), fn ($f) => $f->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'submitted'])->save())->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
         ];
     }
 
@@ -137,7 +138,7 @@ class RoutePermissionMatrixTest extends TestCase
         $adminOnly = collect($this->adminRoutes())->filter(fn ($r) => in_array('admin:admin', $r->gatherMiddleware(), true))->map->getName()->all();
         foreach (['admin.orders.confirm-transfer', 'admin.orders.refunds.store', 'admin.payments.confirm-refund', 'admin.purchase-requests.approve',
             'admin.purchase-requests.reject', 'admin.coupons.store', 'admin.tiers.update', 'admin.customers.tier',
-            'admin.staff.index', 'admin.staff.store', 'admin.staff.update', 'admin.inventory.count'] as $name) {
+            'admin.staff.index', 'admin.staff.store', 'admin.staff.update', 'admin.stock-counts.store', 'admin.stock-counts.update'] as $name) {
             $this->assertContains($name, $adminOnly, "{$name} phải chỉ dành cho quản trị");
         }
     }

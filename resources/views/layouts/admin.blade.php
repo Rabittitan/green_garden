@@ -28,6 +28,7 @@
         'Kho & nhập hàng' => [
             ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh', 'catalog'],
             ['admin.inventory.index', 'admin.inventory.*', 'fa-warehouse', 'Kho', 'inventory'],
+            ['admin.stock-counts.index', 'admin.stock-counts.*', 'fa-clipboard-check', 'Phiếu kiểm kê', 'admin'],
             ['admin.purchase-requests.index', 'admin.purchase-requests.*', 'fa-clipboard-list', 'Yêu cầu nhập', 'purchasing'],
             ['admin.goods-receipts.index', 'admin.goods-receipts.*', 'fa-truck-ramp-box', 'Phiếu nhập kho', 'purchasing'],
             ['admin.suppliers.index', 'admin.suppliers.*', 'fa-handshake', 'Nhà cung cấp', 'purchasing'],

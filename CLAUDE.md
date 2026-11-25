@@ -37,7 +37,7 @@ CI (`.github/workflows/ci.yml`) runs PHP 8.4 + a MySQL 8 service. Steps: Pint �
 - CHECK constraints are added with `App\Support\DbCheck`. Money equations are written additively, e.g. `total + discounts = subtotal + shipping_fee`, so they never underflow UNSIGNED columns.
 - Generated STORED columns with UNIQUE enforce "at most one". Examples: `payments.success_charge_key` (at most one successful charge per order) and `user_addresses.default_key` (at most one default address).
 - The DB connection forces `time_zone=+00:00`.
-- The schema is frozen by default: a schema change needs the owner's explicit approval. Approved changes so far are **additive new migration files** only (`2026_11_22_000100` plant detail columns, `2026_11_23_000100` `home_slides`, `2026_11_25_000100` `users.permissions`, `2026_11_25_000200` coupon gifts, `2026_11_25_000300` flash sales); never edit an existing migration. Record any new one in `docs/H8-nghiem-thu.md` (criterion C2).
+- The schema is frozen by default: a schema change needs the owner's explicit approval. Approved changes so far are **additive new migration files** only (`2026_11_22_000100` plant detail columns, `2026_11_23_000100` `home_slides`, `2026_11_25_000100` `users.permissions`, `2026_11_25_000200` coupon gifts, `2026_11_25_000300` flash sales, `2026_11_25_000400` stock counts); never edit an existing migration. Record any new one in `docs/H8-nghiem-thu.md` (criterion C2).
 
 **Concurrency** (`docs/adr/003`): the isolation level is READ COMMITTED, and correctness comes from explicit `lockForUpdate()` calls taken in a **fixed order**:
 - Sales: `users → orders → plants (id ASC, via InventoryService::lockPlants) → flash_sale_items (id ASC) → coupons → payments`.
@@ -64,7 +64,7 @@ Overdue unpaid orders are cancelled by `orders:expire-unpaid`, which runs every 
 **Inventory is a ledger** (`docs/adr/002`):
 - `stock_movements` is append-only, with real FKs to the source documents.
 - `plants.stock` is only a cache of the ledger sum. It may only be changed through `InventoryService::move()` inside `Plant::writingLedger()`; any other write throws.
-- To fix a stock mismatch, use a stock-count adjustment (`countTo`). Never `UPDATE plants.stock`.
+- To fix a stock mismatch, use a stock count. Never `UPDATE plants.stock`. Stock counts are an admin-only flow (`StockCountService`, Admin → Phiếu kiểm kê): the sheet snapshots ledger quantities, admins enter counts and see a variance report, and only "Chốt phiếu" posts `adjustment` movements. Each movement is `counted − snapshot`, applied as a delta so sales made during the count stay correct, and links `stock_movements.stock_count_item_id`. Staff can only record damage. `InventoryService::countTo` remains as an internal helper.
 
 **Pricing** (`docs/adr/004`):
 - `PricingService::quote()` is the single formula, used for both the cart preview and order placement. It never locks and never writes.

@@ -18,6 +18,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\OrderService;
 use App\Services\PurchaseService;
+use App\Services\StockCountService;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -229,6 +230,24 @@ class ConcurrencyTest extends TestCase
         $this->assertSame(2, $item->refresh()->sold_count);
         $this->assertSame(2, OrderItem::where('flash_sale_item_id', $item->id)->where('unit_price', 99000)->count());
         $this->assertSame(3, OrderItem::where('plant_id', 3)->whereNull('flash_sale_item_id')->where('unit_price', Plant::find(3)->price)->count());
+        $this->assertLedgerConsistent();
+        $this->artisan('shop:reconcile')->assertSuccessful();
+    }
+
+    /** Đợt 5: chốt phiếu kiểm kê đúng lúc khách đặt hàng cùng cây -> không deadlock, áp chênh lệch, sổ kho khớp. */
+    public function test_completing_stock_count_while_customers_order_the_same_plants(): void
+    {
+        $count = app(StockCountService::class)->create($this->admin(), null, 'Đua');
+        foreach ($count->items as $item) {
+            $item->update(['counted_qty' => in_array($item->plant_id, [1, 3], true) ? $item->system_qty - 2 : $item->system_qty]);   // thiếu 2 cây #1, #3
+        }
+        $users = User::factory()->count(3)->create();
+        $jobs = $users->map(fn ($u) => ['place', (string) $u->id, json_encode([1 => 1, 3 => 1]), (string) Str::uuid()])->all();
+        $jobs[] = ['complete-count', (string) $count->id];
+        $this->race($jobs);
+
+        $this->assertSame('completed', $count->refresh()->status);
+        $this->assertSame([30 - 3 - 2, 50 - 3 - 2], [$this->stock(1), $this->stock(3)]);           // bán 3 + thiếu 2, không ghi đè số bán
         $this->assertLedgerConsistent();
         $this->artisan('shop:reconcile')->assertSuccessful();
     }

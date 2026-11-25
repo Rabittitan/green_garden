@@ -20,6 +20,7 @@ use LogicException;
  * @property int|null $unit_cost
  * @property int|null $order_item_id
  * @property int|null $goods_receipt_item_id
+ * @property int|null $stock_count_item_id
  * @property int|null $created_by
  * @property string|null $note
  * @property Carbon|null $created_at
@@ -30,7 +31,7 @@ class StockMovement extends Model
 
     protected $fillable = [
         'plant_id', 'type', 'quantity', 'stock_after', 'unit_cost',
-        'order_item_id', 'goods_receipt_item_id', 'created_by', 'note',
+        'order_item_id', 'goods_receipt_item_id', 'stock_count_item_id', 'created_by', 'note',
     ];
 
     protected function casts(): array
@@ -54,6 +55,12 @@ class StockMovement extends Model
     public function orderItem(): BelongsTo
     {
         return $this->belongsTo(OrderItem::class);
+    }
+
+    /** @return BelongsTo<StockCountItem, $this> dòng phiếu kiểm kê (bút toán điều chỉnh khi chốt phiếu) */
+    public function stockCountItem(): BelongsTo
+    {
+        return $this->belongsTo(StockCountItem::class);
     }
 
     /** @return BelongsTo<GoodsReceiptItem, $this> */
