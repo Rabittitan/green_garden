@@ -56,7 +56,7 @@ try {
             return 'ok';
         })(),
         'review' => app(ReviewService::class)->submit(User::findOrFail((int) $args[0]), (int) $args[1], 5, null, 'Song song')->id,
-        'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::where('role', 'admin')->firstOrFail())?->code,
+        'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::findOrFail((int) $args[0]))?->code,
         'ipn' => (function () use ($args) {
             $p = Payment::where('txn_ref', $args[0])->firstOrFail();
             parse_str(app(PaymentGateway::class)->sign([

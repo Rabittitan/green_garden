@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\GoodsReceiptStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\GoodsReceiptItem;
 use App\Models\Plant;
 use App\Services\InventoryService;
 use Illuminate\Contracts\View\View;
@@ -84,7 +86,12 @@ class PlantController extends Controller
 
     public function edit(Plant $plant): View
     {
-        return view('admin.plants.edit', ['plant' => $plant, 'categories' => Category::orderBy('sort_order')->get()]);
+        // 5 lần nhập gần nhất của cây (phiếu đã nhập kho): để thấy giá nhập lên xuống thế nào so với giá vốn bình quân
+        $recentReceipts = GoodsReceiptItem::with('receipt.supplier')->where('plant_id', $plant->id)
+            ->whereHas('receipt', fn ($q) => $q->where('status', GoodsReceiptStatus::Completed->value))
+            ->latest('id')->take(5)->get();
+
+        return view('admin.plants.edit', ['plant' => $plant, 'categories' => Category::orderBy('sort_order')->get(), 'recentReceipts' => $recentReceipts]);
     }
 
     public function update(Request $request, Plant $plant): RedirectResponse

@@ -133,7 +133,7 @@ class ConcurrencyTest extends TestCase
     /** B7: nhiều người cùng tạo yêu cầu nhập hàng -> mã chứng từ không trùng, không lỗi hệ thống. */
     public function test_document_codes_are_unique_under_concurrency(): void
     {
-        $results = $this->race(array_fill(0, 5, ['draft-pr']));
+        $results = $this->race(array_fill(0, 5, ['draft-pr', (string) User::factory()->staff()->create()->id]));   // nhân viên lập
 
         $codes = collect($results)->pluck('result');
         $this->assertSame(5, $codes->filter()->unique()->count(), 'Mã yêu cầu nhập bị trùng: '.$codes->implode(', '));

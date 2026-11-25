@@ -137,7 +137,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
     Route::get('/inventory/{plant}', [AdminInventoryController::class, 'show'])->name('inventory.show');
-    Route::post('/inventory/{plant}/count', [AdminInventoryController::class, 'count'])->name('inventory.count');
     Route::post('/inventory/{plant}/damage', [AdminInventoryController::class, 'damage'])->name('inventory.damage');
 
     // Đánh giá + hỏi đáp
@@ -166,6 +165,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('/goods-receipts/{goods_receipt}/cancel', [AdminGoodsReceiptController::class, 'cancel'])->name('goods-receipts.cancel');
 
     Route::middleware('admin:admin')->group(function () {
+        // Kiểm kê (điều chỉnh tồn theo số đếm) là việc của quản trị viên; nhân viên chỉ ghi hư hỏng / cây chết
+        Route::post('/inventory/{plant}/count', [AdminInventoryController::class, 'count'])->name('inventory.count');
         Route::post('/purchase-requests/{purchase_request}/approve', [AdminPurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
         Route::post('/purchase-requests/{purchase_request}/reject', [AdminPurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
         Route::post('/orders/{order}/confirm-transfer', [AdminOrderController::class, 'confirmTransfer'])->name('orders.confirm-transfer');

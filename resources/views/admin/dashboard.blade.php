@@ -3,47 +3,71 @@
 
 @section('content')
 @php
-    use App\Enums\OrderStatus;
     use App\Http\Controllers\Admin\DashboardController;
-    $days = DashboardController::TREND_DAYS;
-    // So với kỳ trước: null khi kỳ trước chưa có doanh thu (không chia cho 0, không bịa % tăng)
-    $delta = $trend['previous'] > 0 ? round(($trend['total'] - $trend['previous']) * 100 / $trend['previous'], 1) : null;
-    $statusMax = max(1, (int) $counts->max());
-    $topMax = max(1, (int) $topPlants->max('sold'));
+    $cur = $stats['cur'];
+    $prev = $stats['prev'];
+    // % so với kỳ trước: null khi kỳ trước = 0 (không chia cho 0, không bịa % tăng)
+    $delta = fn (int $now, int $before) => $before > 0 ? round(($now - $before) * 100 / $before, 1) : null;
+    $cards = [
+        ['Doanh thu hàng hóa', $cur['revenue'], $prev['revenue'], true, 'fa-sack-dollar', '#e8f5e9', '#2e7d32', 'sau giảm giá và hoàn tiền, không gồm ship'],
+        ['Giá vốn hàng bán', $cur['cogs'], $prev['cogs'], true, 'fa-boxes-stacked', '#fff4d6', '#8a5a00', 'theo giá vốn lúc bán'],
+        ['Lợi nhuận gộp', $cur['profit'], $prev['profit'], true, 'fa-chart-line', '#e3f2fd', '#1565c0', 'doanh thu − giá vốn'],
+        ['Đơn hoàn thành', $cur['orders'], $prev['orders'], false, 'fa-receipt', '#f3e5f5', '#6a1b9a', 'giao thành công trong kỳ'],
+        ['Giá trị TB / đơn', $cur['aov'], $prev['aov'], true, 'fa-scale-balanced', '#e0f2f1', '#00695c', 'doanh thu ÷ số đơn'],
+        ['Phí ship thu của khách', $cur['shipping'], $prev['shipping'], true, 'fa-truck', '#eceff1', '#455a64', 'không tính vào doanh thu hàng'],
+    ];
+    $catMax = max(1, (int) collect($byCategory)->max('revenue'));
+    $rate = fn (int $n) => $rates['placed'] > 0 ? number_format($n * 100 / $rates['placed'], 1, ',', '.').'%' : '—';
 @endphp
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
     <div>
         <span class="gg-eyebrow">Tổng quan</span>
         <h4 class="fw-bold mb-0">Thống kê kinh doanh</h4>
     </div>
-    <span class="small text-muted"><i class="fa fa-clock"></i> Cập nhật @vndt(now())</span>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Chọn kỳ thống kê">
+            @foreach(DashboardController::PERIODS as $k => [$label])
+                <a href="{{ route('admin.dashboard', ['ky' => $k]) }}" class="btn {{ $period === (string) $k ? 'btn-success' : 'btn-outline-success' }}">{{ $label }}</a>
+            @endforeach
+        </div>
+        <span class="small text-muted">so với {{ $days }} ngày liền trước</span>
+    </div>
+</div>
+
+{{-- ===== THẺ SỐ LIỆU KỲ NÀY ===== --}}
+<div class="row g-3 mb-3" data-testid="kpis">
+    @foreach($cards as [$label, $now, $before, $isMoney, $icon, $bg, $fg, $hint])
+        @php $d = $delta($now, $before); @endphp
+        <div class="col-sm-6 col-xl-4"><div class="gg-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="gg-stat-icon" style="background:{{ $bg }};color:{{ $fg }}"><i class="fa {{ $icon }}"></i></div>
+                @if($d !== null)
+                    <span class="gg-delta {{ $d >= 0 ? 'up' : 'down' }} small"><i class="fa fa-arrow-{{ $d >= 0 ? 'up' : 'down' }}"></i> {{ $d >= 0 ? 'Tăng' : 'Giảm' }} {{ number_format(abs($d), 1, ',', '.') }}%</span>
+                @endif
+            </div>
+            <div class="gg-stat-label">{{ $label }} · {{ $periodLabel }}</div>
+            <div class="gg-stat-value">{{ $isMoney ? \App\Support\Format::money($now) : number_format($now, 0, ',', '.') }}</div>
+            <small>{{ $hint }} · kỳ trước {{ $isMoney ? \App\Support\Format::money($before) : number_format($before, 0, ',', '.') }}</small>
+        </div></div>
+    @endforeach
 </div>
 
 <div class="row g-3 mb-3">
     {{-- ===== DOANH THU THEO NGÀY ===== --}}
     <div class="col-xl-8">
         <div class="gg-panel gg-panel-body h-100">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                 <div>
-                    <div class="gg-stat-label">Doanh thu hàng hóa {{ $days }} ngày qua</div>
+                    <div class="gg-stat-label">Doanh thu hàng hóa theo ngày · {{ $periodLabel }}</div>
                     <div class="gg-hero-value" data-testid="trend-total">@money($trend['total'])</div>
-                    <div class="small">
-                        @if($delta === null)
-                            <span class="text-muted">Chưa có doanh thu {{ $days }} ngày trước đó để so sánh</span>
-                        @else
-                            <span class="gg-delta {{ $delta >= 0 ? 'up' : 'down' }}"><i class="fa fa-arrow-{{ $delta >= 0 ? 'up' : 'down' }}"></i>
-                                {{ $delta >= 0 ? 'Tăng' : 'Giảm' }} {{ number_format(abs($delta), 1, ',', '.') }}%</span>
-                            <span class="text-muted">so với {{ $days }} ngày trước đó (@money($trend['previous']))</span>
-                        @endif
-                    </div>
                 </div>
                 <div class="gg-mini-kpis">
-                    <div><small>Đơn hoàn thành</small><strong>{{ $trend['orders'] }}</strong></div>
-                    <div><small>Giá trị TB / đơn</small><strong>@money($trend['orders'] ? intdiv($trend['total'], $trend['orders']) : 0)</strong></div>
+                    <div><small>Tỉ lệ hủy</small><strong>{{ $rate($rates['cancelled']) }}</strong></div>
+                    <div><small>Tỉ lệ trả hàng</small><strong>{{ $rate($rates['returned']) }}</strong></div>
                 </div>
             </div>
             <div class="gg-chart" id="revenue-chart-wrap">
-                <canvas id="revenue-chart" role="img" aria-label="Biểu đồ doanh thu hàng hóa theo ngày, {{ $days }} ngày gần nhất"></canvas>
+                <canvas id="revenue-chart" role="img" aria-label="Biểu đồ doanh thu hàng hóa theo ngày, {{ $periodLabel }}"></canvas>
                 <div class="gg-chart-fallback small text-muted">Không tải được thư viện biểu đồ. Xem số liệu ở bảng bên dưới.</div>
             </div>
             <details class="mt-2 small">
@@ -59,118 +83,69 @@
                     </table>
                 </div>
             </details>
-            <p class="small text-muted mb-0 mt-2">Tính theo ngày giao thành công (giờ Việt Nam): tiền hàng sau giảm giá, trừ tiền đã hoàn, không gồm phí ship.</p>
+            <p class="small text-muted mb-0 mt-2">Tính theo ngày giao thành công (giờ Việt Nam). Tỉ lệ hủy / trả hàng tính trên {{ number_format($rates['placed'], 0, ',', '.') }} đơn đặt trong kỳ.</p>
         </div>
     </div>
 
-    {{-- ===== VIỆC CẦN LÀM + ĐƠN THEO TRẠNG THÁI ===== --}}
+    {{-- ===== THEO DANH MỤC ===== --}}
     <div class="col-xl-4">
-        <div class="gg-panel gg-panel-body mb-3">
-            <div class="gg-stat-label mb-1"><i class="fa fa-list-check"></i> Việc cần làm</div>
-            @php
-                $todo = [
-                    [route('admin.orders.index', ['status' => 'pending']), $counts['pending'] ?? 0, 'đơn chờ xác nhận'],
-                    [route('admin.orders.index', ['status' => 'confirmed']), $counts['confirmed'] ?? 0, 'đơn chờ giao'],
-                    [route('admin.orders.index', ['status' => 'returning']), $counts['returning'] ?? 0, 'đơn đang hoàn về'],
-                    [route('admin.orders.index', ['payment_status' => 'refund_pending']), $needRefund, 'đơn chờ hoàn tiền'],
-                ];
-            @endphp
-            <div class="gg-todo small">
-                @foreach($todo as [$url, $n, $label])
-                    <a href="{{ $url }}"><span>{{ $n }} {{ $label }}</span><span class="badge rounded-pill {{ $n > 0 ? 'bg-danger' : 'bg-light text-muted' }}">{{ $n }}</span></a>
-                @endforeach
-            </div>
-        </div>
-        <div class="gg-panel gg-panel-body">
-            <div class="gg-stat-label mb-2"><i class="fa fa-layer-group"></i> Đơn theo trạng thái <span class="fw-normal">(mọi thời gian)</span></div>
-            <ul class="gg-meters" data-testid="status-meters">
-                @foreach(OrderStatus::cases() as $st)
-                    @php $n = (int) ($counts[$st->value] ?? 0); @endphp
-                    <li><a href="{{ route('admin.orders.index', ['status' => $st->value]) }}">
-                        <span class="gg-meter-name">{{ $st->label() }}</span>
-                        <span class="gg-meter-bar"><span style="width: {{ $n ? max(2, round($n * 100 / $statusMax)) : 0 }}%"></span></span>
-                        <span class="gg-meter-value">{{ $n }}</span>
-                    </a></li>
-                @endforeach
-            </ul>
-        </div>
-    </div>
-</div>
-
-{{-- ===== SỐ LIỆU LŨY KẾ ===== --}}
-<div class="row g-3 mb-4">
-    <div class="col-md-4"><div class="gg-stat">
-        <div class="gg-stat-icon" style="background:#e8f5e9;color:#2e7d32"><i class="fa fa-sack-dollar"></i></div>
-        <div class="gg-stat-label">Doanh thu hàng hóa (lũy kế)</div><div class="gg-stat-value">@money($revenue)</div>
-        <small>đơn hoàn thành, sau giảm giá và hoàn tiền, không gồm ship</small>
-    </div></div>
-    <div class="col-md-4"><div class="gg-stat">
-        <div class="gg-stat-icon" style="background:#e3f2fd;color:#1565c0"><i class="fa fa-chart-line"></i></div>
-        <div class="gg-stat-label">Lợi nhuận gộp (lũy kế)</div><div class="gg-stat-value">@money($revenue - $cogs)</div>
-        <small>doanh thu − giá vốn lúc bán (@money($cogs))</small>
-    </div></div>
-    <div class="col-md-4"><div class="gg-stat">
-        <div class="gg-stat-icon" style="background:#f3e5f5;color:#6a1b9a"><i class="fa fa-wallet"></i></div>
-        <div class="gg-stat-label">Tiền thực thu (lũy kế)</div><div class="gg-stat-value">@money($cashIn)</div>
-        <small>đã thu − đã hoàn (@money($refunded))</small>
-    </div></div>
-</div>
-
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold"><i class="fa fa-fire text-danger"></i> Top 5 cây bán chạy <span class="small fw-normal text-muted">(số cây đã giao)</span></div>
-            <div class="card-body">
-                @if($topPlants->isEmpty())
-                    <div class="text-center text-muted py-3">Chưa có đơn hoàn thành nào.</div>
-                @else
-                    <ol class="gg-meters gg-meters-ranked mb-0" data-testid="top-plants">
-                        @foreach($topPlants as $row)
-                            <li><span class="gg-meter-name" title="{{ $row->plant_name }}">{{ $row->plant_name }}</span>
-                                <span class="gg-meter-bar"><span style="width: {{ max(2, round($row->sold * 100 / $topMax)) }}%"></span></span>
-                                <span class="gg-meter-value">{{ $row->sold }}</span></li>
-                        @endforeach
-                    </ol>
-                @endif
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold d-flex justify-content-between">
-                <span><i class="fa fa-triangle-exclamation text-warning"></i> Cây dưới ngưỡng tồn</span>
-                <a href="{{ route('admin.inventory.index', ['low' => 1]) }}" class="small">Xem kho</a>
-            </div>
-            <table class="table mb-0">
-                <thead><tr><th>Cây</th><th class="text-end">Tồn / Ngưỡng</th></tr></thead>
-                <tbody>
-                    @forelse($lowStock as $p)
-                        <tr><td><a href="{{ route('admin.inventory.show', $p) }}" class="text-decoration-none">{{ $p->name }}</a></td>
-                            <td class="text-end"><span class="badge bg-danger">{{ $p->stock }}</span> / {{ $p->reorder_point }}</td></tr>
-                    @empty
-                        <tr><td colspan="2" class="text-center text-muted py-3">Kho còn đủ hàng.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white fw-bold"><i class="fa fa-receipt"></i> Đơn mới nhất</div>
-            <div class="table-responsive">
-            <table class="table mb-0 align-middle text-nowrap">
-                <thead><tr><th>Mã</th><th>Người nhận</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thanh toán</th><th></th></tr></thead>
-                <tbody>
-                    @foreach($latestOrders as $order)
-                        <tr>
-                            <td>{{ $order->code }}</td><td>{{ $order->recipient_name }}</td><td>@money($order->total)</td>
-                            <td><span class="badge bg-{{ $order->status->color() }}">{{ $order->status->label() }}</span></td>
-                            <td><span class="badge bg-{{ $order->payment_status->color() }}">{{ $order->payment_status->label() }}</span></td>
-                            <td><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-green">Xem</a></td>
-                        </tr>
+        <div class="gg-panel gg-panel-body h-100">
+            <div class="gg-stat-label mb-2"><i class="fa fa-layer-group"></i> Doanh thu theo danh mục</div>
+            @if($byCategory === [])
+                <div class="text-muted small py-3">Chưa có đơn hoàn thành trong kỳ.</div>
+            @else
+                <ul class="gg-meters gg-meters-money" data-testid="by-category">
+                    @foreach($byCategory as $c)
+                        <li><span class="gg-meter-name" title="{{ $c['name'] }}">{{ $c['name'] }}</span>
+                            <span class="gg-meter-bar"><span style="width: {{ max(2, round($c['revenue'] * 100 / $catMax)) }}%"></span></span>
+                            <span class="gg-meter-value gg-meter-money">@money($c['revenue'])</span></li>
                     @endforeach
-                </tbody>
-            </table>
+                </ul>
+                <p class="small text-muted mb-0 mt-2">Giá trị dòng hàng sau giảm giá (chưa trừ tiền hoàn lẻ của đơn).</p>
+            @endif
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    {{-- ===== TOP CÂY ===== --}}
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold"><i class="fa fa-fire text-danger"></i> Top 5 cây theo doanh thu</div>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle" data-testid="top-plants">
+                    <thead><tr><th>#</th><th>Cây</th><th class="text-end">Đã bán</th><th class="text-end">Doanh thu</th><th class="text-end">Lãi gộp</th></tr></thead>
+                    <tbody>
+                        @forelse($topPlants as $i => $p)
+                            <tr><td>{{ $i + 1 }}</td><td>{{ $p['name'] }}</td><td class="text-end">{{ $p['qty'] }}</td>
+                                <td class="text-end fw-bold">@money($p['revenue'])</td>
+                                <td class="text-end {{ $p['profit'] < 0 ? 'text-danger' : 'text-success' }}">@money($p['profit'])
+                                    <div class="small text-muted">{{ $p['revenue'] > 0 ? number_format($p['profit'] * 100 / $p['revenue'], 1, ',', '.') : 0 }}%</div></td></tr>
+                        @empty
+                            <tr><td colspan="5" class="text-center text-muted py-3">Chưa có đơn hoàn thành trong kỳ.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {{-- ===== TOP KHÁCH ===== --}}
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold"><i class="fa fa-user-group text-green"></i> Top 5 khách hàng</div>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle" data-testid="top-customers">
+                    <thead><tr><th>Khách</th><th class="text-end">Đơn</th><th class="text-end">Doanh thu</th></tr></thead>
+                    <tbody>
+                        @forelse($topCustomers as $c)
+                            <tr><td>@if(auth()->user()->isAdmin())<a href="{{ route('admin.customers.show', $c['id']) }}" class="text-decoration-none">{{ $c['name'] }}</a>@else{{ $c['name'] }}@endif
+                                    <div class="small text-muted">{{ $c['email'] }}</div></td>
+                                <td class="text-end">{{ $c['orders'] }}</td><td class="text-end fw-bold">@money($c['revenue'])</td></tr>
+                        @empty
+                            <tr><td colspan="3" class="text-center text-muted py-3">Chưa có đơn hoàn thành trong kỳ.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -195,7 +170,7 @@
             return v;
         };
         new Chart(document.getElementById('revenue-chart'), {
-            // Cột theo ngày: doanh thu mỗi ngày là giá trị rời rạc (đường cong sẽ vẽ ra "dốc" giữa các ngày không có đơn)
+            // Cột theo ngày: doanh thu mỗi ngày là giá trị rời rạc
             type: 'bar',
             data: { labels: d.labels, datasets: [{
                 label: 'Doanh thu', data: d.revenue, backgroundColor: '#2e7d32', hoverBackgroundColor: '#1b5e20',

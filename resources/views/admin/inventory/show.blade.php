@@ -7,6 +7,7 @@
 <p>Tồn hiện tại: <strong class="fs-5">{{ $plant->stock }}</strong> · Ngưỡng nhập thêm: {{ $plant->reorder_point }} · Giá vốn bình quân: @money($plant->cost_price)</p>
 
 <div class="row g-3 mb-4">
+    @if(auth()->user()->isAdmin())
     <div class="col-md-6">
         <form action="{{ route('admin.inventory.count', $plant) }}" method="POST" class="card card-body shadow-sm">@csrf
             <h6 class="fw-bold">Kiểm kê</h6>
@@ -18,6 +19,7 @@
             </div>
         </form>
     </div>
+    @endif
     <div class="col-md-6">
         <form action="{{ route('admin.inventory.damage', $plant) }}" method="POST" class="card card-body shadow-sm">@csrf
             <h6 class="fw-bold">Ghi hư hỏng / cây chết</h6>

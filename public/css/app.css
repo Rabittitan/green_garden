@@ -428,3 +428,9 @@ a { text-underline-offset: 3px; }
     .gg-slide-caption { padding: 1.25rem 1.25rem 2.5rem; justify-content: flex-end; background: linear-gradient(0deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,.15) 60%, rgba(0,0,0,0) 100%); }
     .gg-slider-nav { display: none; }
 }
+
+/* ================================================================ Thẻ số nhỏ (trang khách hàng, cây) */
+.gg-mini-stat { background: #fff; border: 1px solid var(--gg-line); border-radius: 12px; padding: .6rem .9rem; min-width: 170px; }
+.gg-mini-stat small { display: block; color: var(--gg-muted); font-weight: 600; font-size: .78rem; }
+.gg-mini-stat strong { font-size: 1.1rem; }
+.gg-meters-money li { grid-template-columns: minmax(0, 7.5rem) 1fr 6.5rem; }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
@@ -9,6 +10,7 @@ use App\Models\MembershipTier;
 use App\Models\User;
 use App\Services\MembershipService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -17,11 +19,11 @@ class CustomerController extends Controller
 {
     public function index(Request $request): View
     {
-        $customers = User::where('role', UserRole::Customer->value)->with('tier')->withCount('orders')
+        $customers = $this->withPurchaseTotals(User::where('role', UserRole::Customer->value)->with('tier'))
             ->when($request->filled('q'), fn ($q) => $q->where(fn ($w) => $w->where('name', 'like', '%'.$request->q.'%')
                 ->orWhere('email', 'like', '%'.$request->q.'%')->orWhere('phone', 'like', '%'.$request->q.'%')))
             ->when($request->filled('tier'), fn ($q) => $q->where('membership_tier_id', $request->integer('tier')))
-            ->orderByDesc('lifetime_spend')->paginate(20)->withQueryString();
+            ->orderByDesc('completed_paid_sum')->orderByDesc('id')->paginate(20)->withQueryString();
 
         return view('admin.customers.index', ['customers' => $customers, 'tiers' => MembershipTier::ordered()->get()]);
     }
@@ -29,12 +31,32 @@ class CustomerController extends Controller
     public function show(User $user): View
     {
         $user->load(['tier', 'addresses', 'tierHistories.fromTier', 'tierHistories.toTier', 'tierHistories.changedBy']);
+        $totals = $this->withPurchaseTotals(User::whereKey($user->id))->firstOrFail();
+        foreach (['orders_count', 'completed_orders_count', 'completed_paid_sum', 'completed_refunded_sum'] as $k) {
+            $user->setAttribute($k, $totals->getAttribute($k));
+        }
 
         return view('admin.customers.show', [
             'customer' => $user,
             'orders' => $user->orders()->latest('id')->paginate(10),
             'tiers' => MembershipTier::ordered()->get(),
         ]);
+    }
+
+    /**
+     * Số đơn + "đã mua" (tiền thực trả của đơn HOÀN THÀNH, trừ tiền đã hoàn, gồm phí ship) tính ngay từ đơn hàng.
+     * Khác users.lifetime_spend: đó là chi tiêu XÉT HẠNG, chỉ cộng sau 7 ngày đổi trả và không gồm phí ship.
+     *
+     * @param  Builder<User>  $q
+     * @return Builder<User>
+     */
+    private function withPurchaseTotals(Builder $q): Builder
+    {
+        $completed = fn ($o) => $o->where('status', OrderStatus::Completed->value);
+
+        return $q->withCount(['orders', 'orders as completed_orders_count' => $completed])
+            ->withSum(['orders as completed_paid_sum' => $completed], 'paid_amount')
+            ->withSum(['orders as completed_refunded_sum' => $completed], 'refunded_amount');
     }
 
     public function setTier(Request $request, User $user, MembershipService $membership): RedirectResponse

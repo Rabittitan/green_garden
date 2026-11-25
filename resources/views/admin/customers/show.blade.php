@@ -5,7 +5,13 @@
 <a href="{{ route('admin.customers.index') }}" class="text-green text-decoration-none"><i class="fa fa-arrow-left"></i> Khách hàng</a>
 <h4 class="fw-bold mt-2">{{ $customer->name }} <span class="badge bg-warning text-dark">{{ $customer->tier->name }}</span>
     @unless($customer->is_active)<span class="badge bg-danger">Đã khóa</span>@endunless</h4>
-<p>{{ $customer->email }} · {{ $customer->phone }} · Tổng chi tiêu: <strong>@money($customer->lifetime_spend)</strong> · Đăng ký @vndt($customer->created_at)</p>
+<p>{{ $customer->email }} · {{ $customer->phone }} · Đăng ký @vndt($customer->created_at)</p>
+<div class="d-flex flex-wrap gap-3 mb-3">
+    <div class="gg-mini-stat"><small>Đơn hoàn thành / tổng</small><strong>{{ $customer->completed_orders_count }} / {{ $customer->orders_count }}</strong></div>
+    <div class="gg-mini-stat"><small>Đã mua (đơn hoàn thành)</small><strong>@money((int) $customer->completed_paid_sum - (int) $customer->completed_refunded_sum)</strong></div>
+    <div class="gg-mini-stat"><small>Chi tiêu xét hạng</small><strong>@money($customer->lifetime_spend)</strong>
+        <span class="small text-muted">cộng sau {{ config('shop.return_window_days') }} ngày đổi trả</span></div>
+</div>
 
 <div class="row g-4">
     <div class="col-lg-4">

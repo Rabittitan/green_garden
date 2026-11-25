@@ -29,8 +29,12 @@ class PurchaseRequestController extends Controller
         return view('admin.purchase-requests.index', compact('requests'));
     }
 
-    public function create(): View
+    public function create(Request $request): View|RedirectResponse
     {
+        if ($request->user()->isAdmin()) {                                   // quản trị viên chỉ duyệt, không lập
+            return redirect()->route('admin.purchase-requests.index')->with('error', 'Quản trị viên chỉ duyệt yêu cầu nhập. Yêu cầu nhập do nhân viên lập.');
+        }
+
         return view('admin.purchase-requests.form', $this->formData(new PurchaseRequest(['priority' => 'normal'])));
     }
 

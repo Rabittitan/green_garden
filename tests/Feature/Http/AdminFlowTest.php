@@ -119,6 +119,14 @@ class AdminFlowTest extends TestCase
         $this->post(route('admin.inventory.damage', 16), ['quantity' => 5, 'reason' => 'x'])->assertSessionHas('error');
         $this->assertSame(25, $this->stock(1));
         $this->get(route('admin.inventory.show', 1))->assertOk()->assertSee('Kiểm kê')->assertSee('Hư hỏng');
+
+        // Nhân viên: ghi cây chết được, kiểm kê thì không (việc của quản trị viên)
+        $staff = User::factory()->staff()->create();
+        $this->actingAs($staff)->get(route('admin.inventory.show', 1))->assertOk()
+            ->assertSee('Ghi hư hỏng / cây chết')->assertDontSee(route('admin.inventory.count', 1), false);
+        $this->post(route('admin.inventory.count', 1), ['counted' => 1, 'reason' => 'x'])->assertForbidden();
+        $this->post(route('admin.inventory.damage', 1), ['quantity' => 1, 'reason' => 'Cây héo'])->assertSessionHas('success');
+        $this->assertSame(24, $this->stock(1));
     }
 
     public function test_coupon_crud_and_lock_after_use(): void

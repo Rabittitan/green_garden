@@ -35,6 +35,11 @@ class PurchaseService
      */
     public function createRequest(User $by, array $items, array $meta = []): PurchaseRequest
     {
+        // Phân vai (chủ shop chốt 25/11/2026): nhân viên lập yêu cầu, quản trị viên chỉ duyệt / từ chối
+        if ($by->isAdmin()) {
+            throw new BusinessException('Quản trị viên chỉ duyệt yêu cầu nhập. Yêu cầu nhập do nhân viên lập.');
+        }
+
         return DB::transaction(function () use ($by, $items, $meta) {
             $pr = $this->createWithCode('YCN', 'purchase_requests', fn (string $code) => PurchaseRequest::create([
                 'code' => $code, 'requested_by' => $by->id, 'status' => PurchaseRequestStatus::Draft,
@@ -96,6 +101,9 @@ class PurchaseService
     /** Gợi ý tạo yêu cầu nhập từ các cây đang dưới ngưỡng reorder_point. */
     public function draftFromLowStock(User $user, int $targetMultiplier = 3): ?PurchaseRequest
     {
+        if ($user->isAdmin()) {
+            throw new BusinessException('Quản trị viên chỉ duyệt yêu cầu nhập. Yêu cầu nhập do nhân viên lập.');
+        }
         $plants = Plant::active()->needsReorder()->get();
         if ($plants->isEmpty()) {
             return null;
