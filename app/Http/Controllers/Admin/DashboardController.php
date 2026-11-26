@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\StaffPermission;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Contracts\View\View;
@@ -35,6 +37,17 @@ class DashboardController extends Controller
 
     /** Kỳ mặc định (cũng là độ dài biểu đồ khi mở trang). */
     public const TREND_DAYS = 30;
+
+    /**
+     * Màu biểu đồ tròn, gán theo THỨ TỰ cố định (phần lớn nhất màu 1...). Bộ 6 màu đã kiểm tra: các cặp màu kề nhau
+     * phân biệt được cả với người mù màu đỏ-lục; vài màu nhạt trên nền trắng nên chú thích luôn ghi tên + số + %.
+     */
+    public const PALETTE = ['#257de0', '#f47230', '#00b894', '#f2a600', '#ee7fac', '#008a17'];
+
+    public const OTHER_COLOR = '#a3aca6';
+
+    /** Màu tình trạng đơn: xanh lá = xong, xanh dương = đang xử lý, cam = trả hàng, đỏ = hủy. */
+    public const STATUS_COLORS = ['completed' => '#0aac23', 'processing' => '#257de0', 'returned' => '#f18a59', 'cancelled' => '#dc3c3d'];
 
     /** Trang đầu của từng nhóm quyền: nhân viên không có quyền "Thống kê" được đưa tới mục đầu tiên mình dùng được. */
     public const LANDING = [
@@ -69,6 +82,7 @@ class DashboardController extends Controller
             'trend' => $this->trend($from, $today, $range, $tz),
             'rates' => $this->rates($range),
             'byCategory' => $this->byCategory($range),
+            'byPayment' => $this->byPayment($range),
             'topPlants' => $this->topPlants($range),
             'topCustomers' => $this->topCustomers($range),
         ]);
@@ -141,36 +155,74 @@ class DashboardController extends Controller
     }
 
     /**
-     * Tỉ lệ hủy / trả hàng trên các đơn ĐẶT trong kỳ.
+     * Đơn ĐẶT trong kỳ theo tình trạng hiện tại (biểu đồ tròn "Tình trạng đơn") + tỉ lệ hủy / trả hàng.
+     * completed + processing + returned + cancelled = placed.
      *
      * @param  array{from: Carbon, prev: Carbon, to: Carbon}  $r
-     * @return array{placed: int, cancelled: int, returned: int}
+     * @return array{placed: int, completed: int, processing: int, returned: int, cancelled: int}
      */
     private function rates(array $r): array
     {
         $row = Order::where('placed_at', '>=', $r['from'])->where('placed_at', '<', $r['to'])
-            ->selectRaw('COUNT(*) AS placed, SUM(status = ?) AS cancelled, SUM(status IN (?, ?)) AS returned',
-                [OrderStatus::Cancelled->value, OrderStatus::Returning->value, OrderStatus::Returned->value])
+            ->selectRaw('COUNT(*) AS placed, SUM(status = ?) AS completed, SUM(status = ?) AS cancelled, SUM(status IN (?, ?)) AS returned', [
+                OrderStatus::Completed->value, OrderStatus::Cancelled->value, OrderStatus::Returning->value, OrderStatus::Returned->value,
+            ])
             ->toBase()->first();
+        $placed = (int) ($row->placed ?? 0);
+        $completed = (int) ($row->completed ?? 0);
+        $cancelled = (int) ($row->cancelled ?? 0);
+        $returned = (int) ($row->returned ?? 0);
 
-        return ['placed' => (int) ($row->placed ?? 0), 'cancelled' => (int) ($row->cancelled ?? 0), 'returned' => (int) ($row->returned ?? 0)];
+        return ['placed' => $placed, 'completed' => $completed, 'processing' => $placed - $completed - $cancelled - $returned,
+            'returned' => $returned, 'cancelled' => $cancelled];
     }
 
     /**
      * Giá trị hàng bán theo danh mục (dòng hàng sau giảm giá, đơn hoàn thành trong kỳ).
+     * Màu đi theo DANH MỤC (thứ tự id), không theo hạng: đổi kỳ thống kê không đổi màu. Danh mục thứ 7 trở đi màu "Khác".
      *
      * @param  array{from: Carbon, prev: Carbon, to: Carbon}  $r
-     * @return list<array{name: string, revenue: int, qty: int}>
+     * @return list<array{name: string, revenue: int, qty: int, color: string}>
      */
     private function byCategory(array $r): array
     {
+        $palette = Category::orderBy('id')->limit(count(self::PALETTE))->pluck('id')->flip()->all();
+
         return $this->completedLines($r)
             ->join('plants', 'plants.id', '=', 'order_items.plant_id')
             ->join('categories', 'categories.id', '=', 'plants.category_id')
             ->groupBy('categories.id', 'categories.name')
-            ->selectRaw('categories.name AS name, SUM('.self::LINE_NET.') AS revenue, SUM(order_items.quantity) AS qty')
+            ->selectRaw('categories.id AS id, categories.name AS name, SUM('.self::LINE_NET.') AS revenue, SUM(order_items.quantity) AS qty')
             ->orderByDesc('revenue')->toBase()->get()
-            ->map(fn ($x) => ['name' => (string) $x->name, 'revenue' => (int) $x->revenue, 'qty' => (int) $x->qty])->values()->all();
+            // Xếp theo thứ tự màu (= thứ tự danh mục): hai phần cạnh nhau trên vòng luôn là cặp màu đã kiểm tra dễ phân biệt
+            ->sortBy(fn ($x) => $palette[(int) $x->id] ?? count(self::PALETTE))
+            ->map(fn ($x) => ['name' => (string) $x->name, 'revenue' => (int) $x->revenue, 'qty' => (int) $x->qty,
+                'color' => self::PALETTE[$palette[(int) $x->id] ?? -1] ?? self::OTHER_COLOR])->values()->all();
+    }
+
+    /**
+     * Đơn hoàn thành trong kỳ theo cách thanh toán: doanh thu hàng hóa (cùng công thức thẻ doanh thu) + số đơn.
+     *
+     * @param  array{from: Carbon, prev: Carbon, to: Carbon}  $r
+     * @return list<array{label: string, value: int, orders: int, color: string}>
+     */
+    private function byPayment(array $r): array
+    {
+        $rows = Order::status(OrderStatus::Completed)->where('completed_at', '>=', $r['from'])->where('completed_at', '<', $r['to'])
+            ->groupBy('payment_method')->selectRaw('payment_method, SUM('.self::NET_GOODS.') AS revenue, COUNT(*) AS n')
+            ->toBase()->get()->keyBy('payment_method');
+        $out = [];
+        foreach (PaymentMethod::cases() as $i => $m) {                       // màu cố định theo cách thanh toán
+            $row = $rows->get($m->value);
+            $label = match ($m) {                                             // nhãn ngắn cho chú thích biểu đồ
+                PaymentMethod::Cod => 'COD (tiền mặt)',
+                PaymentMethod::Vnpay => 'VNPay',
+                PaymentMethod::BankTransfer => 'Chuyển khoản',
+            };
+            $out[] = ['label' => $label, 'value' => (int) ($row->revenue ?? 0), 'orders' => (int) ($row->n ?? 0), 'color' => self::PALETTE[$i]];
+        }
+
+        return $out;
     }
 
     /**

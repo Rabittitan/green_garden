@@ -100,6 +100,14 @@ class ArticleController extends Controller
         return response()->json(['url' => $url, 'markdown' => '![Mô tả ảnh]('.$url.')']);
     }
 
+    /** Nút "Xem trước" trong trình soạn: hiện nội dung đang gõ (kể cả ảnh vừa chèn) đúng như khách sẽ thấy. Không lưu gì. */
+    public function preview(Request $request): JsonResponse
+    {
+        $data = $request->validate(['content' => ['nullable', 'string', 'max:20000']], [], ['content' => 'nội dung']);
+
+        return response()->json(['html' => (string) Article::renderMarkdown((string) ($data['content'] ?? ''))]);
+    }
+
     /**
      * @return array{title: string, summary: string, content: string, status: string, published_at?: string|null, image_url?: string|null, plant_ids?: array<int, int>}
      */

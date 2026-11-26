@@ -8,7 +8,7 @@
 
 | Chỉ số | Kết quả |
 |---|---|
-| Test tự động (MySQL thật) | **455 test qua**, 45.460 assertion, ~2 phút (lúc nghiệm thu 17/11: 370 test) |
+| Test tự động (MySQL thật) | **503 test qua**, 46.493 assertion, ~3 phút (lúc nghiệm thu 17/11: 370 test) |
 | Larastan level 6 | 0 lỗi |
 | Pint (định dạng) | sạch |
 | `composer audit` | 0 lỗ hổng |
@@ -21,7 +21,7 @@
 
 | Mã | Tiêu chí | Bằng chứng | Kết quả |
 |---|---|---|---|
-| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 455 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
+| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 503 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
 | **C2** | Toàn vẹn dữ liệu | `shop:reconcile` (9 bất biến: kho = sổ kho, tiền thu/hoàn = payments, giảm giá dòng = đơn, lượt mã, điểm đánh giá, lượt hữu ích, đơn quá hạn, chi tiêu hạng, suất flash sale đã bán = dòng hàng chưa hủy) chạy ở 3 chỗ: trong ma trận trạng thái (sau mỗi ô), trên CI (DB mới + seed), và sau kịch bản trình duyệt. Schema đổi 2 lần sau khi chốt, đều theo yêu cầu của chủ shop và chỉ THÊM: K8 (22/11/2026) thêm 6 cột thông tin chi tiết vào `plants` (cho phép trống, CHECK `chk_plants_growth_rate`); 23/11/2026 thêm bảng `home_slides` (slide trang chủ, không khóa ngoại); 25/11/2026 thêm cột `users.permissions` (phân quyền nhân viên, NULL = đủ quyền như cũ) và ví mã (bảng `coupon_gift_rules`, cột `coupons.owner_user_id / gift_rule_id / source_order_id`), flash sale (bảng `flash_sales`, `flash_sale_items`, cột `order_items.flash_sale_item_id`), phiếu kiểm kê (bảng `stock_counts`, `stock_count_items`, cột `stock_movements.stock_count_item_id`), phí ship theo vùng (bảng `shipping_zones`, `shipping_zone_provinces`, cột `plants.weight_grams`). Không đụng tiền, kho hay đơn | ✅ |
 | **C3** | Đồng thời | 12 kịch bản đua bằng **tiến trình PHP thật**, gồm: tranh cây cuối, bấm đúp nhiều tab, IPN đua với hết hạn, hủy đua với đặt mới, mã chứng từ, nhập kho đua với đặt hàng, đánh giá trùng, nhân viên hủy đua với IPN, giao đua với hủy, 2 admin cùng xác nhận hoàn tiền, 3 admin cùng xác nhận đơn, **admin sửa phạm vi mã giảm giá đúng lúc khách đặt hàng bằng mã đó (nhóm B, 11/2026)**. Kết quả: không tồn âm, không thu tiền 2 lần, không deadlock | ✅ |
 | **C4** | Luồng khép kín | `OrderStateMatrixTest`: 12 hành động × 9 trạng thái = 108 ô. Ô được phép phải chạy xong và đối soát sạch; ô bị cấm phải không để lại tác dụng phụ. Mọi trạng thái đều tới được, và mọi trạng thái chưa kết thúc đều có lối ra. Kịch bản trình duyệt đi qua đủ các nút bấm thật của cả 3 vai trò | ✅ |
@@ -54,7 +54,7 @@
   - Mở trang đơn **đã quá hạn thanh toán** thì đơn tự hủy. Đây đúng là việc cron vẫn làm mỗi phút, không ai lợi dụng được để làm gì khác.
 - **Quy tắc giữ nguyên:** đơn VNPay bỏ dở vẫn giữ lượt dùng mã "đơn đầu tiên" cho tới khi đơn hết hạn (B9). Mục đích là chống lạm dụng; thông báo lỗi có ghi rõ.
 
-## Thay đổi sau nghiệm thu (18–23/11/2026)
+## Thay đổi sau nghiệm thu (18–26/11/2026)
 
 Mỗi đợt đều chạy lại đủ: toàn bộ test trên MySQL, Larastan, Pint, kịch bản trình duyệt, `shop:reconcile`; lỗi sửa đều có test đỏ trên code cũ.
 
@@ -73,6 +73,8 @@ Mỗi đợt đều chạy lại đủ: toàn bộ test trên MySQL, Larastan, P
 | Tin tức | Admin đăng bài, ảnh tải lên, Markdown an toàn, nháp / hẹn giờ | Chặn SVG, HTML, `javascript:`; cần `storage:link` khi triển khai |
 | Hóa đơn + ghi chú | In hóa đơn bán lẻ (khách + admin, A4, không phụ thuộc CDN); khách sửa ghi chú cho shop tới khi shop xác nhận đơn | Trang hóa đơn chỉ đọc; PDF xuất thử 1 trang A4 |
 | Trang chủ | Slide ảnh admin quản lý (**bảng mới `home_slides`**, tối đa 10, slider tự viết không cần CDN); mục "Sản phẩm hot" = bán chạy 30 ngày | Hot chỉ tính đơn chờ xác nhận / đã xác nhận / đang giao / hoàn thành, cây đang bán |
+| Góp ý 24/11 (đợt 1–6) | Thống kê theo kỳ; phân quyền nhân viên; ví mã + tặng mã; flash sale; phiếu kiểm kê; phí ship theo vùng + cân nặng (**5 migration mới, đều chỉ thêm**, xem C2) | Mỗi luồng ghi tiền / kho có test đua; `shop:reconcile` thêm bất biến suất flash sale |
+| Góp ý 26/11 | Thống kê: 3 biểu đồ tròn (tình trạng đơn, doanh thu theo danh mục, theo cách thanh toán), màu cố định theo đối tượng, bảng màu đã kiểm tra mù màu, có vòng CSS dự phòng khi CDN lỗi. Trình soạn bài có "Xem trước" + ảnh thu nhỏ. "Sản phẩm hot" thành dải trượt ngang tự chạy; slide luôn tự chạy (cả khi máy bật giảm chuyển động / chuột nằm trên slide), có nút tạm dừng | **Lỗi ảnh bài viết không hiện**: thiếu link `public/storage` thì `/storage/...` rơi vào route ký của disk riêng tư → 403. Sửa `config/filesystems.php`: disk `public` tự phát file khi thiếu link, disk `local` thôi chiếm `/storage`. Test hồi quy đỏ trên code cũ |
 
 ## Chưa kiểm được trong môi trường này (không tính là đạt)
 

@@ -16,8 +16,6 @@
         ['Giá trị TB / đơn', $cur['aov'], $prev['aov'], true, 'fa-scale-balanced', '#e0f2f1', '#00695c', 'doanh thu ÷ số đơn'],
         ['Phí ship thu của khách', $cur['shipping'], $prev['shipping'], true, 'fa-truck', '#eceff1', '#455a64', 'không tính vào doanh thu hàng'],
     ];
-    $catMax = max(1, (int) collect($byCategory)->max('revenue'));
-    $rate = fn (int $n) => $rates['placed'] > 0 ? number_format($n * 100 / $rates['placed'], 1, ',', '.').'%' : '—';
 @endphp
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
     <div>
@@ -61,10 +59,6 @@
                     <div class="gg-stat-label">Doanh thu hàng hóa theo ngày · {{ $periodLabel }}</div>
                     <div class="gg-hero-value" data-testid="trend-total">@money($trend['total'])</div>
                 </div>
-                <div class="gg-mini-kpis">
-                    <div><small>Tỉ lệ hủy</small><strong>{{ $rate($rates['cancelled']) }}</strong></div>
-                    <div><small>Tỉ lệ trả hàng</small><strong>{{ $rate($rates['returned']) }}</strong></div>
-                </div>
             </div>
             <div class="gg-chart" id="revenue-chart-wrap">
                 <canvas id="revenue-chart" role="img" aria-label="Biểu đồ doanh thu hàng hóa theo ngày, {{ $periodLabel }}"></canvas>
@@ -83,26 +77,43 @@
                     </table>
                 </div>
             </details>
-            <p class="small text-muted mb-0 mt-2">Tính theo ngày giao thành công (giờ Việt Nam). Tỉ lệ hủy / trả hàng tính trên {{ number_format($rates['placed'], 0, ',', '.') }} đơn đặt trong kỳ.</p>
+            <p class="small text-muted mb-0 mt-2">Tính theo ngày giao thành công (giờ Việt Nam).</p>
         </div>
     </div>
 
-    {{-- ===== THEO DANH MỤC ===== --}}
+    {{-- ===== TÌNH TRẠNG ĐƠN ĐẶT TRONG KỲ ===== --}}
     <div class="col-xl-4">
         <div class="gg-panel gg-panel-body h-100">
-            <div class="gg-stat-label mb-2"><i class="fa fa-layer-group"></i> Doanh thu theo danh mục</div>
-            @if($byCategory === [])
-                <div class="text-muted small py-3">Chưa có đơn hoàn thành trong kỳ.</div>
-            @else
-                <ul class="gg-meters gg-meters-money" data-testid="by-category">
-                    @foreach($byCategory as $c)
-                        <li><span class="gg-meter-name" title="{{ $c['name'] }}">{{ $c['name'] }}</span>
-                            <span class="gg-meter-bar"><span style="width: {{ max(2, round($c['revenue'] * 100 / $catMax)) }}%"></span></span>
-                            <span class="gg-meter-value gg-meter-money">@money($c['revenue'])</span></li>
-                    @endforeach
-                </ul>
-                <p class="small text-muted mb-0 mt-2">Giá trị dòng hàng sau giảm giá (chưa trừ tiền hoàn lẻ của đơn).</p>
-            @endif
+            <div class="gg-stat-label mb-1"><i class="fa fa-clipboard-check"></i> Tình trạng đơn đặt · {{ $periodLabel }}</div>
+            <p class="small text-muted mb-2">Đơn đặt trong kỳ, theo trạng thái hiện tại. % trên tổng đơn đặt = tỉ lệ hoàn thành / hủy / trả hàng.</p>
+            @include('admin.partials.donut', ['id' => 'order-status', 'money' => false, 'centerLabel' => 'đơn đặt', 'empty' => 'Chưa có đơn đặt trong kỳ.',
+                'items' => [
+                    ['label' => 'Hoàn thành', 'value' => $rates['completed'], 'color' => DashboardController::STATUS_COLORS['completed']],
+                    ['label' => 'Đang xử lý / giao', 'value' => $rates['processing'], 'color' => DashboardController::STATUS_COLORS['processing']],
+                    ['label' => 'Trả hàng', 'value' => $rates['returned'], 'color' => DashboardController::STATUS_COLORS['returned']],
+                    ['label' => 'Đã hủy', 'value' => $rates['cancelled'], 'color' => DashboardController::STATUS_COLORS['cancelled']],
+                ]])
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    {{-- ===== THEO DANH MỤC ===== --}}
+    <div class="col-lg-6">
+        <div class="gg-panel gg-panel-body h-100">
+            <div class="gg-stat-label mb-1"><i class="fa fa-layer-group"></i> Doanh thu theo danh mục</div>
+            <p class="small text-muted mb-2">Giá trị dòng hàng sau giảm giá của đơn hoàn thành (chưa trừ tiền hoàn lẻ của đơn).</p>
+            @include('admin.partials.donut', ['id' => 'by-category', 'money' => true, 'centerLabel' => 'doanh thu', 'empty' => 'Chưa có đơn hoàn thành trong kỳ.',
+                'items' => array_map(fn ($c) => ['label' => $c['name'], 'value' => $c['revenue'], 'color' => $c['color']], $byCategory)])
+        </div>
+    </div>
+    {{-- ===== THEO CÁCH THANH TOÁN ===== --}}
+    <div class="col-lg-6">
+        <div class="gg-panel gg-panel-body h-100">
+            <div class="gg-stat-label mb-1"><i class="fa fa-wallet"></i> Doanh thu theo cách thanh toán</div>
+            <p class="small text-muted mb-2">Đơn hoàn thành trong kỳ, cùng công thức thẻ "Doanh thu hàng hóa".</p>
+            @include('admin.partials.donut', ['id' => 'by-payment', 'money' => true, 'centerLabel' => 'doanh thu', 'empty' => 'Chưa có đơn hoàn thành trong kỳ.',
+                'items' => $byPayment])
         </div>
     </div>
 </div>
@@ -160,9 +171,37 @@
 <script>
     (function () {
         var wrap = document.getElementById('revenue-chart-wrap');
-        if (!window.Chart || !wrap) { wrap && wrap.classList.add('gg-chart-off'); return; }   // CDN lỗi: còn bảng số liệu
-        var d = JSON.parse(document.getElementById('revenue-data').textContent);
+        // CDN lỗi: cột ngày còn bảng số liệu; biểu đồ tròn còn vòng vẽ bằng CSS + chú thích
+        if (!window.Chart || !wrap) { wrap && wrap.classList.add('gg-chart-off'); return; }
         var money = function (v) { return new Intl.NumberFormat('vi-VN').format(v) + 'đ'; };
+        var count = function (v) { return new Intl.NumberFormat('vi-VN').format(v); };
+
+        // ===== Biểu đồ tròn (vành khuyên): khe trắng 2px giữa các phần, rê chuột nổi phần đó lên =====
+        document.querySelectorAll('script[data-donut]').forEach(function (tag) {
+            var p = JSON.parse(tag.textContent), canvas = document.getElementById(tag.dataset.donut);
+            var total = p.values.reduce(function (a, b) { return a + b; }, 0);
+            new Chart(canvas, {
+                type: 'doughnut',
+                data: { labels: p.labels, datasets: [{ data: p.values, backgroundColor: p.colors, hoverBackgroundColor: p.colors,
+                    borderColor: '#fff', borderWidth: 2, hoverBorderColor: '#fff', borderRadius: 4, hoverOffset: 8 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '64%', layout: { padding: 8 },
+                    animation: { animateRotate: true, duration: 700 },
+                    plugins: {
+                        legend: { display: false },                    // chú thích HTML bên cạnh: tên + số + %
+                        tooltip: { backgroundColor: '#1f2a23', padding: 10, boxPadding: 4, callbacks: {
+                            label: function (i) {
+                                var pct = total > 0 ? (i.parsed * 100 / total).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) : 0;
+                                return ' ' + i.label + ': ' + (p.money ? money(i.parsed) : count(i.parsed) + ' đơn') + ' (' + pct + '%)';
+                            }
+                        } }
+                    }
+                }
+            });
+            canvas.closest('.gg-donut').classList.add('gg-donut-live');
+        });
+
+        var d = JSON.parse(document.getElementById('revenue-data').textContent);
         var compact = function (v) {
             if (v >= 1e9) return (v / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tỷ';
             if (v >= 1e6) return (v / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tr';
@@ -173,7 +212,11 @@
             // Cột theo ngày: doanh thu mỗi ngày là giá trị rời rạc
             type: 'bar',
             data: { labels: d.labels, datasets: [{
-                label: 'Doanh thu', data: d.revenue, backgroundColor: '#2e7d32', hoverBackgroundColor: '#1b5e20',
+                label: 'Doanh thu', data: d.revenue, hoverBackgroundColor: '#1b5e20',
+                backgroundColor: function (c) {                   // cột chuyển màu từ xanh lá tươi (trên) xuống xanh đậm (đáy)
+                    var a = c.chart.chartArea; if (!a) return '#2e7d32';
+                    var g = c.chart.ctx.createLinearGradient(0, a.bottom, 0, a.top); g.addColorStop(0, '#2e7d32'); g.addColorStop(1, '#4cc764'); return g;
+                },
                 borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'bottom', maxBarThickness: 18,
                 categoryPercentage: .85, barPercentage: .9, minBarLength: 0
             }] },
