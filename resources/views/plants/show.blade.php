@@ -26,8 +26,8 @@
                 <div class="mb-2"><span class="gg-stars fs-6">@for($i = 1; $i <= 5; $i++)<i class="fa{{ $i <= round($plant->rating_avg) ? 's' : 'r' }} fa-star"></i>@endfor</span>
                     <strong>{{ $plant->rating_avg }}</strong>/5 · <a href="#reviews" class="text-green">{{ $plant->rating_count }} đánh giá</a></div>
             @endif
-            @if($flash)
-                {{-- Flash sale đang chạy: giá thật vẫn do server tính lúc đặt hàng (còn đủ suất mới được giá sale) --}}
+            @if($flash && $flash->sale_price < $plant->price)
+                {{-- Flash sale đang chạy: giá thật vẫn do server tính lúc đặt hàng (còn đủ suất + rẻ hơn giá thường mới được giá sale) --}}
                 <div class="gg-flash-box my-2">
                     <div class="d-flex flex-wrap align-items-baseline gap-2">
                         <span class="badge bg-danger"><i class="fa fa-bolt"></i> Flash sale</span>

@@ -189,11 +189,11 @@ class DefectReportTest extends TestCase
     {
         $report = $this->defects()->create(User::factory()->staff()->create(), [$this->shelf(1, 1)[0] => ['type' => 'dead']], null);
         $this->actingAs(User::factory()->staff()->create(['permissions' => ['orders']]));
-        $this->get(route('admin.defect-reports.create'))->assertForbidden();
-        $this->get(route('admin.defects.report'))->assertForbidden();
+        $this->get(route('admin.defect-reports.create'))->assertNoAccess();
+        $this->get(route('admin.defects.report'))->assertNoAccess();
         $this->actingAs(User::factory()->staff()->create(['permissions' => ['inventory']]));
         $this->get(route('admin.defect-reports.show', $report))->assertOk()->assertSee('chờ quản trị viên duyệt');
-        $this->post(route('admin.defect-reports.reject', $report), ['reason' => 'x'])->assertForbidden();
+        $this->post(route('admin.defect-reports.reject', $report), ['reason' => 'x'])->assertNoAccess();
         $this->actingAs(User::factory()->staff()->create(['permissions' => ['reports']]))->get(route('admin.defects.report'))->assertOk();
         $this->assertSame('submitted', $report->refresh()->status);
     }

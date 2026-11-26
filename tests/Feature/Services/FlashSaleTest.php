@@ -179,14 +179,14 @@ class FlashSaleTest extends TestCase
     {
         $sale = $this->sales->create($this->staff, $this->window(), [1 => ['sale_price' => 199000, 'quantity_limit' => 3]]);
         $this->actingAs($this->staff)->post(route('admin.flash-sales.submit', $sale))->assertSessionHas('success');
-        $this->post(route('admin.flash-sales.approve', $sale))->assertForbidden();               // nhân viên không duyệt
+        $this->post(route('admin.flash-sales.approve', $sale))->assertNoAccess();               // nhân viên không duyệt
         $this->actingAs($this->admin())->get(route('admin.flash-sales.create'))->assertRedirect(route('admin.flash-sales.index'));
         $this->get(route('admin.flash-sales.show', $sale))->assertOk()->assertSee('Duyệt')->assertSee('Từ chối');
         $this->post(route('admin.flash-sales.approve', $sale))->assertSessionHas('success');
         $this->assertSame(FlashSaleStatus::Approved, $sale->refresh()->status);
 
         $limited = User::factory()->staff()->create(['permissions' => ['orders']]);
-        $this->actingAs($limited)->get(route('admin.flash-sales.index'))->assertForbidden();
+        $this->actingAs($limited)->get(route('admin.flash-sales.index'))->assertNoAccess();
         $this->actingAs($this->staff)->post(route('admin.flash-sales.store'), ['name' => 'X'] + $this->window() + ['items' => [3 => ['sale_price' => 100000]]])
             ->assertRedirect();
         $this->assertSame(2, FlashSale::count());

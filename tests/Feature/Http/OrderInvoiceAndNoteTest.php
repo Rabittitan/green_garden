@@ -40,9 +40,9 @@ class OrderInvoiceAndNoteTest extends TestCase
         $this->actingAs($this->customer())->get(route('orders.invoice', $order))->assertOk()->assertSee('ĐƠN ĐÃ HỦY')
             ->assertDontSee('Còn phải thu');
 
-        $this->actingAs(User::factory()->create())->get(route('orders.invoice', $order))->assertForbidden();
+        $this->actingAs(User::factory()->create())->get(route('orders.invoice', $order))->assertNoAccess();
         $this->actingAs(User::factory()->staff()->create())->get(route('admin.orders.invoice', $order))->assertOk()->assertSee($order->code);
-        $this->actingAs($this->customer())->get(route('admin.orders.invoice', $order))->assertForbidden();
+        $this->actingAs($this->customer())->get(route('admin.orders.invoice', $order))->assertNoAccess();
         auth()->logout();
         $this->get(route('orders.invoice', $order))->assertRedirect(route('login'));
     }

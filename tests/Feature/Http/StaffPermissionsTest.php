@@ -39,16 +39,16 @@ class StaffPermissionsTest extends TestCase
         }
         $this->assertStringNotContainsString('Kho &amp; nhập hàng', $menu);                // nhóm rỗng: ẩn cả tiêu đề
         $this->get(route('admin.articles.index'))->assertOk();
-        $this->get(route('admin.plants.index'))->assertForbidden();
-        $this->get(route('admin.inventory.show', 1))->assertForbidden();
-        $this->get(route('admin.staff.index'))->assertForbidden();
+        $this->get(route('admin.plants.index'))->assertNoAccess();
+        $this->get(route('admin.inventory.show', 1))->assertNoAccess();
+        $this->get(route('admin.staff.index'))->assertNoAccess();
     }
 
     public function test_staff_without_any_permission_sees_a_friendly_page(): void
     {
         $none = User::factory()->staff()->create(['permissions' => []]);
         $this->actingAs($none)->get(route('admin.dashboard'))->assertOk()->assertSee('chưa được cấp quyền dùng mục nào');
-        $this->get(route('admin.orders.index'))->assertForbidden();
+        $this->get(route('admin.orders.index'))->assertNoAccess();
     }
 
     public function test_existing_staff_keep_full_staff_access_but_never_admin_only(): void
@@ -59,7 +59,7 @@ class StaffPermissionsTest extends TestCase
             $this->assertTrue($old->hasPermission($p));
         }
         $this->actingAs($old)->get(route('admin.dashboard'))->assertOk()->assertSee('Thống kê kinh doanh');
-        $this->get(route('admin.coupons.index'))->assertForbidden();
+        $this->get(route('admin.coupons.index'))->assertNoAccess();
         $this->assertFalse($this->customer()->hasPermission(StaffPermission::Orders));
     }
 

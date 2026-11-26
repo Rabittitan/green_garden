@@ -88,7 +88,8 @@
     </div>
 </nav>
 
-{{-- ===== THÔNG BÁO (flash message) ===== --}}
+{{-- ===== THÔNG BÁO ===== flash message: nổi (partials/toasts), không đẩy trang; nhắc xác thực email: cố định ở đây --}}
+@include('partials.toasts')
 <div class="container mt-3">
     {{-- Nhắc xác thực email (ẩn ở chính trang xác thực để không lặp) --}}
     @auth
@@ -102,18 +103,6 @@
             </div>
         @endif
     @endauth
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show"><i class="fa fa-check-circle"></i> {{ session('success') }}
-            <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show"><i class="fa fa-triangle-exclamation"></i> {{ session('error') }}
-            <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-    @endif
-    @if(session('warning'))
-        <div class="alert alert-warning alert-dismissible fade show"><i class="fa fa-circle-info"></i> {{ session('warning') }}
-            <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-    @endif
 </div>
 
 {{-- ===== NỘI DUNG RIÊNG TỪNG TRANG ===== --}}
@@ -161,6 +150,7 @@
 @include('partials.social-bubble')
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('js/toasts.js') }}?v={{ @filemtime(public_path('js/toasts.js')) }}"></script>
 <script>
     // Ô "Hiện mật khẩu": bật/tắt hiển thị mọi ô mật khẩu trong cùng form
     document.querySelectorAll('[data-show-password]').forEach(function (box) {

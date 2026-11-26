@@ -32,7 +32,7 @@ class PurchasingHttpTest extends TestCase
         $this->get(route('admin.purchase-requests.edit', $pr))->assertOk();
         $this->post(route('admin.purchase-requests.transition', $pr), ['to' => 'submitted'])->assertSessionHas('success');
 
-        $this->post(route('admin.purchase-requests.approve', $pr))->assertForbidden();   // nhân viên không duyệt
+        $this->post(route('admin.purchase-requests.approve', $pr))->assertNoAccess();   // nhân viên không duyệt
         $this->actingAs($this->admin())->get(route('admin.purchase-requests.show', $pr))->assertSee('Duyệt (theo số');
         $item = $pr->items()->sole();
         $this->post(route('admin.purchase-requests.approve', $pr), ['approved' => [$item->id => 10]])->assertSessionHas('success');

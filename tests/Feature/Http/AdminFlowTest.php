@@ -23,11 +23,11 @@ class AdminFlowTest extends TestCase
 
     public function test_access_control(): void
     {
-        $this->actingAs($this->customer())->get(route('admin.dashboard'))->assertForbidden();
+        $this->actingAs($this->customer())->get(route('admin.dashboard'))->assertNoAccess();
         $staff = User::factory()->staff()->create();
         $this->actingAs($staff)->get(route('admin.orders.index'))->assertOk();
-        $this->actingAs($staff)->get(route('admin.coupons.index'))->assertForbidden();
-        $this->actingAs($staff)->get(route('admin.tiers.index'))->assertForbidden();
+        $this->actingAs($staff)->get(route('admin.coupons.index'))->assertNoAccess();
+        $this->actingAs($staff)->get(route('admin.tiers.index'))->assertNoAccess();
         $staff->forceFill(['is_active' => false])->save();
         $this->actingAs($staff)->get(route('admin.orders.index'))->assertRedirect(route('login'));   // bị khóa: đăng xuất luôn
         $this->assertGuest();
@@ -121,13 +121,13 @@ class AdminFlowTest extends TestCase
         $staff = User::factory()->staff()->create();
         $this->actingAs($staff)->get(route('admin.inventory.show', 1))->assertOk()
             ->assertSee('Lập phiếu báo lỗi')->assertDontSee(route('admin.stock-counts.index'), false);
-        $this->get(route('admin.stock-counts.index'))->assertForbidden();
+        $this->get(route('admin.stock-counts.index'))->assertNoAccess();
         $codes = PlantUnit::where('plant_id', 1)->where('status', 'in_stock')->orderBy('id')->take(2)->pluck('code');
         $this->post(route('admin.defect-reports.store'), ['lines' => [$codes[0] => ['type' => 'dead'], $codes[1] => ['type' => 'pest', 'note' => 'Rệp']]])
             ->assertRedirect();
         $report = DefectReport::sole();
         $this->assertSame(30, $this->stock(1));                                            // chưa duyệt: kho chưa đổi
-        $this->post(route('admin.defect-reports.approve', $report))->assertForbidden();
+        $this->post(route('admin.defect-reports.approve', $report))->assertNoAccess();
 
         $this->actingAs($this->admin());
         $this->get(route('admin.defect-reports.show', $report))->assertOk()->assertSee('Duyệt &amp; xuất hủy 2 chậu', false);
@@ -181,7 +181,7 @@ class AdminFlowTest extends TestCase
     {
         $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->customer()))->assertSessionHas('success');
         $this->assertFalse($this->customer()->is_active);
-        $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->admin()))->assertForbidden();
+        $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->admin()))->assertNoAccess();
     }
 
     public function test_console_commands(): void

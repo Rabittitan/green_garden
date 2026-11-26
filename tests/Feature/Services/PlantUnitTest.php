@@ -184,7 +184,7 @@ class PlantUnitTest extends TestCase
             ->assertJson(['code' => $code, 'plant_id' => 1, 'status' => 'sold', 'status_label' => 'Đã giao']);
         $this->getJson(route('admin.units.check', ['code' => 'ZZZZZZZZ']))->assertNotFound();
         $this->getJson(route('admin.units.check', ['code' => 'x']))->assertStatus(422);
-        $this->get(route('admin.units.index', ['ma' => $code]))->assertForbidden();        // tra cứu: nhóm Kho
+        $this->get(route('admin.units.index', ['ma' => $code]))->assertNoAccess();        // tra cứu: nhóm Kho
 
         $this->actingAs(User::factory()->staff()->create(['permissions' => ['inventory']]));
         $this->get(route('admin.units.index', ['ma' => UnitCode::format($code)]))->assertOk()

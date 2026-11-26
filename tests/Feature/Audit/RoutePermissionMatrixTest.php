@@ -29,7 +29,8 @@ use Tests\TestCase;
 
 /**
  * H5 — Ma trận phân quyền (tiêu chí C5). Tự đọc MỌI route admin từ router nên route mới thêm sau này
- * cũng tự động được kiểm: khách vãng lai -> đăng nhập, khách hàng -> 403, nhân viên -> 403 ở route chỉ dành cho quản trị.
+ * cũng tự động được kiểm: khách vãng lai -> đăng nhập, khách hàng -> về trang chủ (không có quyền), nhân viên -> về trang đầu
+ * khu quản trị ở route chỉ dành cho quản trị.
  */
 class RoutePermissionMatrixTest extends TestCase
 {
@@ -85,19 +86,19 @@ class RoutePermissionMatrixTest extends TestCase
 
             auth()->logout();
             $this->call($method, $url)->assertRedirect(route('login'));
-            $this->actingAs($this->customer())->call($method, $url)->assertForbidden();
+            $this->actingAs($this->customer())->call($method, $url)->assertNoAccess('home');      // khách -> trang chủ shop
 
-            $staffStatus = $this->actingAs($staff)->call($method, $url)->getStatusCode();
-            $adminOnly ? $this->assertSame(403, $staffStatus, "Nhân viên vào được route chỉ dành cho quản trị: {$r->getName()}")
-                : $this->assertNotSame(403, $staffStatus, "Nhân viên bị chặn nhầm ở {$r->getName()}");
-            $this->assertNotSame(403, $this->actingAs($this->admin())->call($method, $url)->getStatusCode(), "Quản trị bị chặn ở {$r->getName()}");
+            $staffDenied = $this->isDenied($this->actingAs($staff)->call($method, $url));
+            $adminOnly ? $this->assertTrue($staffDenied, "Nhân viên vào được route chỉ dành cho quản trị: {$r->getName()}")
+                : $this->assertFalse($staffDenied, "Nhân viên bị chặn nhầm ở {$r->getName()}");
+            $this->assertFalse($this->isDenied($this->actingAs($this->admin())->call($method, $url)), "Quản trị bị chặn ở {$r->getName()}");
             $checked++;
         }
         $this->assertGreaterThan(50, $checked);
     }
 
     /**
-     * Phân quyền nhân viên (đợt 2): route nào gắn 'admin:<quyền>' thì nhân viên THIẾU quyền đó nhận 403
+     * Phân quyền nhân viên (đợt 2): route nào gắn 'admin:<quyền>' thì nhân viên THIẾU quyền đó bị chặn (về trang đầu khu quản trị)
      * (trước khi nạp model: không dò được id), nhân viên CHỈ có đúng quyền đó thì vào được. Tự đọc router.
      */
     public function test_staff_permission_groups_guard_their_routes(): void
@@ -118,20 +119,20 @@ class RoutePermissionMatrixTest extends TestCase
             $url = $this->url($r, $fx);
 
             $without = User::factory()->staff()->create(['permissions' => array_values(array_diff($perms, [$perm]))]);
-            $this->actingAs($without)->call($method, $url)->assertForbidden();
+            $this->actingAs($without)->call($method, $url)->assertNoAccess($perm === 'reports' ? 'admin.orders.index' : 'admin.dashboard');   // -> trang đầu của nhân viên
             $only = User::factory()->staff()->create(['permissions' => [$perm]]);
-            $this->assertNotSame(403, $this->actingAs($only)->call($method, $url)->getStatusCode(), "Nhân viên có quyền {$perm} bị chặn ở {$r->getName()}");
+            $this->assertFalse($this->isDenied($this->actingAs($only)->call($method, $url)), "Nhân viên có quyền {$perm} bị chặn ở {$r->getName()}");
             $checked++;
         }
         $this->assertGreaterThan(40, $checked);
     }
 
-    /** F2: không lộ id nào tồn tại qua 404 / 403. */
+    /** F2: không lộ id nào tồn tại qua 404 / 403: id có hay không đều bị chuyển về như nhau. */
     public function test_unauthorized_users_get_403_for_missing_and_existing_ids_alike(): void
     {
         $this->actingAs($this->customer());
         foreach (['admin.orders.show' => 'order', 'admin.goods-receipts.show' => 'goods_receipt', 'admin.customers.show' => 'user'] as $name => $param) {
-            $this->get(route($name, [$param => 987654]))->assertForbidden();
+            $this->get(route($name, [$param => 987654]))->assertNoAccess();
         }
     }
 
@@ -159,8 +160,8 @@ class RoutePermissionMatrixTest extends TestCase
             ['DELETE', route('comments.destroy', $fx['comment'])],
         ];
         foreach ($cases as $c) {
-            $status = $this->actingAs($other)->call($c[0], $c[1], $c[2] ?? [])->getStatusCode();
-            $this->assertContains($status, [403, 404], "Người khác truy cập được {$c[0]} {$c[1]} (HTTP {$status})");
+            $res = $this->actingAs($other)->call($c[0], $c[1], $c[2] ?? []);
+            $this->assertTrue($this->isDenied($res) || $res->getStatusCode() === 404, "Người khác truy cập được {$c[0]} {$c[1]} (HTTP {$res->getStatusCode()})");
         }
         $this->assertSame(1, $this->customer()->addresses()->count(), 'Địa chỉ của chủ bị người khác xóa');
         $this->assertNotNull(Comment::find($fx['comment']));

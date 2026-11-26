@@ -89,9 +89,19 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
   await step('nhân viên: không thấy menu quản trị tiền / mã / hạng', async () => {
     await staff.goto(B + '/admin'); const html = await staff.content();
     if (html.includes('Mã giảm giá') || html.includes('Hạng thành viên')) throw new Error('nhân viên thấy menu chỉ dành cho quản trị');
-    const r = await staff.goto(B + '/admin/coupons'); if (r.status() !== 403) throw new Error('vào được /admin/coupons: ' + r.status());
+    await staff.goto(B + '/admin/coupons');                                       // không có quyền -> về trang đầu khu quản trị + thông báo nổi
+    if (new URL(staff.url()).pathname !== '/admin') throw new Error('không bị chuyển về trang đầu: ' + staff.url());
+    if (!(await staff.isVisible('.gg-toast.error'))) throw new Error('thiếu thông báo nổi "không có quyền"');
+    await expect(staff, 'Bạn không có quyền truy cập trang đó.');
   });
   // ===== KHÁCH: sổ địa chỉ chọn Tỉnh -> Phường/xã (K9: tải danh sách xã bằng JS, CSP vẫn áp)
+  await step('khách: thêm vào giỏ từ giữa trang danh sách -> giữ nguyên chỗ cuộn, thông báo nổi', async () => {
+    await customer.goto(B + '/cay-canh'); const btn = (await customer.$$('form[action*="/gio-hang/them/"] button'))[5];
+    await btn.scrollIntoViewIfNeeded(); const before = await customer.evaluate(() => scrollY);
+    await Promise.all([customer.waitForNavigation(), btn.click()]); await customer.waitForSelector('.gg-toast.success');
+    const after = await customer.evaluate(() => scrollY);
+    if (before < 200 || Math.abs(after - before) > 40) throw new Error('trang nhảy: ' + before + ' -> ' + after);
+  });
   await step('khách: bong bóng mạng xã hội mở / đóng, link mở tab mới', async () => {
     await customer.goto(B + '/'); await customer.click('.gg-social-toggle');
     const links = await customer.$$eval('.gg-social-item', as => as.filter(a => a.getBoundingClientRect().width > 0 && a.target === '_blank').length);
@@ -191,11 +201,13 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     }
     await admin.setViewportSize({ width: 1280, height: 720 });
   });
-  await step('trang lỗi tiếng Việt (404, 403) có CSS, không lộ chi tiết', async () => {
+  await step('trang lỗi 404 tiếng Việt; link không có quyền -> về trang chủ, thông báo nổi đóng được', async () => {
     const r = await customer.goto(B + '/khong-co-trang-nay'); if (r.status() !== 404) throw new Error('404? ' + r.status());
     await expect(customer, 'Không tìm thấy trang');
-    const f = await customer.goto(B + '/admin'); if (f.status() !== 403) throw new Error('403? ' + f.status());
-    await expect(customer, 'Không có quyền truy cập');
+    await customer.goto(B + '/admin'); if (new URL(customer.url()).pathname !== '/') throw new Error('không về trang chủ: ' + customer.url());
+    const pos = await customer.$eval('.gg-toast.error', t => getComputedStyle(t.parentElement).position);
+    if (pos !== 'fixed') throw new Error('thông báo không nổi: ' + pos);
+    await customer.click('.gg-toast.error [data-toast-close]'); await customer.waitForSelector('.gg-toast.error', { state: 'detached', timeout: 2000 });
     const h = await customer.goto(B + '/'); const csp = h.headers()['content-security-policy'] || '';
     if (!csp.includes("frame-ancestors 'none'")) throw new Error('thiếu CSP');
   });

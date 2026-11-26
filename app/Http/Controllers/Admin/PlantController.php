@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\FlashSaleStatus;
 use App\Enums\GoodsReceiptStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\FlashSaleItem;
 use App\Models\GoodsReceiptItem;
 use App\Models\Plant;
 use App\Services\InventoryService;
+use App\Support\Format;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -102,7 +105,14 @@ class PlantController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $plant->update($data);                                          // stock / cost_price không có trong $data
 
-        return redirect()->route('admin.plants.index')->with('success', 'Đã cập nhật cây!');
+        // Cây đang / sắp có flash sale đã duyệt mà giá mới không còn cao hơn giá sale: đợt sale đó thôi tác dụng với cây này
+        $outpriced = FlashSaleItem::with('sale')->where('plant_id', $plant->id)->where('sale_price', '>=', $plant->price)
+            ->whereHas('sale', fn ($q) => $q->where('status', FlashSaleStatus::Approved->value)->where('ends_at', '>', now()))->get();
+        $redirect = redirect()->route('admin.plants.index')->with('success', 'Đã cập nhật cây!');
+
+        return $outpriced->isEmpty() ? $redirect : $redirect->with('warning', 'Lưu ý: giá mới '.Format::money($plant->price)
+            .' không cao hơn giá flash sale ('.$outpriced->map(fn ($i) => "\"{$i->sale->name}\" ".Format::money($i->sale_price))->implode(', ')
+            .'). Khách sẽ trả giá thường; đợt sale không áp cho cây này nữa.');
     }
 
     /** Xóa mềm: đơn cũ, sổ kho, đánh giá vẫn giữ nguyên tham chiếu. */

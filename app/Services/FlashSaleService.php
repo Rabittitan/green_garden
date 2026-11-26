@@ -23,8 +23,12 @@ use Illuminate\Support\Facades\DB;
  */
 class FlashSaleService
 {
+    /** Giá sale chỉ có hiệu lực khi THẤP HƠN giá thường hiện tại của cây (giá thường có thể bị hạ sau khi duyệt đợt sale). */
+    public const CHEAPER_THAN_LIST = 'flash_sale_items.sale_price < (SELECT p.price FROM plants p WHERE p.id = flash_sale_items.plant_id)';
+
     /**
      * Dòng sale ĐANG CHẠY cho các cây, theo plant_id. Có $lock: khóa dòng (theo id) — chỉ gọi trong transaction đặt / hủy đơn.
+     * Bỏ qua dòng có giá sale không còn thấp hơn giá thường (đã hạ giá thường sau khi duyệt): khách trả giá thường, không ăn suất.
      *
      * @param  list<int>  $plantIds
      * @return Collection<int, FlashSaleItem>
@@ -39,6 +43,7 @@ class FlashSaleService
             $rows = FlashSaleItem::whereIn('plant_id', $plantIds)
                 ->whereHas('sale', fn ($s) => $s->where('status', FlashSaleStatus::Approved->value)
                     ->where('starts_at', '<=', now())->where('ends_at', '>', now()))
+                ->whereRaw(self::CHEAPER_THAN_LIST)
                 ->orderBy('id')->lockForUpdate()->get();
         } else {
             // Trang xem / báo giá thử: 1 câu JOIN, dựng sẵn quan hệ sale (tên, giờ) để view không truy vấn thêm
@@ -46,6 +51,7 @@ class FlashSaleService
                 ->whereIn('flash_sale_items.plant_id', $plantIds)
                 ->where('flash_sales.status', FlashSaleStatus::Approved->value)
                 ->where('flash_sales.starts_at', '<=', now())->where('flash_sales.ends_at', '>', now())
+                ->whereRaw(self::CHEAPER_THAN_LIST)
                 ->orderBy('flash_sale_items.id')
                 ->select('flash_sale_items.*', 'flash_sales.name as fs_name', 'flash_sales.starts_at as fs_starts_at', 'flash_sales.ends_at as fs_ends_at')
                 ->get()->each(function (FlashSaleItem $item) {
@@ -157,10 +163,14 @@ class FlashSaleService
             if ($s->ends_at->isPast()) {
                 throw new BusinessException('Đợt sale đã qua giờ kết thúc, không duyệt được.');
             }
-            $items = $s->items()->with('plant')->get();
+            $items = $s->items()->get();
+            // Khóa các cây của đợt (id tăng dần) TRƯỚC khi kiểm trùng giờ: 2 admin duyệt cùng lúc 2 đợt có chung cây thì
+            // người sau phải chờ, rồi thấy đợt kia đã duyệt. Thứ tự flash_sales -> plants; đặt hàng không khóa flash_sales nên không vòng.
+            $plants = Plant::withTrashed()->whereIn('id', $items->pluck('plant_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             foreach ($items as $it) {
-                if ($it->sale_price >= $it->plant->price) {
-                    throw new BusinessException("Giá sale của \"{$it->plant->name}\" phải thấp hơn giá bán hiện tại (".Format::money($it->plant->price).').');
+                $plant = $plants[$it->plant_id];
+                if ($it->sale_price >= $plant->price) {
+                    throw new BusinessException("Giá sale của \"{$plant->name}\" phải thấp hơn giá bán hiện tại (".Format::money($plant->price).').');
                 }
             }
             $clash = FlashSaleItem::with(['sale', 'plant'])->whereIn('plant_id', $items->pluck('plant_id'))

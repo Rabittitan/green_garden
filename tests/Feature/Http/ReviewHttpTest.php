@@ -58,7 +58,7 @@ class ReviewHttpTest extends TestCase
         $this->get(route('plants.show', 1))->assertDontSee('Bao lâu tưới');
 
         $this->actingAs($this->customer())->delete(route('reviews.destroy', $review))->assertSessionHas('success');
-        $this->actingAs($this->customer())->delete(route('comments.destroy', $q))->assertForbidden();   // không phải chủ câu hỏi
+        $this->actingAs($this->customer())->delete(route('comments.destroy', $q))->assertNoAccess();   // không phải chủ câu hỏi
         $this->actingAs($voter)->delete(route('comments.destroy', $q))->assertSessionHas('success');
         $this->artisan('shop:reconcile')->assertSuccessful();
     }

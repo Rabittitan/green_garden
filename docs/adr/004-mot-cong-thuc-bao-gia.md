@@ -38,3 +38,11 @@ Gom về một chỗ thì tính năng giá mới nào cũng phải sửa `Pricin
 ## Action Items
 1. [x] Test phân bổ (tổng luôn khớp, tái lập được) và test chọn phương án lợi hơn
 2. [ ] Khuyến mãi mới: thêm vào `PricingService`, không tính giá ở controller hay view
+
+## Bổ sung 26/11/2026: giá flash sale không bao giờ cao hơn giá thường
+Lỗi tìm ra khi rà soát: hạ giá thường xuống dưới giá sale trong lúc sale chạy thì khách vẫn bị tính giá sale (đắt hơn), ăn 1 suất,
+trang cây hiện "−-60%". Sửa: đơn giá của một dòng chỉ do `PricingService::unitPrice()` quyết định (báo giá, đặt hàng **và** trang giỏ hàng
+cùng dùng), giá sale chỉ áp khi còn đủ suất **và** thấp hơn giá thường hiện tại; `FlashSaleService::activeItems()` lọc sẵn ở SQL
+(`CHEAPER_THAN_LIST`) nên mọi trang hiển thị cũng không còn quảng cáo "sale" đắt hơn giá thường. Test hồi quy:
+`tests/Feature/Regression/FlashSaleBelowListPriceTest`.
+

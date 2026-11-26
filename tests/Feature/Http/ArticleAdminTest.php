@@ -160,8 +160,8 @@ class ArticleAdminTest extends TestCase
 
     public function test_customers_cannot_reach_article_admin(): void
     {
-        $this->actingAs($this->customer())->get(route('admin.articles.index'))->assertForbidden();
-        $this->post(route('admin.articles.store'), $this->payload())->assertForbidden();
+        $this->actingAs($this->customer())->get(route('admin.articles.index'))->assertNoAccess();
+        $this->post(route('admin.articles.store'), $this->payload())->assertNoAccess();
         $this->postJson(route('admin.articles.images'), ['image' => UploadedFile::fake()->image('a.jpg')])->assertForbidden();
         $this->assertCount(0, Storage::disk('public')->allFiles());
     }

@@ -69,8 +69,8 @@ class ContactChannelTest extends TestCase
     public function test_other_roles_cannot_edit(): void
     {
         $this->actingAs(User::factory()->staff()->create(['permissions' => ['orders']]))
-            ->put(route('admin.contact-channels.update'), $this->form())->assertForbidden();
-        $this->actingAs($this->customer())->get(route('admin.contact-channels.index'))->assertForbidden();
+            ->put(route('admin.contact-channels.update'), $this->form())->assertNoAccess();
+        $this->actingAs($this->customer())->get(route('admin.contact-channels.index'))->assertNoAccess();
         $this->assertSame('https://zalo.me/0900000001', ContactChannel::where('channel', 'zalo')->value('url'));
     }
 }

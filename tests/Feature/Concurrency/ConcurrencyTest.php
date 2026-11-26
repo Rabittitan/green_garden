@@ -336,6 +336,27 @@ class ConcurrencyTest extends TestCase
         $this->assertLedgerConsistent();
     }
 
+    /** 2 quản trị viên cùng lúc duyệt 2 đợt sale trùng giờ có chung cây: chỉ 1 đợt được duyệt (lỗi duyệt trùng 26/11). */
+    public function test_two_admins_approving_overlapping_sales_only_one_wins(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $admin2 = User::factory()->create(['role' => 'admin']);
+        $sales = [];
+        foreach ([[1, 3], [3, 5]] as $i => $plants) {                                         // chung cây #3
+            $sale = new FlashSale(['name' => 'Đợt '.$i, 'starts_at' => now()->addHour(), 'ends_at' => now()->addHours(3)]);
+            $sale->forceFill(['created_by' => $staff->id, 'status' => 'submitted'])->save();
+            foreach ($plants as $p) {
+                $sale->items()->create(['plant_id' => $p, 'sale_price' => 1000, 'quantity_limit' => null]);
+            }
+            $sales[] = $sale;
+        }
+        $results = $this->race([['flash-approve', (string) $sales[0]->id, (string) $this->admin()->id], ['flash-approve', (string) $sales[1]->id, (string) $admin2->id]]);
+
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $this->assertSame(1, FlashSale::where('status', 'approved')->count());
+        $this->assertSame(1, FlashSale::where('status', 'submitted')->count());
+    }
+
     /** 2 admin cùng xác nhận đã hoàn 1 khoản: chỉ ghi nhận 1 lần, không hoàn trùng. */
     public function test_double_refund_confirmation_is_recorded_once(): void
     {

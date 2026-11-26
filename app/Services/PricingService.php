@@ -15,7 +15,7 @@ use App\Support\Allocator;
 /**
  * Báo giá — MỘT công thức duy nhất cho cả xem trước và đặt hàng:
  *
- *   1. subtotal          = Σ đơn giá × số lượng; đơn giá = giá sale nếu cây đang trong flash sale ĐÃ DUYỆT và còn đủ suất
+ *   1. subtotal          = Σ đơn giá × số lượng; đơn giá = giá sale nếu cây đang trong flash sale ĐÃ DUYỆT, còn đủ suất và giá sale < giá thường
  *                          cho cả số lượng của dòng, ngược lại = giá bán (DB). Giảm hạng + mã tính TIẾP trên giá này.
  *   2. member_discount   = min(floor(subtotal × %hạng), trần hạng)          → phân bổ theo thành tiền dòng
  *   3. coupon_discount   = theo mã, tính trên (dòng − giảm hạng của dòng) trong phạm vi mã → phân bổ
@@ -140,11 +140,23 @@ class PricingService
     private function freshLines(array $items): array
     {
         return array_map(function ($it) {
-            $flash = $it['flash'] ?? null;
-            $applied = $flash !== null && $flash->covers($it['quantity']) ? $flash : null;
+            [$unit, $applied] = self::unitPrice($it['plant'], $it['quantity'], $it['flash'] ?? null);
 
-            return new QuoteLine($it['plant'], $it['quantity'], $applied ? $applied->sale_price : (int) $it['plant']->price, $applied);
+            return new QuoteLine($it['plant'], $it['quantity'], $unit, $applied);
         }, $items);
+    }
+
+    /**
+     * Đơn giá 1 dòng — quy tắc DUY NHẤT (báo giá, đặt hàng, giỏ hàng): giá sale khi đợt sale còn đủ suất cho CẢ dòng
+     * VÀ giá sale thấp hơn giá thường hiện tại; ngược lại giá thường. Khách luôn trả giá thấp hơn trong hai giá.
+     *
+     * @return array{0: int, 1: FlashSaleItem|null} [đơn giá, suất sale được áp]
+     */
+    public static function unitPrice(Plant $plant, int $quantity, ?FlashSaleItem $flash): array
+    {
+        $applied = $flash !== null && $flash->covers($quantity) && $flash->sale_price < (int) $plant->price ? $flash : null;
+
+        return [$applied ? $applied->sale_price : (int) $plant->price, $applied];
     }
 
     /**

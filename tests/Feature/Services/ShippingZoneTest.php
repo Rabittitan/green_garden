@@ -81,6 +81,6 @@ class ShippingZoneTest extends TestCase
 
         $this->delete(route('admin.shipping-zones.destroy', $north))->assertRedirect();
         $this->assertSame(1, ShippingZone::where('is_default', true)->count());             // vùng khác thành mặc định
-        $this->actingAs(User::factory()->staff()->create())->get(route('admin.shipping-zones.index'))->assertForbidden();
+        $this->actingAs(User::factory()->staff()->create())->get(route('admin.shipping-zones.index'))->assertNoAccess();
     }
 }

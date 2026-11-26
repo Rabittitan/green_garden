@@ -23,8 +23,10 @@ Mọi mục dưới đây là **test tự động** (chạy trong CI), không ph
 
 ## 2. Phân quyền — `tests/Feature/Audit/RoutePermissionMatrixTest.php`
 Tự đọc mọi route `admin.*` từ router (route mới thêm tự được kiểm): khách vãng lai → đăng nhập,
-khách → 403, nhân viên → 403 ở route tiền / mã / hạng / duyệt nhập, quản trị → được.
-Tài nguyên của khách (đơn, địa chỉ, bình luận): người khác → 403/404.
+khách → bị chặn, nhân viên → bị chặn ở route tiền / mã / hạng / duyệt nhập, quản trị → được.
+Tài nguyên của khách (đơn, địa chỉ, bình luận): người khác → bị chặn / 404.
+Từ 26/11/2026 "bị chặn" trên trang web = chuyển về trang đầu của vai trò kèm thông báo (App\Support\NoAccessRedirect);
+gọi JSON vẫn nhận 403.
 
 ## 3. Gây lỗi giữa chừng — `tests/Feature/Audit/FailureInjectionTest.php`
 Đặt hàng, hủy đơn, IPN, nhập kho, chốt chi tiêu, xác nhận hoàn tiền: nổ ở bước cuối → rollback sạch, chạy lại được.

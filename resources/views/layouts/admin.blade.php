@@ -81,21 +81,7 @@
             </div>
         </header>
         <main class="gg-admin-content">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show"><i class="fa fa-check-circle"></i> {{ session('success') }}
-                    <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-            @endif
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show"><i class="fa fa-triangle-exclamation"></i> {{ session('error') }}
-                    <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-            @endif
-            @if(session('warning'))
-                <div class="alert alert-warning alert-dismissible fade show"><i class="fa fa-circle-info"></i> {{ session('warning') }}
-                    <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-            @endif
-            @if($errors->any())
-                <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
-            @endif
+            @include('partials.toasts', ['withErrors' => true])
 
             @yield('content')
         </main>
@@ -110,6 +96,7 @@
         document.addEventListener('click', function (e) { if (bar.classList.contains('show') && !bar.contains(e.target)) bar.classList.remove('show'); });
     })();
 </script>
+<script src="{{ asset('js/toasts.js') }}?v={{ @filemtime(public_path('js/toasts.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

@@ -181,8 +181,8 @@ class CustomerFlowTest extends TestCase
     {
         $order = $this->place();
         $stranger = User::factory()->create();
-        $this->actingAs($stranger)->get(route('orders.show', $order))->assertForbidden();
-        $this->actingAs($stranger)->post(route('orders.cancel', $order), ['reason' => 'x'])->assertForbidden();
+        $this->actingAs($stranger)->get(route('orders.show', $order))->assertNoAccess();
+        $this->actingAs($stranger)->post(route('orders.cancel', $order), ['reason' => 'x'])->assertNoAccess();
 
         $this->actingAs($this->customer())->post(route('orders.cancel', $order), ['reason' => 'Đổi ý'])->assertSessionHas('success');
         $this->assertSame(OrderStatus::Cancelled, $order->refresh()->status);

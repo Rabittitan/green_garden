@@ -527,3 +527,24 @@ a { text-underline-offset: 3px; }
 .gg-unit-chip.sold { background: #e3f2fd; color: #0d47a1; }
 .gg-unit-chip.in_stock { background: var(--gg-green-light); color: var(--gg-green-dark); }
 .gg-unit-chip.damaged { background: #fdecea; color: #b3261e; text-decoration: line-through; }
+
+/* ================================================================ Thông báo nổi (toast): không đẩy nội dung trang */
+.gg-toasts { position: fixed; top: 100px; right: 18px; z-index: 1085; display: flex; flex-direction: column; gap: .6rem; width: min(380px, calc(100vw - 24px)); pointer-events: none; }
+.gg-toast { pointer-events: auto; display: flex; align-items: flex-start; gap: .65rem; padding: .8rem .75rem .8rem 1rem; border-radius: 12px; background: #fff;
+    color: var(--gg-ink); box-shadow: 0 10px 30px rgba(16, 40, 16, .18), 0 2px 6px rgba(16, 40, 16, .08); border-left: 5px solid var(--gg-green);
+    font-size: .93rem; line-height: 1.45; animation: gg-toast-in .22s ease-out; }
+.gg-toast > .fa { font-size: 1.15rem; margin-top: .1rem; color: var(--gg-green); }
+.gg-toast.warning { border-left-color: #f59e0b; } .gg-toast.warning > .fa { color: #b45309; }
+.gg-toast.error { border-left-color: #dc3545; } .gg-toast.error > .fa { color: #b3261e; }
+.gg-toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gg-toast-text ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+.gg-toast-close { border: 0; background: transparent; color: var(--gg-muted); font-size: 1.35rem; line-height: 1; padding: 0 .25rem; cursor: pointer; }
+.gg-toast-close:hover { color: var(--gg-ink); }
+.gg-toast.hide { opacity: 0; transform: translateX(16px); transition: opacity .22s, transform .22s; }
+.gg-admin-content .gg-toasts { top: 70px; }            /* dưới thanh trên cùng (dính) của trang quản trị */
+@keyframes gg-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 575.98px) {
+    .gg-toasts { top: 10px; right: 12px; left: 12px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .gg-toast { animation: none; } .gg-toast.hide { transition: none; } }
+@media print { .gg-toasts { display: none; } }
