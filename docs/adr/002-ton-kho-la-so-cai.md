@@ -47,3 +47,13 @@ C giữ được tốc độ đọc của A và khả năng kiểm toán của B
 1. [x] Rào `Plant::writingLedger()` và test chứng minh ghi ngoài rào bị chặn
 2. [x] `shop:reconcile` kiểm tồn = sổ
 3. [ ] Khi có nhiều kho: thêm `warehouse_id` vào sổ (sổ cái mở rộng tự nhiên)
+
+## Bổ sung 26/11/2026: mã riêng cho từng chậu
+Chủ shop duyệt: mỗi chậu có một mã (8 ký tự Crockford base32, in tem QR), để biết chậu nào nhập từ phiếu nào, giao cho đơn nào, hỏng / thất lạc lúc nào.
+- Bảng `plant_units` (trạng thái hiện tại) + `plant_unit_events` (lịch sử, chỉ ghi thêm). Sổ kho vẫn là nguồn số lượng; từng chậu là lớp chi tiết đi kèm.
+- `InventoryService::move()` là nơi duy nhất đổi tồn, nên cũng là nơi giữ chậu khớp sổ: tồn đầu kỳ / nhập kho phát chậu mới; hoàn hàng đưa chậu đã giao về kho (đơn giao trước khi có mã thì phát mã mới); `damage` / `adjustment` **bắt buộc** chỉ rõ từng chậu (không còn trừ kho "chung chung").
+- Bán (lúc đặt) và hủy trước khi giao không đụng chậu: chậu vẫn trên kệ, chỉ rời kho khi nhân viên **quét mã lúc đóng gói** (`OrderService::ship`).
+- Bất biến (`shop:reconcile` #10, và `assertLedgerConsistent` trong mọi test): chậu "trong kho" = `plants.stock` + số đã đặt mà chưa giao.
+- Hàng lỗi: phiếu báo lỗi (nhân viên quét chậu lỗi, quản trị viên khác người lập duyệt) thay cho "ghi hư hỏng" trừ kho ngay. Kiểm kê: quét từng chậu thay vì gõ số đếm.
+- Đã cân nhắc chỉ in mã theo **loại** cây (SKU) để quét tăng số đếm: rẻ hơn nhiều nhưng không truy được từng chậu. Chủ shop chọn mã từng chậu.
+

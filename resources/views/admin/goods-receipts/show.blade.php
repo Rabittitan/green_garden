@@ -29,5 +29,12 @@
         <form action="{{ route('admin.goods-receipts.cancel', $receipt) }}" method="POST" onsubmit="return confirm('Hủy phiếu nháp?')">@csrf
             <button class="btn btn-outline-danger">Hủy phiếu</button></form>
     </div>
+    <p class="small text-muted mt-2 mb-0">Khi nhập kho, mỗi chậu được phát một mã riêng; sau đó in tem QR ở đây và dán lên từng chậu.</p>
+@elseif($receipt->status === \App\Enums\GoodsReceiptStatus::Completed)
+    <div class="gg-panel gg-panel-body d-flex flex-wrap align-items-center gap-3" data-testid="receipt-labels">
+        <div class="flex-grow-1"><strong>Tem QR cho chậu của phiếu này</strong>
+            <div class="small text-muted">Mỗi chậu nhập về có một mã riêng. In tem (máy in tem nhiệt, khổ 50 × 30 mm) rồi dán lên từng chậu trước khi đưa lên kệ.</div></div>
+        <a href="{{ route('admin.units.labels', ['receipt' => $receipt->id]) }}" class="btn btn-green"><i class="fa fa-print"></i> In tem</a>
+    </div>
 @endif
 @endsection

@@ -15,6 +15,8 @@ use App\Services\MembershipService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 use Tests\Concerns\BuildsOrders;
 use Tests\TestCase;
 
@@ -89,34 +91,31 @@ class MembershipAndInventoryTest extends TestCase
 
     // ------------------------------------------------------------- kho
 
-    public function test_stock_count_uses_locked_current_stock_not_stale_form_value(): void
+    /** Xuất hủy / kiểm kê phải chỉ rõ TỪNG chậu: không còn đường trừ kho "chung chung" làm lệch số chậu trên kệ. */
+    public function test_damage_and_adjustment_require_the_exact_pots(): void
     {
         $inventory = app(InventoryService::class);
-        $this->place(cart: [1 => 5]);                                       // 30 -> 25 trong lúc admin đi đếm
-
-        $m = $inventory->countTo(1, 24, 'Kiểm kê cuối tháng', $this->admin()->id);
-        $this->assertSame([StockMovementType::Adjustment, -1, 24], [$m->type, $m->quantity, $m->stock_after]);
-        $this->assertNull($inventory->countTo(1, 24, 'Đếm lại'));          // không chênh lệch -> không ghi
+        foreach ([[StockMovementType::Damage, -1], [StockMovementType::Adjustment, -2]] as [$type, $qty]) {
+            try {
+                DB::transaction(fn () => $inventory->move($inventory->lockPlants([1])[1], $type, $qty, note: 'thử'));
+                $this->fail("{$type->value} không kèm chậu phải bị chặn");
+            } catch (LogicException $e) {
+                $this->assertStringContainsString('phải kèm đúng', $e->getMessage());
+            }
+        }
+        $this->assertSame(30, $this->stock(1));
         $this->assertLedgerConsistent();
     }
 
-    public function test_damage_and_opening_stock(): void
+    public function test_opening_stock_issues_one_code_per_pot(): void
     {
         $inventory = app(InventoryService::class);
-        $inventory->recordDamage(1, 2, 'Cây chết do nắng');
-        $this->assertSame(28, $this->stock(1));
-        try {
-            $inventory->recordDamage(16, 5, 'quá số tồn');
-            $this->fail();
-        } catch (BusinessException $e) {
-            $this->assertStringContainsString('không đủ hàng', $e->getMessage());
-        }
-
         $plant = Plant::create(['category_id' => 1, 'sku' => 'NEW01', 'name' => 'Cây mới', 'slug' => 'cay-moi',
             'price' => 100000, 'light' => 'ua_bong', 'element' => 'moc']);
         $inventory->opening($plant, 10, 60000);
         $this->assertSame([10, 60000], [$plant->fresh()->stock, $plant->fresh()->cost_price]);
         $this->assertSame(StockMovementType::Opening, StockMovement::where('plant_id', $plant->id)->sole()->type);
+        $this->assertSame(10, $plant->units()->where('status', 'in_stock')->count());
         $this->assertLedgerConsistent();
     }
 }

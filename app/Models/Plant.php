@@ -142,6 +142,12 @@ class Plant extends Model
         return $this->belongsToMany(Article::class);
     }
 
+    /** @return HasMany<PlantUnit, $this> từng chậu có mã riêng */
+    public function units(): HasMany
+    {
+        return $this->hasMany(PlantUnit::class);
+    }
+
     /** @return HasMany<StockMovement, $this> */
     public function stockMovements(): HasMany
     {

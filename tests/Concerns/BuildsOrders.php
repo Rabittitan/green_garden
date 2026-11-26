@@ -7,6 +7,7 @@ use App\Models\MembershipTier;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Plant;
+use App\Models\PlantUnit;
 use App\Models\User;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\OrderService;
@@ -72,12 +73,33 @@ trait BuildsOrders
         return Plant::withTrashed()->findOrFail($plantId)->stock;
     }
 
-    /** Bất biến kho: plants.stock = SUM(stock_movements) cho mọi cây. */
+    /**
+     * Mã các chậu "trong kho" đủ cho mọi dòng của đơn (như nhân viên quét khi đóng gói), chậu nhập trước lấy trước.
+     *
+     * @return list<string>
+     */
+    protected function packCodes(Order $order): array
+    {
+        $codes = [];
+        foreach ($order->items()->get() as $item) {
+            array_push($codes, ...PlantUnit::where('plant_id', $item->plant_id)->where('status', 'in_stock')
+                ->whereNotIn('code', $codes)->orderBy('id')->limit($item->quantity)->pluck('code')->all());
+        }
+
+        return $codes;
+    }
+
+    /** Bất biến kho: plants.stock = SUM(stock_movements), và số chậu trên kệ khớp tồn, cho mọi cây. */
     protected function assertLedgerConsistent(): void
     {
         $drift = DB::table('plants as p')
             ->whereRaw('p.stock <> (SELECT COALESCE(SUM(quantity),0) FROM stock_movements s WHERE s.plant_id = p.id)')
             ->pluck('id')->all();
         $this->assertSame([], $drift, 'plants.stock lệch sổ kho');
+        // Từng chậu: chậu trên kệ = tồn + số đã đặt chưa giao (shop:reconcile #10)
+        $units = DB::table('plants as p')->whereRaw("(SELECT COUNT(*) FROM plant_units u WHERE u.plant_id = p.id AND u.status = 'in_stock')
+            <> p.stock + (SELECT COALESCE(SUM(i.quantity),0) FROM order_items i JOIN orders o ON o.id = i.order_id
+            WHERE i.plant_id = p.id AND o.status IN ('pending_payment','pending','confirmed'))")->pluck('id')->all();
+        $this->assertSame([], $units, 'số chậu trong kho lệch tồn');
     }
 }

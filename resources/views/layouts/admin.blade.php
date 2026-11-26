@@ -18,6 +18,7 @@
     $groups = [
         'Bán hàng' => [
             ['admin.dashboard', 'admin.dashboard', 'fa-chart-line', 'Thống kê', 'reports'],
+            ['admin.defects.report', 'admin.defects.report', 'fa-chart-pie', 'Báo cáo hàng lỗi', 'reports'],
             ['admin.orders.index', 'admin.orders.*', 'fa-receipt', 'Đơn hàng', 'orders'],
             ['admin.reviews.index', 'admin.reviews.*', 'fa-star', 'Đánh giá', 'reviews'],
             ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp', 'reviews'],
@@ -29,6 +30,8 @@
         'Kho & nhập hàng' => [
             ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh', 'catalog'],
             ['admin.inventory.index', 'admin.inventory.*', 'fa-warehouse', 'Kho', 'inventory'],
+            ['admin.units.index', 'admin.units.index', 'fa-qrcode', 'Tra cứu chậu', 'inventory'],
+            ['admin.defect-reports.index', 'admin.defect-reports.*', 'fa-triangle-exclamation', 'Phiếu báo lỗi', 'inventory'],
             ['admin.stock-counts.index', 'admin.stock-counts.*', 'fa-clipboard-check', 'Phiếu kiểm kê', 'admin'],
             ['admin.purchase-requests.index', 'admin.purchase-requests.*', 'fa-clipboard-list', 'Yêu cầu nhập', 'purchasing'],
             ['admin.goods-receipts.index', 'admin.goods-receipts.*', 'fa-truck-ramp-box', 'Phiếu nhập kho', 'purchasing'],

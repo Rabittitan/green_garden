@@ -503,3 +503,27 @@ a { text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .gg-social:not([open]) .gg-social-toggle, .gg-social[open] .gg-social-list { animation: none; } }
 @media print { .gg-social { display: none; } }
 
+/* ================================================================ Mã từng chậu: ô quét (máy quét USB / camera), tra cứu */
+.gg-scan-input { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; flex: 1 1 220px; min-width: 0; }
+.gg-scan-input::placeholder { text-transform: none; letter-spacing: normal; font-family: var(--gg-font); }
+.gg-scan-video { position: relative; margin-top: .6rem; border-radius: 12px; overflow: hidden; background: #000; max-width: 420px; }
+.gg-scan-video[hidden] { display: none; }
+.gg-scan-video video { display: block; width: 100%; height: auto; }
+.gg-scan-aim { position: absolute; inset: 18% 22%; border: 3px solid rgba(255,255,255,.9); border-radius: 14px; box-shadow: 0 0 0 999px rgba(0,0,0,.28); pointer-events: none; }
+.gg-scan-status { min-height: 1.4em; margin-top: .4rem; font-weight: 600; font-size: .9rem; }
+.gg-scan-status.ok { color: var(--gg-green); }
+.gg-scan-status.bad { color: #b3261e; }
+.gg-code-big { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.5rem; font-weight: 800; letter-spacing: .05em; }
+.gg-code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .35rem; }
+.gg-code-grid a { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85rem; padding: .25rem .5rem; border: 1px solid var(--gg-line); border-radius: 8px; text-decoration: none; color: var(--gg-ink); background: #fff; text-align: center; }
+.gg-code-grid a:hover { border-color: var(--gg-green); color: var(--gg-green); }
+.gg-scan-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .35rem; }
+.gg-scan-list li { display: inline-flex; align-items: center; gap: .35rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85rem;
+    padding: .2rem .25rem .2rem .55rem; border-radius: 999px; background: var(--gg-green-light); color: var(--gg-green-dark); }
+.gg-scan-list button { border: 0; background: transparent; color: inherit; padding: 0 .3rem; line-height: 1; font-size: 1rem; }
+
+.gg-unit-chip { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .78rem; padding: .05rem .4rem; border-radius: 6px;
+    background: #eef2ee; color: var(--gg-ink); text-decoration: none; margin: .1rem 0; }
+.gg-unit-chip.sold { background: #e3f2fd; color: #0d47a1; }
+.gg-unit-chip.in_stock { background: var(--gg-green-light); color: var(--gg-green-dark); }
+.gg-unit-chip.damaged { background: #fdecea; color: #b3261e; text-decoration: line-through; }

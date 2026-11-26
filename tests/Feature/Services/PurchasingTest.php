@@ -11,7 +11,6 @@ use App\Models\PurchaseRequest;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
-use App\Services\InventoryService;
 use App\Services\PurchaseService;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -200,7 +199,7 @@ class PurchasingTest extends TestCase
         $this->purchases->completeReceipt($r);
         $this->assertSame(5, $this->stock(16));
 
-        app(InventoryService::class)->countTo(3, 2, 'test');   // cây #3 xuống dưới ngưỡng
+        $this->place(cart: [3 => $this->stock(3) - 2]);         // bán gần hết: cây #3 xuống dưới ngưỡng
         $pr = $this->purchases->draftFromLowStock($this->staff);
         $this->assertSame(PR::Draft, $pr->status);
         $this->assertTrue($pr->items()->where('plant_id', 3)->exists());

@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Enums\ActorType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\PlantUnitStatus;
 use App\Enums\StockMovementType;
 use App\Exceptions\BusinessException;
 use App\Exceptions\PriceChangedException;
 use App\Models\Order;
+use App\Models\PlantUnit;
+use App\Models\PlantUnitEvent;
 use App\Models\User;
 use App\Notifications\OrderCancelled;
 use App\Notifications\OrderCompleted;
@@ -18,6 +21,8 @@ use App\Services\Orders\OrderStateWriter;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\Pricing\Quote;
 use App\Support\Notifier;
+use App\Support\UnitCode;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -26,6 +31,7 @@ use Throwable;
  * Đặt hàng + vòng đời đơn.
  *
  * THỨ TỰ KHÓA (mọi luồng): users -> orders -> plants (id tăng dần) -> flash_sale_items (id tăng dần) -> coupons -> payments.
+ * Từng chậu (plant_units) khóa sau orders / plants: giao hàng (orders -> plant_units), nhận hoàn (orders -> plants -> plant_units).
  * Mọi transaction dùng attempts = 3 để tự thử lại khi MySQL báo deadlock.
  * Kết nối chạy READ COMMITTED (config/database.php) nên không có gap lock.
  */
@@ -38,6 +44,7 @@ class OrderService
         private PaymentService $payments,
         private OrderStateWriter $state,
         private FlashSaleService $flashSales,
+        private PlantUnitService $units,
     ) {}
 
     // ================================================================ ĐẶT HÀNG
@@ -176,15 +183,22 @@ class OrderService
             ['confirmed_at' => now()]));
     }
 
-    public function ship(Order $order, string $carrier, string $trackingCode, User $by): Order
+    /**
+     * Giao cho đơn vị vận chuyển. $unitCodes = mã các chậu nhân viên quét khi đóng gói: phải đủ số lượng và đúng cây
+     * của từng dòng (màn hình giao hàng luôn gửi). null = tự lấy chậu nhập trước (chỉ cho lệnh nội bộ / test).
+     *
+     * @param  list<string>|null  $unitCodes
+     */
+    public function ship(Order $order, string $carrier, string $trackingCode, User $by, ?array $unitCodes = null): Order
     {
         if (trim($carrier) === '' || trim($trackingCode) === '') {
             throw new BusinessException('Phải nhập đơn vị vận chuyển và mã vận đơn.');
         }
 
-        return $this->locked($order, function (Order $o) use ($carrier, $trackingCode, $by) {
+        return $this->locked($order, function (Order $o) use ($carrier, $trackingCode, $by, $unitCodes) {
             $this->state->transition($o, OrderStatus::Shipping, ActorType::Staff, $by->id, null,
                 ['shipping_carrier' => trim($carrier), 'tracking_code' => trim($trackingCode), 'shipped_at' => now()]);
+            $this->units->shipOrder($o, $unitCodes, $by->id);
             Notifier::send($o->user, new OrderShipped($o));
 
             return $o;
@@ -337,17 +351,21 @@ class OrderService
      * Hàng tốt nhập lại kho; hàng hỏng ghi nhận rồi xuất hủy (sổ kho thấy đủ 2 bút toán).
      * Đã thu tiền -> tạo hoàn tiền (mặc định toàn bộ phần còn hoàn được; admin có thể nhập ít hơn, vd trừ phí ship khi lỗi do khách).
      *
+     * Chậu hỏng: $damagedCodes = mã các chậu hỏng nhân viên quét (màn hình nhận hoàn luôn gửi); null = lấy các chậu đầu tiên.
+     *
      * @param  array<int, array{good:int, damaged:int}>  $quantities  order_item_id => số lượng
+     * @param  list<string>|null  $damagedCodes
      */
-    public function receiveReturn(Order $order, array $quantities, User $by, ?int $refundAmount = null, ?string $note = null): Order
+    public function receiveReturn(Order $order, array $quantities, User $by, ?int $refundAmount = null, ?string $note = null, ?array $damagedCodes = null): Order
     {
-        return $this->locked($order, function (Order $o) use ($quantities, $by, $refundAmount, $note) {
+        return $this->locked($order, function (Order $o) use ($quantities, $by, $refundAmount, $note, $damagedCodes) {
             if ($o->status !== OrderStatus::Returning) {
                 throw new BusinessException("Đơn {$o->code} không ở trạng thái đang hoàn về.");
             }
             $items = $o->items()->get();
             $plants = $this->inventory->lockPlants($items->pluck('plant_id')->all());
 
+            $wanted = $damagedCodes === null ? null : $this->normalizeCodes($damagedCodes);
             foreach ($items as $item) {
                 $good = (int) ($quantities[$item->id]['good'] ?? -1);
                 $damaged = (int) ($quantities[$item->id]['damaged'] ?? -1);
@@ -355,13 +373,29 @@ class OrderService
                     throw new BusinessException("Dòng \"{$item->plant_name}\": số tốt + số hỏng phải bằng {$item->quantity}.");
                 }
                 $plant = $plants[$item->plant_id];
-                $this->inventory->move($plant, StockMovementType::SaleReturn, $item->quantity,
+                $back = $this->inventory->move($plant, StockMovementType::SaleReturn, $item->quantity,
                     orderItem: $item, unitCost: $item->unit_cost, note: "Hoàn hàng đơn {$o->code}", by: $by->id);
+                $returned = PlantUnit::whereIn('id', PlantUnitEvent::where('stock_movement_id', $back->id)->select('plant_unit_id'))
+                    ->orderBy('id')->get();
+                $broken = $wanted === null ? $returned->take($damaged)
+                    : $returned->filter(fn (PlantUnit $u) => in_array($u->code, $wanted, true));
+                if ($broken->count() !== $damaged) {
+                    throw new BusinessException("Dòng \"{$item->plant_name}\": khai {$damaged} chậu hỏng nhưng quét {$broken->count()} mã chậu hỏng của dòng này.");
+                }
                 if ($damaged > 0) {
                     $this->inventory->move($plant, StockMovementType::Damage, -$damaged,
-                        orderItem: $item, unitCost: $item->unit_cost, note: "Hàng hoàn bị hỏng - đơn {$o->code}", by: $by->id);
+                        orderItem: $item, unitCost: $item->unit_cost, note: "Hàng hoàn bị hỏng - đơn {$o->code}", by: $by->id,
+                        units: new Collection($broken->values()->all()));
                 }
                 $item->update(['returned_good_qty' => $good, 'returned_damaged_qty' => $damaged]);
+            }
+
+            if ($wanted !== null) {
+                $used = PlantUnit::whereIn('order_item_id', $items->modelKeys())->where('status', PlantUnitStatus::Damaged->value)->pluck('code')->all();
+                $stray = array_diff($wanted, $used);
+                if ($stray !== []) {
+                    throw new BusinessException('Mã '.implode(', ', array_map([UnitCode::class, 'format'], $stray)).' không phải chậu của đơn này.');
+                }
             }
 
             $this->payments->cancelPendingCharges($o);                       // COD chưa thu -> không phải thu nữa
@@ -376,6 +410,15 @@ class OrderService
     }
 
     // ================================================================ tiện ích
+
+    /**
+     * @param  list<string>  $codes
+     * @return list<string>
+     */
+    private function normalizeCodes(array $codes): array
+    {
+        return array_map(fn ($c) => UnitCode::normalize((string) $c) ?? throw new BusinessException("\"{$c}\" không phải mã chậu hợp lệ."), $codes);
+    }
 
     /** Chạy $fn với đơn đã khóa dòng (đọc lại trong transaction: chặn bấm đúp / 2 admin cùng thao tác). */
     /**

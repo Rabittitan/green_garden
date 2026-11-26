@@ -69,4 +69,10 @@ class OrderItem extends Model
     {
         return $this->unit_price * $this->quantity - $this->member_discount - $this->coupon_discount;
     }
+
+    /** @return HasMany<PlantUnit, $this> các chậu đã quét giao cho dòng này */
+    public function units(): HasMany
+    {
+        return $this->hasMany(PlantUnit::class)->orderBy('id');
+    }
 }
