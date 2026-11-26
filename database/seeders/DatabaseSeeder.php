@@ -114,6 +114,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // ===== 6. Thông tin chi tiết cây mẫu + bài viết + slide trang chủ =====
-        $this->call([PlantDetailSeeder::class, ArticleSeeder::class, HomeSlideSeeder::class]);
+        $this->call([PlantDetailSeeder::class, ArticleSeeder::class, HomeSlideSeeder::class, ContactChannelSeeder::class]);
     }
 }

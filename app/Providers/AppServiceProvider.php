@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\PaymentMethod;
 use App\Models\Article;
+use App\Models\ContactChannel;
 use App\Models\Plant;
 use App\Models\User;
 use App\Services\CartService;
@@ -73,6 +74,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Số loại cây trong giỏ cho thanh menu
         View::composer('layouts.app', fn ($view) => $view->with('cartCount', app(CartService::class)->count()));
+        // Bong bóng mạng xã hội (Admin → Kênh liên hệ): 1 câu SQL, chỉ kênh đang bật
+        View::composer('partials.social-bubble', fn ($view) => $view->with('contactChannels',
+            ContactChannel::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()));
         // Lưu 'plant' thay vì 'App\Models\Plant' trong comments.commentable_type.
         // (Sổ kho đã dùng FK thật order_item_id / goods_receipt_item_id, không còn quan hệ đa hình.)
         Relation::enforceMorphMap([

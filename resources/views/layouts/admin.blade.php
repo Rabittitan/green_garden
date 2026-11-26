@@ -23,6 +23,7 @@
             ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp', 'reviews'],
             ['admin.articles.index', 'admin.articles.*', 'fa-newspaper', 'Tin tức', 'content'],
             ['admin.slides.index', 'admin.slides.*', 'fa-images', 'Slide trang chủ', 'content'],
+            ['admin.contact-channels.index', 'admin.contact-channels.*', 'fa-comment-dots', 'Kênh liên hệ', 'content'],
             ['admin.flash-sales.index', 'admin.flash-sales.*', 'fa-bolt', 'Flash sale', 'flash_sales'],
         ],
         'Kho & nhập hàng' => [

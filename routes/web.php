@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
+use App\Http\Controllers\Admin\ContactChannelController as AdminContactChannelController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CouponGiftRuleController as AdminCouponGiftRuleController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
@@ -173,6 +174,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/articles/preview', [AdminArticleController::class, 'preview'])->name('articles.preview');
         Route::resource('articles', AdminArticleController::class);
         Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
+        Route::get('/contact-channels', [AdminContactChannelController::class, 'index'])->name('contact-channels.index');
+        Route::put('/contact-channels', [AdminContactChannelController::class, 'update'])->name('contact-channels.update');
     });
 
     // Flash sale: nhân viên tạo / sửa / gửi duyệt / hủy đợt chưa duyệt (duyệt, từ chối: nhóm admin:admin bên dưới)

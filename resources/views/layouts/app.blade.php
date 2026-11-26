@@ -158,6 +158,8 @@
     </div>
 </footer>
 
+@include('partials.social-bubble')
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Ô "Hiện mật khẩu": bật/tắt hiển thị mọi ô mật khẩu trong cùng form
