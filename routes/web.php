@@ -170,6 +170,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Tin tức (ảnh bìa / ảnh trong bài) + slide ảnh đầu trang chủ
     Route::middleware('admin:content')->group(function () {
         Route::post('/articles/images', [AdminArticleController::class, 'uploadImage'])->name('articles.images');
+        Route::post('/articles/preview', [AdminArticleController::class, 'preview'])->name('articles.preview');
         Route::resource('articles', AdminArticleController::class);
         Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
     });

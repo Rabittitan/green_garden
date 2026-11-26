@@ -32,7 +32,8 @@ Sửa `.env` theo **checklist production** (mục 3), rồi:
 mysql -e "CREATE DATABASE green_life CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 php artisan migrate --force                 # KHÔNG --seed: seeder mẫu tự chặn ở production
 php artisan shop:create-admin chu@shop.vn --name="Chủ shop"   # hỏi mật khẩu ẩn, tối thiểu 10 ký tự có chữ+số
-php artisan storage:link                    # public/storage -> storage/app/public (ảnh tin tức tải lên)
+php artisan storage:link                    # public/storage -> storage/app/public (ảnh tin tức, slide). Thiếu link ảnh vẫn hiện
+                                            # (Laravel tự phát file) nhưng chậm hơn và không được trình duyệt lưu đệm
 php artisan optimize
 sudo chown -R www-data:www-data storage bootstrap/cache
 ```

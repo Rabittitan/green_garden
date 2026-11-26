@@ -20,7 +20,7 @@
             </div>
             <div>
                 <label class="form-label fw-semibold" for="content">Nội dung <span class="text-danger">*</span></label>
-                <div class="gg-editor-bar" data-editor-for="content" data-upload-url="{{ route('admin.articles.images') }}">
+                <div class="gg-editor-bar" data-editor-for="content" data-upload-url="{{ route('admin.articles.images') }}" data-preview-url="{{ route('admin.articles.preview') }}">
                     <button type="button" class="btn btn-sm btn-light" data-md="bold" title="Chữ đậm"><i class="fa fa-bold"></i></button>
                     <button type="button" class="btn btn-sm btn-light" data-md="heading" title="Tiêu đề mục"><i class="fa fa-heading"></i></button>
                     <button type="button" class="btn btn-sm btn-light" data-md="list" title="Danh sách"><i class="fa fa-list-ul"></i></button>
@@ -29,13 +29,16 @@
                         <i class="fa fa-image"></i> Chèn ảnh
                         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-md-image hidden>
                     </label>
-                    <span class="small text-muted ms-1" data-editor-status></span>
+                    <button type="button" class="btn btn-sm btn-outline-success ms-auto" data-md-preview aria-pressed="false"><i class="fa fa-eye"></i> <span>Xem trước</span></button>
+                    <span class="gg-editor-status small text-muted" data-editor-status></span>
                 </div>
                 <textarea id="content" name="content" rows="18" maxlength="20000" required class="form-control gg-editor @error('content') is-invalid @enderror">{{ old('content', $article->content) }}</textarea>
+                {{-- Xem trước: nội dung đang gõ hiện đúng như trang bài (ảnh hiện thật, không phải dòng ![...](...)) --}}
+                <div class="gg-editor-preview gg-article-body" data-editor-preview hidden aria-live="polite"></div>
                 @error('content') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 <div class="form-text">
                     Cách đoạn: để 1 dòng trống. <code>**chữ đậm**</code> · <code>## Tiêu đề mục</code> · <code>- gạch đầu dòng</code> ·
-                    ảnh: <code>![mô tả](đường dẫn)</code>. Mã HTML gõ tay sẽ bị bỏ. Lưu nháp rồi bấm <strong>Xem trước</strong> để xem như khách.
+                    ảnh: <code>![mô tả](đường dẫn)</code>. Mã HTML gõ tay sẽ bị bỏ. Bấm <strong>Xem trước</strong> trên thanh công cụ để xem bài (cả ảnh) như khách thấy.
                 </div>
             </div>
         </div>
@@ -71,7 +74,8 @@
                 </div>
             @endif
             <label class="form-label small mb-1" for="cover">Tải ảnh lên (JPG, PNG, WEBP, GIF · tối đa 4MB)</label>
-            <input type="file" id="cover" name="cover" accept="image/jpeg,image/png,image/webp,image/gif" class="form-control @error('cover') is-invalid @enderror">
+            <input type="file" id="cover" name="cover" accept="image/jpeg,image/png,image/webp,image/gif" class="form-control @error('cover') is-invalid @enderror" data-cover-input>
+            <img alt="Ảnh bìa sẽ dùng" class="img-fluid rounded-3 mt-2" data-cover-preview hidden>
             @error('cover') <div class="invalid-feedback">{{ $message }}</div> @enderror
             <label class="form-label small mb-1 mt-2" for="image_url">hoặc dán link ảnh (https://…)</label>
             <input id="image_url" name="image_url" value="{{ old('image_url') }}" placeholder="https://..." class="form-control form-control-sm @error('image_url') is-invalid @enderror">

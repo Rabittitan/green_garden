@@ -58,7 +58,13 @@ class Article extends Model
      */
     public function renderedContent(): HtmlString
     {
-        $html = Str::markdown($this->content, [
+        return self::renderMarkdown($this->content);
+    }
+
+    /** Markdown -> HTML an toàn (bỏ HTML gõ tay, chặn link javascript:...). Dùng chung cho trang bài và nút "Xem trước". */
+    public static function renderMarkdown(string $markdown): HtmlString
+    {
+        $html = Str::markdown($markdown, [
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
             'max_nesting_level' => 20,

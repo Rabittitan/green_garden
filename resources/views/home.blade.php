@@ -31,6 +31,7 @@
         @if($slides->count() > 1)
             <button type="button" class="gg-slider-nav prev" data-prev aria-label="Ảnh trước"><i class="fa fa-chevron-left"></i></button>
             <button type="button" class="gg-slider-nav next" data-next aria-label="Ảnh sau"><i class="fa fa-chevron-right"></i></button>
+            <button type="button" class="gg-slider-toggle" data-toggle aria-pressed="false" aria-label="Tạm dừng tự chạy"><i class="fa fa-pause"></i></button>
             <div class="gg-slider-dots" data-dots>
                 @foreach($slides as $i => $slide)
                     <button type="button" aria-label="Ảnh {{ $i + 1 }}" @if($i === 0) aria-current="true" @endif></button>
@@ -95,11 +96,18 @@
             <p>Được mua nhiều nhất {{ config('shop.home.hot_days') }} ngày qua</p></div>
         <a href="{{ route('plants.index') }}">Xem tất cả <i class="fa fa-arrow-right"></i></a>
     </div>
-    <div class="row g-3 mb-2" data-testid="hot-plants">
-        @foreach($hotPlants as $plant)
-            <div class="col-6 col-md-4 col-lg-3">@include('partials.plant-card', ['plant' => $plant, 'sold' => $hotSold[$plant->id] ?? 0, 'flash' => $flashMap[$plant->id] ?? null])</div>
-        @endforeach
-    </div>
+    {{-- Dải trượt ngang tự chạy (public/js/slider.js, [data-gg-carousel]); không JS vẫn vuốt / cuộn ngang được --}}
+    <section class="gg-carousel mb-2" data-gg-carousel aria-roledescription="carousel" aria-label="Sản phẩm hot">
+        <div class="gg-carousel-track" data-track tabindex="0" data-testid="hot-plants">
+            @foreach($hotPlants as $plant)
+                <div class="gg-carousel-item" role="group" aria-roledescription="slide" aria-label="{{ $loop->iteration }} / {{ $hotPlants->count() }}">@include('partials.plant-card', ['plant' => $plant, 'sold' => $hotSold[$plant->id] ?? 0, 'flash' => $flashMap[$plant->id] ?? null])</div>
+            @endforeach
+        </div>
+        @if($hotPlants->count() > 1)
+            <button type="button" class="gg-carousel-nav prev" data-prev aria-label="Cây trước"><i class="fa fa-chevron-left"></i></button>
+            <button type="button" class="gg-carousel-nav next" data-next aria-label="Cây tiếp theo"><i class="fa fa-chevron-right"></i></button>
+        @endif
+    </section>
 @endif
 
 {{-- Chọn cây theo mệnh --}}
