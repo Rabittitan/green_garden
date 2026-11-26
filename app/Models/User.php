@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StaffPermission;
 use App\Enums\TierChangeReason;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property UserRole $role
+ * @property list<string>|null $permissions
  * @property string|null $phone
  * @property int $membership_tier_id
  * @property int $lifetime_spend
@@ -61,6 +63,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'lifetime_spend' => 'integer',
             'tier_achieved_at' => 'datetime',
             'is_active' => 'boolean',
+            'permissions' => 'array',
         ];
     }
 
@@ -90,6 +93,21 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isBackOffice(): bool
     {
         return $this->role->isBackOffice();
+    }
+
+    /**
+     * Quyền trong khu quản trị: quản trị viên có tất cả; nhân viên theo cột permissions
+     * (NULL = đủ mọi quyền nhân viên, giữ hành vi cũ); khách không có quyền nào.
+     */
+    public function hasPermission(StaffPermission|string $permission): bool
+    {
+        $key = $permission instanceof StaffPermission ? $permission->value : $permission;
+
+        return match ($this->role) {
+            UserRole::Admin => true,
+            UserRole::Staff => $this->permissions === null || in_array($key, $this->permissions, true),
+            default => false,
+        };
     }
 
     /** @return BelongsTo<MembershipTier, $this> */

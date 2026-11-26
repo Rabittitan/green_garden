@@ -65,6 +65,29 @@
         <div><strong>Thanh toán khi nhận hàng</strong><br><small>Nhận cây, kiểm tra rồi mới trả tiền</small></div></div>
 </div>
 
+{{-- Flash sale đang diễn ra (đợt đã duyệt, trong khung giờ). Đếm ngược tới giờ kết thúc sớm nhất. --}}
+@if($flashItems->isNotEmpty())
+    @php $endsAt = $flashItems->min(fn ($i) => $i->sale->ends_at); @endphp
+    <section class="gg-flash mb-2" id="flash-sale" data-testid="flash-sale">
+        <div class="gg-section-head mt-0">
+            <div><span class="gg-eyebrow text-danger">Giá sốc có hạn</span><h2><i class="fa fa-bolt text-danger"></i> Flash sale</h2></div>
+            <div class="gg-countdown" data-countdown="{{ $endsAt->toIso8601String() }}">Kết thúc sau <strong data-left>@vndt($endsAt)</strong></div>
+        </div>
+        <div class="row g-3">
+            @foreach($flashItems->take(8) as $fi)
+                <div class="col-6 col-md-4 col-lg-3">
+                    @include('partials.plant-card', ['plant' => $fi->plant, 'flash' => $fi])
+                    @if($fi->quantity_limit)
+                        <div class="gg-flash-bar mt-1" title="Đã bán {{ $fi->sold_count }}/{{ $fi->quantity_limit }}">
+                            <span style="width: {{ min(100, round($fi->sold_count * 100 / $fi->quantity_limit)) }}%"></span>
+                            <em>{{ $fi->remaining() > 0 ? 'Còn '.$fi->remaining().' suất' : 'Hết suất' }}</em></div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </section>
+@endif
+
 {{-- Sản phẩm hot: bán chạy nhất trong 30 ngày (HomeController::hotPlants) --}}
 @if($hotPlants->isNotEmpty())
     <div class="gg-section-head" id="san-pham-hot">
@@ -74,7 +97,7 @@
     </div>
     <div class="row g-3 mb-2" data-testid="hot-plants">
         @foreach($hotPlants as $plant)
-            <div class="col-6 col-md-4 col-lg-3">@include('partials.plant-card', ['plant' => $plant, 'sold' => $hotSold[$plant->id] ?? 0])</div>
+            <div class="col-6 col-md-4 col-lg-3">@include('partials.plant-card', ['plant' => $plant, 'sold' => $hotSold[$plant->id] ?? 0, 'flash' => $flashMap[$plant->id] ?? null])</div>
         @endforeach
     </div>
 @endif
@@ -115,7 +138,7 @@
 </div>
 <div class="row g-3">
     @foreach($newPlants as $plant)
-        <div class="col-6 col-md-4 col-lg-3">@include('partials.plant-card', ['plant' => $plant])</div>
+        <div class="col-6 col-md-4 col-lg-3">@include('partials.plant-card', ['plant' => $plant, 'flash' => $flashMap[$plant->id] ?? null])</div>
     @endforeach
 </div>
 
@@ -130,4 +153,17 @@
     @endforeach
 </div>
 <script src="{{ asset('js/slider.js') }}?v={{ @filemtime(public_path('js/slider.js')) }}"></script>
+<script>
+    // Đếm ngược flash sale (giờ máy khách chỉ để hiển thị; giá thật luôn do server tính lúc đặt hàng)
+    document.querySelectorAll('[data-countdown]').forEach(function (el) {
+        var end = new Date(el.dataset.countdown).getTime(), out = el.querySelector('[data-left]');
+        function tick() {
+            var s = Math.max(0, Math.floor((end - Date.now()) / 1000)), d = Math.floor(s / 86400);
+            var hms = [Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60].map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+            out.textContent = (d ? d + ' ngày ' : '') + hms;
+            if (s === 0) clearInterval(t);
+        }
+        var t = setInterval(tick, 1000); tick();
+    });
+</script>
 @endsection

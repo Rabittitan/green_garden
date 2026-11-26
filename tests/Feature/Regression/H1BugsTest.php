@@ -93,7 +93,7 @@ class H1BugsTest extends TestCase
         $payments->confirmRefund($payments->requestRefund($order, 100000, $this->admin(), 'Cây chết'), $this->admin(), 'RF');
 
         $this->actingAs($this->admin())->get(route('admin.dashboard'))
-            ->assertOk()->assertViewHas('revenue', 150000);
+            ->assertOk()->assertViewHas('stats', fn (array $s) => $s['cur']['revenue'] === 150000);   // thẻ doanh thu kỳ này
     }
 
     /** B8: log callback thanh toán cũ hơn 180 ngày được dọn, log mới giữ lại. */

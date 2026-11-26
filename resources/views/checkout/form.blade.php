@@ -17,7 +17,7 @@
         <form id="checkout-form" action="{{ route('checkout.store') }}" method="POST" class="gg-panel gg-panel-body">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $token }}">
-            <input type="hidden" name="expected_total" value="{{ $quote->total() }}">
+            <input type="hidden" name="expected_total" value="{{ $quote->total() }}" data-quote-total-input>
 
             <div class="gg-step-title"><span class="gg-step-num">1</span> Địa chỉ nhận hàng</div>
             @if($addresses->isNotEmpty())
@@ -77,7 +77,7 @@
             @endforeach
             @error('checkout_token') <div class="alert alert-danger mt-2">{{ $message }}</div> @enderror
 
-            <button class="btn btn-green btn-lg w-100 mt-3" id="submit-btn">Đặt hàng · @money($quote->total())</button>
+            <button class="btn btn-green btn-lg w-100 mt-3" id="submit-btn">Đặt hàng · <span data-quote-total>@money($quote->total())</span></button>
             <small class="d-block text-muted mt-2">Bấm đặt hàng là bạn đồng ý thanh toán đúng số tiền trên. Nếu giá thay đổi, hệ thống sẽ báo để bạn xem lại.</small>
         </form>
     </div>
@@ -93,7 +93,9 @@
                 @foreach($quote->lines as $line)
                     <li class="list-group-item px-0">
                         <div class="d-flex justify-content-between">
-                            <span>{{ $line->plant->name }} <span class="text-muted">× {{ $line->quantity }}</span></span>
+                            <span>{{ $line->plant->name }} <span class="text-muted">× {{ $line->quantity }}</span>
+                                @if($line->flashItem)<span class="badge bg-danger"><i class="fa fa-bolt"></i> Sale</span>
+                                    <div class="small text-muted"><s>@money($line->listPrice())</s> → <span class="text-danger">@money($line->unitPrice)</span></div>@endif</span>
                             <span>@money($line->subtotal())</span>
                         </div>
                         @if($line->memberDiscount + $line->couponDiscount > 0)
@@ -110,11 +112,11 @@
                 @if($quote->couponDiscount() > 0)
                     <tr class="text-danger"><td>Mã {{ $quote->coupon->code }}</td><td class="text-end">−@money($quote->couponDiscount())</td></tr>
                 @endif
-                <tr><td>Phí vận chuyển</td><td class="text-end">{{ $quote->shippingFee > 0 ? \App\Support\Format::money($quote->shippingFee) : 'Miễn phí' }}</td></tr>
+                <tr><td>Phí vận chuyển <span class="small text-muted d-block">theo tỉnh nhận hàng + khối lượng</span></td><td class="text-end" data-quote-shipping>{{ $quote->shippingFee > 0 ? \App\Support\Format::money($quote->shippingFee) : 'Miễn phí' }}</td></tr>
                 @if($quote->shippingDiscount > 0)
                     <tr class="text-danger"><td>Mã {{ $quote->coupon->code }} (giảm ship)</td><td class="text-end">−@money($quote->shippingDiscount)</td></tr>
                 @endif
-                <tr class="fs-5 fw-bold"><td class="border-0 pt-3">Tổng thanh toán</td><td class="text-end text-green border-0 pt-3">@money($quote->total())</td></tr>
+                <tr class="fs-5 fw-bold"><td class="border-0 pt-3">Tổng thanh toán</td><td class="text-end text-green border-0 pt-3" data-quote-total>@money($quote->total())</td></tr>
             </table>
             @foreach($quote->notices as $notice)
                 <div class="alert alert-info small py-2">{{ $notice }}</div>
@@ -133,6 +135,17 @@
                     <input type="text" name="coupon_code" class="form-control" placeholder="Nhập mã giảm giá" value="{{ old('coupon_code') }}" maxlength="40">
                     <button class="btn btn-outline-green">Áp dụng</button>
                 </form>
+                @if($myCoupons->isNotEmpty())
+                    <div class="small fw-semibold mt-2">Mã của bạn:</div>
+                    <div class="d-flex flex-wrap gap-1 mt-1" data-testid="my-coupons">
+                        @foreach($myCoupons as $c)
+                            <form action="{{ route('checkout.coupon.apply') }}" method="POST">@csrf
+                                <input type="hidden" name="coupon_code" value="{{ $c->code }}">
+                                <button class="btn btn-sm btn-outline-success" title="Hạn đến @vndt($c->ends_at)"><i class="fa fa-gift"></i> {{ $c->code }} · {{ $c->benefitText() }}</button>
+                            </form>
+                        @endforeach
+                    </div>
+                @endif
             @endif
 
             @if($nextTier)
@@ -153,6 +166,18 @@
         document.querySelectorAll('input[data-field]').forEach(el => { if (a[el.dataset.field] !== undefined) el.value = a[el.dataset.field]; });
         document.querySelector('[data-gg-address]')?.ggSet?.(a);
     });
+    // Đổi tỉnh nhận hàng -> tính lại phí ship (theo vùng + cân nặng) và tổng tiền; expected_total khớp con số khách thấy
+    const requote = function () {
+        fetch('{{ route('checkout.shipping-quote') }}?province=' + encodeURIComponent(this.value), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(q => {
+                document.querySelectorAll('[data-quote-shipping]').forEach(el => el.textContent = q.shipping_fee_text);
+                document.querySelectorAll('[data-quote-total]').forEach(el => el.textContent = q.total_text);
+                document.querySelector('[data-quote-total-input]').value = q.total;
+            })
+            .catch(() => {});                                       // lỗi mạng: lúc đặt hàng server tính lại và báo nếu khác
+    };
+    ['change', 'gg:province'].forEach(ev => document.getElementById('f-province')?.addEventListener(ev, requote));
     // Chặn bấm 2 lần (server vẫn chống trùng bằng checkout_token)
     document.getElementById('checkout-form').addEventListener('submit', function () {
         const b = document.getElementById('submit-btn'); b.disabled = true; b.innerText = 'Đang đặt hàng...';

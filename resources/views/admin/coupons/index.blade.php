@@ -2,17 +2,24 @@
 @section('title', 'Mã giảm giá')
 
 @section('content')
-<div class="d-flex justify-content-between mb-3">
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
     <h4 class="text-green fw-bold"><i class="fa fa-ticket"></i> Mã giảm giá</h4>
-    <a href="{{ route('admin.coupons.create') }}" class="btn btn-green"><i class="fa fa-plus"></i> Tạo mã</a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.coupon-gifts.index') }}" class="btn btn-outline-success"><i class="fa fa-gift"></i> Quà tặng khi mua</a>
+        <a href="{{ route('admin.coupons.create') }}" class="btn btn-green"><i class="fa fa-plus"></i> Tạo mã</a>
+    </div>
 </div>
+<ul class="nav nav-pills gap-2 mb-3">
+    <li class="nav-item"><a class="nav-link {{ $gifted ? '' : 'active' }}" href="{{ route('admin.coupons.index') }}">Mã chung</a></li>
+    <li class="nav-item"><a class="nav-link {{ $gifted ? 'active' : '' }}" href="{{ route('admin.coupons.index', ['loai' => 'tang']) }}">Mã đã tặng riêng cho khách</a></li>
+</ul>
 <table class="table bg-white shadow-sm align-middle">
     <thead class="table-success"><tr><th>Mã</th><th>Tên</th><th>Ưu đãi</th><th>Điều kiện</th><th>Đã dùng</th><th>Thời hạn</th><th>Trạng thái</th><th></th></tr></thead>
     <tbody>
         @foreach($coupons as $c)
             <tr>
                 <td class="fw-bold">{{ $c->code }}</td>
-                <td>{{ $c->name }}</td>
+                <td>{{ $c->name }}@if($c->owner)<div class="small text-muted"><i class="fa fa-gift"></i> của {{ $c->owner->name }}</div>@endif</td>
                 <td>{{ match($c->type) { \App\Enums\CouponType::Percent => $c->value.'%', \App\Enums\CouponType::Fixed => \App\Support\Format::money($c->value), \App\Enums\CouponType::FreeShipping => 'Miễn phí ship' } }}
                     @if($c->max_discount_amount)<div class="small text-muted">tối đa @money($c->max_discount_amount)</div>@endif</td>
                 <td class="small">

@@ -33,6 +33,7 @@ use LogicException;
  * @property string|null $description
  * @property string|null $height
  * @property string|null $pot_size
+ * @property int|null $weight_grams
  * @property string|null $growth_rate
  * @property string|null $watering
  * @property string|null $growth_info
@@ -52,7 +53,7 @@ class Plant extends Model
     protected $fillable = [
         'category_id', 'sku', 'name', 'slug', 'price', 'reorder_point',
         'light', 'element', 'image', 'description', 'is_active',
-        'height', 'pot_size', 'growth_rate', 'watering', 'growth_info', 'care_guide',
+        'height', 'pot_size', 'weight_grams', 'growth_rate', 'watering', 'growth_info', 'care_guide',
     ];
 
     private static int $ledgerDepth = 0;
@@ -86,7 +87,7 @@ class Plant extends Model
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean', 'price' => 'integer', 'cost_price' => 'integer', 'stock' => 'integer',
+            'is_active' => 'boolean', 'weight_grams' => 'integer', 'price' => 'integer', 'cost_price' => 'integer', 'stock' => 'integer',
             'reorder_point' => 'integer', 'rating_sum' => 'integer', 'rating_count' => 'integer',
         ];
     }

@@ -12,7 +12,9 @@ use App\Models\Coupon;
 use App\Models\GoodsReceipt;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\StockCount;
 use App\Models\User;
+use App\Services\CouponGiftService;
 use App\Services\CouponService;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\OrderService;
@@ -20,6 +22,7 @@ use App\Services\Payments\PaymentGateway;
 use App\Services\PaymentService;
 use App\Services\PurchaseService;
 use App\Services\ReviewService;
+use App\Services\StockCountService;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 
@@ -55,8 +58,10 @@ try {
 
             return 'ok';
         })(),
+        'complete-count' => app(StockCountService::class)->complete(StockCount::findOrFail((int) $args[0]), User::where('role', 'admin')->firstOrFail())->status,
+        'issue-gifts' => app(CouponGiftService::class)->issueDueGifts(),
         'review' => app(ReviewService::class)->submit(User::findOrFail((int) $args[0]), (int) $args[1], 5, null, 'Song song')->id,
-        'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::where('role', 'admin')->firstOrFail())?->code,
+        'draft-pr' => app(PurchaseService::class)->draftFromLowStock(User::findOrFail((int) $args[0]))?->code,
         'ipn' => (function () use ($args) {
             $p = Payment::where('txn_ref', $args[0])->firstOrFail();
             parse_str(app(PaymentGateway::class)->sign([

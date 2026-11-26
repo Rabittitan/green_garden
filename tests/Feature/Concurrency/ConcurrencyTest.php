@@ -8,15 +8,20 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PurchaseRequestStatus;
 use App\Models\Coupon;
+use App\Models\CouponGiftRule;
+use App\Models\FlashSale;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Plant;
 use App\Models\PlantReview;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\OrderService;
 use App\Services\PurchaseService;
+use App\Services\StockCountService;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Process\Process;
@@ -133,7 +138,7 @@ class ConcurrencyTest extends TestCase
     /** B7: nhiều người cùng tạo yêu cầu nhập hàng -> mã chứng từ không trùng, không lỗi hệ thống. */
     public function test_document_codes_are_unique_under_concurrency(): void
     {
-        $results = $this->race(array_fill(0, 5, ['draft-pr']));
+        $results = $this->race(array_fill(0, 5, ['draft-pr', (string) User::factory()->staff()->create()->id]));   // nhân viên lập
 
         $codes = collect($results)->pluck('result');
         $this->assertSame(5, $codes->filter()->unique()->count(), 'Mã yêu cầu nhập bị trùng: '.$codes->implode(', '));
@@ -188,6 +193,61 @@ class ConcurrencyTest extends TestCase
                 $this->assertContains([$coupon->value, $scope], [[20, [1, 3, 5, 7, 12]], [30, [1, 3, 5, 9]]]);
             }
         }
+        $this->assertLedgerConsistent();
+        $this->artisan('shop:reconcile')->assertSuccessful();
+    }
+
+    /** Đợt 3: nhiều tiến trình phát quà cùng lúc (cron chồng nhau) -> mỗi đơn đủ điều kiện được tặng ĐÚNG 1 mã. */
+    public function test_gift_issuing_runs_in_parallel_without_duplicates(): void
+    {
+        $rule = CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 20000, 'valid_days' => 30]);
+        $rule->forceFill(['created_at' => now()->subDays(30)])->save();
+        $orders = app(OrderService::class);
+        foreach (range(1, 4) as $i) {
+            $o = $this->place(User::factory()->create(), [1 => 1]);
+            $orders->confirm($o, $this->admin());
+            $orders->ship($o, 'GHN', 'G'.$i, $this->admin());
+            $orders->complete($o, $this->admin());
+        }
+        DB::table('orders')->update(['completed_at' => now()->subDays(10)]);
+
+        $results = $this->race(array_fill(0, 4, ['issue-gifts']));
+        $this->assertSame(4, collect($results)->sum('result'));
+        $this->assertSame(4, Coupon::where('gift_rule_id', $rule->id)->count());
+        $this->assertSame(4, Coupon::where('gift_rule_id', $rule->id)->distinct()->count('source_order_id'));
+    }
+
+    /** Đợt 4: 5 khách tranh 2 suất flash sale cuối -> đúng 2 cây bán giá sale, sold_count khớp, không bán lố suất. */
+    public function test_customers_racing_for_last_flash_sale_slots(): void
+    {
+        $sale = new FlashSale(['name' => 'Race', 'starts_at' => now()->subHour(), 'ends_at' => now()->addHour()]);
+        $sale->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'approved', 'approved_by' => $this->admin()->id, 'approved_at' => now()])->save();
+        $item = $sale->items()->create(['plant_id' => 3, 'sale_price' => 99000, 'quantity_limit' => 2]);
+        $users = User::factory()->count(5)->create();
+        $results = $this->race($users->map(fn ($u) => ['place', (string) $u->id, json_encode([3 => 1]), (string) Str::uuid()])->all());
+
+        $this->assertSame(5, collect($results)->where('ok', true)->count());                  // ai cũng đặt được, quá suất thì giá thường
+        $this->assertSame(2, $item->refresh()->sold_count);
+        $this->assertSame(2, OrderItem::where('flash_sale_item_id', $item->id)->where('unit_price', 99000)->count());
+        $this->assertSame(3, OrderItem::where('plant_id', 3)->whereNull('flash_sale_item_id')->where('unit_price', Plant::find(3)->price)->count());
+        $this->assertLedgerConsistent();
+        $this->artisan('shop:reconcile')->assertSuccessful();
+    }
+
+    /** Đợt 5: chốt phiếu kiểm kê đúng lúc khách đặt hàng cùng cây -> không deadlock, áp chênh lệch, sổ kho khớp. */
+    public function test_completing_stock_count_while_customers_order_the_same_plants(): void
+    {
+        $count = app(StockCountService::class)->create($this->admin(), null, 'Đua');
+        foreach ($count->items as $item) {
+            $item->update(['counted_qty' => in_array($item->plant_id, [1, 3], true) ? $item->system_qty - 2 : $item->system_qty]);   // thiếu 2 cây #1, #3
+        }
+        $users = User::factory()->count(3)->create();
+        $jobs = $users->map(fn ($u) => ['place', (string) $u->id, json_encode([1 => 1, 3 => 1]), (string) Str::uuid()])->all();
+        $jobs[] = ['complete-count', (string) $count->id];
+        $this->race($jobs);
+
+        $this->assertSame('completed', $count->refresh()->status);
+        $this->assertSame([30 - 3 - 2, 50 - 3 - 2], [$this->stock(1), $this->stock(3)]);           // bán 3 + thiếu 2, không ghi đè số bán
         $this->assertLedgerConsistent();
         $this->artisan('shop:reconcile')->assertSuccessful();
     }

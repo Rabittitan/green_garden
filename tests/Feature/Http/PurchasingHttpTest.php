@@ -51,7 +51,10 @@ class PurchasingHttpTest extends TestCase
 
     public function test_low_stock_shortcut_and_validation(): void
     {
-        $this->actingAs($this->admin());
+        $this->actingAs($this->admin());                                                // quản trị viên chỉ duyệt, không lập
+        $this->post(route('admin.purchase-requests.from-low-stock'))->assertSessionHas('error');
+        $this->assertSame(0, PurchaseRequest::count());
+        $this->actingAs(User::factory()->staff()->create());
         $this->post(route('admin.purchase-requests.from-low-stock'))->assertRedirect();     // cây #16 tồn 1 <= ngưỡng 5
         $this->assertSame(1, PurchaseRequest::count());
         $this->post(route('admin.purchase-requests.store'), ['priority' => 'normal', 'items' => [1 => ['quantity' => 0]]])->assertSessionHas('error');

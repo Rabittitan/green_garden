@@ -26,7 +26,22 @@
                 <div class="mb-2"><span class="gg-stars fs-6">@for($i = 1; $i <= 5; $i++)<i class="fa{{ $i <= round($plant->rating_avg) ? 's' : 'r' }} fa-star"></i>@endfor</span>
                     <strong>{{ $plant->rating_avg }}</strong>/5 · <a href="#reviews" class="text-green">{{ $plant->rating_count }} đánh giá</a></div>
             @endif
-            <div class="gg-price my-2">@money($plant->price)</div>
+            @if($flash)
+                {{-- Flash sale đang chạy: giá thật vẫn do server tính lúc đặt hàng (còn đủ suất mới được giá sale) --}}
+                <div class="gg-flash-box my-2">
+                    <div class="d-flex flex-wrap align-items-baseline gap-2">
+                        <span class="badge bg-danger"><i class="fa fa-bolt"></i> Flash sale</span>
+                        <span class="gg-price text-danger">@money($flash->sale_price)</span>
+                        <s class="text-muted">@money($plant->price)</s>
+                        <span class="badge bg-danger-subtle text-danger">−{{ round(($plant->price - $flash->sale_price) * 100 / max(1, $plant->price)) }}%</span>
+                    </div>
+                    <div class="small mt-1">Kết thúc @vndt($flash->sale->ends_at)
+                        @if($flash->quantity_limit) · còn <strong>{{ $flash->remaining() }}</strong>/{{ $flash->quantity_limit }} suất @endif
+                        · vẫn được cộng ưu đãi hạng và mã giảm giá</div>
+                </div>
+            @else
+                <div class="gg-price my-2">@money($plant->price)</div>
+            @endif
 
             <div class="gg-attrs my-3">
                 <div class="gg-attr"><small>Mệnh phong thủy</small><strong>{{ \App\Models\Plant::ELEMENTS[$plant->element] }}</strong></div>
@@ -119,7 +134,7 @@
     <div class="gg-section-head"><h2>Cây cùng mệnh {{ \App\Models\Plant::ELEMENTS[$plant->element] }}</h2></div>
     <div class="row g-3">
         @foreach($related as $item)
-            <div class="col-6 col-md-3">@include('partials.plant-card', ['plant' => $item])</div>
+            <div class="col-6 col-md-3">@include('partials.plant-card', ['plant' => $item, 'flash' => $flashMap[$item->id] ?? null])</div>
         @endforeach
     </div>
 @endif

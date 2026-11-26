@@ -5,9 +5,13 @@ namespace Tests\Feature\Audit;
 use App\Enums\PaymentMethod;
 use App\Models\Article;
 use App\Models\Coupon;
+use App\Models\CouponGiftRule;
+use App\Models\FlashSale;
 use App\Models\HomeSlide;
 use App\Models\Plant;
 use App\Models\PlantReview;
+use App\Models\ShippingZone;
+use App\Models\StockCount;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\UserAddress;
@@ -57,7 +61,7 @@ class AcceptanceCrawlTest extends TestCase
         return [
             'order' => $order, 'plant' => 1, 'id' => 1, 'coupon' => Coupon::first()->id, 'user' => $this->customer()->id,
             'purchase_request' => $pr->id, 'supplier' => Supplier::first()->id, 'goods_receipt' => $receipt->id,
-            'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id,
+            'address' => UserAddress::first()->id, 'article' => Article::first()->id, 'slide' => HomeSlide::first()->id, 'shippingZone' => ShippingZone::create(['name' => 'Vùng thử', 'base_fee' => 30000, 'base_weight_grams' => 100000, 'extra_fee_per_kg' => 0, 'is_default' => true])->id, 'stockCount' => tap(new StockCount(['code' => 'KK-TEST-0001']), fn ($c) => $c->forceFill(['created_by' => User::where('role', 'admin')->first()->id, 'status' => 'draft'])->save())->id, 'flashSale' => tap(new FlashSale(['name' => 'FS', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDays(2)]), fn ($f) => $f->forceFill(['created_by' => User::factory()->staff()->create()->id, 'status' => 'submitted'])->save())->id, 'rule' => CouponGiftRule::create(['name' => 'Quà', 'min_order_total' => 1, 'type' => 'fixed', 'value' => 1000, 'valid_days' => 7])->id, 'staff' => User::factory()->staff()->create()->id,
             'token' => 'token-dat-lai-mat-khau-khong-hop-le',               // trang đặt lại mật khẩu: chỉ hiện form, không ghi DB
         ];
     }

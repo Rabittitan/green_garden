@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\CouponScope;
 use App\Enums\CouponType;
+use App\Support\Format;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -31,6 +33,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $ends_at
  * @property bool $is_active
  * @property int|null $created_by
+ * @property int|null $owner_user_id
+ * @property int|null $gift_rule_id
+ * @property int|null $source_order_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -69,6 +74,36 @@ class Coupon extends Model
     public function setCodeAttribute(string $value): void
     {
         $this->attributes['code'] = static::normalizeCode($value);
+    }
+
+    /** @return BelongsTo<User, $this> chủ ví (mã riêng); null = mã chung */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    /**
+     * Mã riêng của khách còn dùng được (bật, đã tới giờ, chưa hết hạn, còn lượt). Điều kiện đơn tối thiểu xét lúc áp mã.
+     *
+     * @param  Builder<static>  $q
+     * @return Builder<static>
+     */
+    public function scopeWalletUsable(Builder $q, int $userId): Builder
+    {
+        return $q->where('owner_user_id', $userId)->where('is_active', true)
+            ->where(fn ($w) => $w->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($w) => $w->whereNull('ends_at')->orWhere('ends_at', '>', now()))
+            ->where(fn ($w) => $w->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'));
+    }
+
+    /** Mô tả ngắn quyền lợi, vd "Giảm 10% (tối đa 50.000đ)" / "Giảm 30.000đ" / "Miễn phí vận chuyển". */
+    public function benefitText(): string
+    {
+        return match ($this->type) {
+            CouponType::Percent => 'Giảm '.$this->value.'%'.($this->max_discount_amount ? ' (tối đa '.Format::money($this->max_discount_amount).')' : ''),
+            CouponType::Fixed => 'Giảm '.Format::money($this->value),
+            CouponType::FreeShipping => 'Miễn phí vận chuyển',
+        };
     }
 
     public static function normalizeCode(string $code): string

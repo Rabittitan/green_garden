@@ -6,12 +6,14 @@ use App\Enums\ActorType;
 use App\Enums\OrderStatus;
 use App\Exceptions\BusinessException;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\PlantReview;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 /** Đơn hàng của khách: lịch sử, chi tiết, thanh toán lại, hủy, yêu cầu trả hàng. */
@@ -23,7 +25,23 @@ class OrderController extends Controller
     {
         $orders = $request->user()->orders()->latest('id')->paginate(10);
 
-        return view('orders.index', compact('orders'));
+        return view('orders.index', ['orders' => $orders, 'toReview' => $this->awaitingReview($request->user()->id),
+            'tab' => $request->query('tab') === 'cho-danh-gia' ? 'review' : 'orders']);
+    }
+
+    /**
+     * Cây khách đã NHẬN (dòng hàng của đơn hoàn thành) mà chưa đánh giá, mỗi cây 1 dòng, mới nhất trước.
+     * Cùng điều kiện với ReviewService::proofOfPurchase; cây ngừng bán bị bỏ (trang cây 404). 1 câu SQL + nạp cây.
+     *
+     * @return Collection<int, OrderItem>
+     */
+    private function awaitingReview(int $userId)
+    {
+        return OrderItem::with(['plant', 'order'])
+            ->whereHas('order', fn ($q) => $q->where('user_id', $userId)->where('status', OrderStatus::Completed->value))
+            ->whereHas('plant', fn ($q) => $q->where('is_active', true)->whereNull('deleted_at'))
+            ->whereNotIn('plant_id', PlantReview::where('user_id', $userId)->select('plant_id'))
+            ->latest('id')->take(30)->get()->unique('plant_id')->values();
     }
 
     public function show(Order $order): View

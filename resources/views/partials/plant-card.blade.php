@@ -1,4 +1,5 @@
-{{-- Thẻ hiển thị 1 cây. Nhận biến $plant (đã nạp sẵn category), tùy chọn $sold (số đã bán gần đây: hiện nhãn "Hot"). Số sao / tồn kho lấy từ cột của cây: không truy vấn thêm.
+{{-- Thẻ hiển thị 1 cây. Nhận biến $plant (đã nạp sẵn category), tùy chọn $sold (số đã bán gần đây: hiện nhãn "Hot"),
+     $flash (FlashSaleItem đang chạy: hiện giá sale + giá gạch). Số sao / tồn kho lấy từ cột của cây: không truy vấn thêm.
      onerror: ảnh lỗi thì hiện ảnh dự phòng --}}
 <div class="card plant-card h-100">
     <a href="{{ route('plants.show', $plant->id) }}" class="gg-card-media">
@@ -9,7 +10,9 @@
         @elseif($plant->stock <= $plant->reorder_point)
             <span class="gg-card-flag gg-flag-low">Sắp hết hàng</span>
         @endif
-        @if(! empty($sold))
+        @if(! empty($flash))
+            <span class="gg-card-flag gg-flag-hot"><i class="fa fa-bolt"></i> Flash sale</span>
+        @elseif(! empty($sold))
             <span class="gg-card-flag gg-flag-hot"><i class="fa fa-fire"></i> Đã bán {{ $sold }}</span>
         @endif
     </a>
@@ -29,7 +32,13 @@
             <span class="gg-chip gg-chip-sun">{{ \App\Models\Plant::LIGHTS[$plant->light] }}</span>
         </div>
         <div class="mt-auto">
-            <div class="gg-price fs-5 mb-2">@money($plant->price)</div>
+            @if(! empty($flash))
+                <div class="mb-2"><span class="gg-price fs-5 text-danger">@money($flash->sale_price)</span>
+                    <s class="small text-muted ms-1">@money($plant->price)</s>
+                    <span class="badge bg-danger ms-1">−{{ round(($plant->price - $flash->sale_price) * 100 / max(1, $plant->price)) }}%</span></div>
+            @else
+                <div class="gg-price fs-5 mb-2">@money($plant->price)</div>
+            @endif
             @if($plant->stock > 0)
                 {{-- Thêm nhanh 1 cây vào giỏ --}}
                 <form action="{{ route('cart.add', $plant->id) }}" method="POST">

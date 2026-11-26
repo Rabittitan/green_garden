@@ -2,13 +2,17 @@
 @section('title', 'Yêu cầu nhập hàng')
 
 @section('content')
-<div class="d-flex justify-content-between mb-3">
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
     <h4 class="text-green fw-bold"><i class="fa fa-clipboard-list"></i> Yêu cầu nhập hàng</h4>
-    <div class="d-flex gap-2">
-        <form action="{{ route('admin.purchase-requests.from-low-stock') }}" method="POST">@csrf
-            <button class="btn btn-outline-warning"><i class="fa fa-wand-magic-sparkles"></i> Lập từ cây dưới ngưỡng</button></form>
-        <a href="{{ route('admin.purchase-requests.create') }}" class="btn btn-green"><i class="fa fa-plus"></i> Lập yêu cầu</a>
-    </div>
+    @if(auth()->user()->isAdmin())
+        <span class="small text-muted align-self-center">Quản trị viên duyệt / từ chối; nhân viên lập yêu cầu.</span>
+    @else
+        <div class="d-flex gap-2">
+            <form action="{{ route('admin.purchase-requests.from-low-stock') }}" method="POST">@csrf
+                <button class="btn btn-outline-warning"><i class="fa fa-wand-magic-sparkles"></i> Lập từ cây dưới ngưỡng</button></form>
+            <a href="{{ route('admin.purchase-requests.create') }}" class="btn btn-green"><i class="fa fa-plus"></i> Lập yêu cầu</a>
+        </div>
+    @endif
 </div>
 <div class="mb-3 d-flex flex-wrap gap-1">
     <a href="{{ route('admin.purchase-requests.index') }}" class="btn btn-sm {{ request('status') ? 'btn-outline-dark' : 'btn-dark' }}">Tất cả</a>

@@ -111,14 +111,21 @@ class AdminFlowTest extends TestCase
         $this->assertLedgerConsistent();
     }
 
-    public function test_inventory_count_and_damage(): void
+    public function test_inventory_damage_and_stock_count_link(): void
     {
         $this->actingAs($this->admin());
-        $this->post(route('admin.inventory.count', 1), ['counted' => 27, 'reason' => 'Kiểm kê'])->assertSessionHas('success');
         $this->post(route('admin.inventory.damage', 1), ['quantity' => 2, 'reason' => 'Cây chết'])->assertSessionHas('success');
         $this->post(route('admin.inventory.damage', 16), ['quantity' => 5, 'reason' => 'x'])->assertSessionHas('error');
-        $this->assertSame(25, $this->stock(1));
-        $this->get(route('admin.inventory.show', 1))->assertOk()->assertSee('Kiểm kê')->assertSee('Hư hỏng');
+        $this->assertSame(28, $this->stock(1));
+        $this->get(route('admin.inventory.show', 1))->assertOk()->assertSee('Phiếu kiểm kê')->assertSee('Hư hỏng');
+
+        // Nhân viên: ghi cây chết được, không thấy / không vào được phiếu kiểm kê (việc của quản trị viên)
+        $staff = User::factory()->staff()->create();
+        $this->actingAs($staff)->get(route('admin.inventory.show', 1))->assertOk()
+            ->assertSee('Ghi hư hỏng / cây chết')->assertDontSee(route('admin.stock-counts.index'), false);
+        $this->get(route('admin.stock-counts.index'))->assertForbidden();
+        $this->post(route('admin.inventory.damage', 1), ['quantity' => 1, 'reason' => 'Cây héo'])->assertSessionHas('success');
+        $this->assertSame(27, $this->stock(1));
     }
 
     public function test_coupon_crud_and_lock_after_use(): void

@@ -5,7 +5,13 @@
 <a href="{{ route('admin.customers.index') }}" class="text-green text-decoration-none"><i class="fa fa-arrow-left"></i> Khách hàng</a>
 <h4 class="fw-bold mt-2">{{ $customer->name }} <span class="badge bg-warning text-dark">{{ $customer->tier->name }}</span>
     @unless($customer->is_active)<span class="badge bg-danger">Đã khóa</span>@endunless</h4>
-<p>{{ $customer->email }} · {{ $customer->phone }} · Tổng chi tiêu: <strong>@money($customer->lifetime_spend)</strong> · Đăng ký @vndt($customer->created_at)</p>
+<p>{{ $customer->email }} · {{ $customer->phone }} · Đăng ký @vndt($customer->created_at)</p>
+<div class="d-flex flex-wrap gap-3 mb-3">
+    <div class="gg-mini-stat"><small>Đơn hoàn thành / tổng</small><strong>{{ $customer->completed_orders_count }} / {{ $customer->orders_count }}</strong></div>
+    <div class="gg-mini-stat"><small>Đã mua (đơn hoàn thành)</small><strong>@money((int) $customer->completed_paid_sum - (int) $customer->completed_refunded_sum)</strong></div>
+    <div class="gg-mini-stat"><small>Chi tiêu xét hạng</small><strong>@money($customer->lifetime_spend)</strong>
+        <span class="small text-muted">cộng sau {{ config('shop.return_window_days') }} ngày đổi trả</span></div>
+</div>
 
 <div class="row g-4">
     <div class="col-lg-4">
@@ -17,6 +23,12 @@
             <input name="note" class="form-control mb-2" placeholder="Lý do (bắt buộc)" required>
             <button class="btn btn-warning">Đổi hạng</button>
             <small class="text-muted mt-1">Hạng tự động chỉ đi lên; đổi tay được cả lên và xuống, có lưu lịch sử.</small>
+        </form>
+        {{-- Tặng tay 1 mã riêng vào "Mã của tôi" của khách (kèm email báo) --}}
+        <form action="{{ route('admin.customers.gift', $customer) }}" method="POST" class="card card-body shadow-sm mb-3" id="tang-ma">@csrf
+            <h6 class="fw-bold"><i class="fa fa-gift text-green"></i> Tặng mã cho khách</h6>
+            @include('admin.coupon-gifts._fields', ['g' => null])
+            <button class="btn btn-green btn-sm mt-2">Tặng mã</button>
         </form>
         <form action="{{ route('admin.customers.toggle', $customer) }}" method="POST" class="mb-3">@csrf
             <button class="btn btn-sm {{ $customer->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}">{{ $customer->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}</button>

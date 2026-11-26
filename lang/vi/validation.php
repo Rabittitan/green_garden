@@ -185,6 +185,7 @@ return [
         'amount' => 'số tiền',
         'height' => 'kích thước cây',
         'pot_size' => 'chậu',
+        'weight_grams' => 'khối lượng đóng gói',
         'growth_rate' => 'tốc độ lớn',
         'watering' => 'lịch tưới nước',
         'growth_info' => 'quá trình sinh trưởng',

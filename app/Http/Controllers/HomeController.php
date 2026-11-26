@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FlashSaleStatus;
 use App\Enums\OrderStatus;
 use App\Models\Article;
 use App\Models\Category;
+use App\Models\FlashSaleItem;
 use App\Models\HomeSlide;
 use App\Models\OrderItem;
 use App\Models\Plant;
@@ -29,8 +31,15 @@ class HomeController extends Controller
 
         [$hotPlants, $hotSold] = $this->hotPlants();
 
+        // Flash sale đang chạy: mục riêng có đếm ngược + giá sale trên mọi thẻ cây của trang (1 câu SQL)
+        $flashItems = FlashSaleItem::with(['plant.category', 'sale'])
+            ->whereHas('sale', fn ($q) => $q->where('status', FlashSaleStatus::Approved->value)->where('starts_at', '<=', now())->where('ends_at', '>', now()))
+            ->whereHas('plant', fn ($q) => $q->where('is_active', true)->whereNull('deleted_at'))
+            ->orderBy('sale_price')->get()->unique('plant_id')->values();
+        $flashMap = $flashItems->keyBy('plant_id');
+
         // Gửi dữ liệu sang view resources/views/home.blade.php
-        return view('home', compact('categories', 'newPlants', 'articles', 'slides', 'hotPlants', 'hotSold'));
+        return view('home', compact('categories', 'newPlants', 'articles', 'slides', 'hotPlants', 'hotSold', 'flashItems', 'flashMap'));
     }
 
     /**

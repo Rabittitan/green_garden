@@ -7,6 +7,7 @@ use App\Exceptions\BusinessException;
 use App\Models\GoodsReceiptItem;
 use App\Models\OrderItem;
 use App\Models\Plant;
+use App\Models\StockCountItem;
 use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +50,7 @@ class InventoryService
         ?int $unitCost = null,
         ?string $note = null,
         ?int $by = null,
+        ?StockCountItem $countItem = null,
     ): StockMovement {
         if (DB::transactionLevel() === 0) {
             throw new LogicException('InventoryService::move phải chạy trong transaction có khóa dòng.');
@@ -58,6 +60,9 @@ class InventoryService
         }
         if ($type->requiresOrderItem() !== ($orderItem !== null) && $type !== StockMovementType::Damage) {
             throw new LogicException("Bút toán {$type->value} ".($type->requiresOrderItem() ? 'bắt buộc' : 'không được').' gắn dòng đơn hàng.');
+        }
+        if ($countItem !== null && $type !== StockMovementType::Adjustment) {
+            throw new LogicException('Chỉ bút toán kiểm kê mới gắn dòng phiếu kiểm kê.');
         }
         if ($type->requiresReceiptItem() !== ($receiptItem !== null)) {
             throw new LogicException("Bút toán {$type->value} ".($type->requiresReceiptItem() ? 'bắt buộc' : 'không được').' gắn dòng phiếu nhập.');
@@ -86,6 +91,7 @@ class InventoryService
             'unit_cost' => $unitCost ?? $plant->cost_price,
             'order_item_id' => $orderItem?->id,
             'goods_receipt_item_id' => $receiptItem?->id,
+            'stock_count_item_id' => $countItem?->id,
             'created_by' => $by,
             'note' => $note,
         ]);

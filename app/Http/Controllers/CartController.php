@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\BusinessException;
 use App\Models\Plant;
 use App\Services\CartService;
+use App\Services\FlashSaleService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ use Illuminate\Http\Request;
 /** Giỏ hàng (session). Giá hiển thị luôn lấy từ DB. */
 class CartController extends Controller
 {
-    public function __construct(private CartService $cart) {}
+    public function __construct(private CartService $cart, private FlashSaleService $flashSales) {}
 
     public function index(): View
     {
@@ -21,7 +22,14 @@ class CartController extends Controller
         }
         $items = $this->cart->items();
         $plants = Plant::whereIn('id', array_keys($items))->get()->keyBy('id');
-        $lines = collect($items)->map(fn ($qty, $id) => ['plant' => $plants[$id], 'quantity' => $qty, 'total' => $plants[$id]->price * $qty]);
+        // Flash sale đang chạy: cùng quy tắc với báo giá (đủ suất cho cả dòng mới tính giá sale)
+        $flash = $this->flashSales->activeItems(array_map('intval', array_keys($items)));
+        $lines = collect($items)->map(function ($qty, $id) use ($plants, $flash) {
+            $f = $flash->get((int) $id);
+            $unit = $f && $f->covers((int) $qty) ? $f->sale_price : $plants[$id]->price;
+
+            return ['plant' => $plants[$id], 'quantity' => $qty, 'unit' => $unit, 'flash' => $f, 'total' => $unit * $qty];
+        });
 
         return view('cart.index', ['lines' => $lines, 'subtotal' => $lines->sum('total')]);
     }

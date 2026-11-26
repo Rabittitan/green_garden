@@ -60,6 +60,7 @@ Cài cron, supervisor, nginx theo 3 file mẫu trong `deploy/` (đổi `shop.exa
 | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_URL` | lấy từ VNPay | thiếu → thanh toán online tự ẩn |
 | `SHOP_BANK_ACCOUNT_NO` (+ tên/ngân hàng) | số TK thật | trống → ẩn phương thức chuyển khoản |
 | `SHOP_RETURN_ADDRESS` | địa chỉ nhận hàng trả | in trong email trả hàng |
+| (không phải `.env`) Phí ship theo vùng | Admin → Phí vận chuyển: tạo vùng, gán tỉnh, đặt phí cơ bản + phí mỗi kg; nhập khối lượng đóng gói ở form cây | chưa tạo vùng nào = thu đồng giá `SHOP_SHIPPING_FEE` như cũ |
 | `SHOP_SELLER_NAME`, `SHOP_SELLER_ADDRESS`, `SHOP_SELLER_PHONE`, `SHOP_SELLER_EMAIL`, `SHOP_SELLER_TAX_CODE` | thông tin người bán thật | in trên **hóa đơn bán lẻ** của đơn hàng; dòng nào để trống thì không in. Đây không phải hóa đơn GTGT |
 
 Kiểm tra nhanh sau khi sửa `.env`: `php artisan optimize && php artisan about` (mục Environment phải là production, Debug OFF).
@@ -86,7 +87,7 @@ Kiểm tra nhanh sau khi sửa `.env`: `php artisan optimize && php artisan abou
 |---|---|---|---|
 | `orders:expire-unpaid` | mỗi phút | hủy đơn VNPay quá 15 phút / chuyển khoản quá 24h chưa trả, **trả hàng về kho** | hàng bị giữ mãi, khách khác không mua được |
 | `membership:record-spend` | mỗi giờ | đơn đã qua 7 ngày đổi trả → cộng chi tiêu, tự lên hạng | khách không được lên hạng |
-| `shop:reconcile` | 02:17 hằng ngày | đối soát 8 bất biến kho / tiền / mã / hạng / đánh giá | không phát hiện lệch dữ liệu |
+| `shop:reconcile` | 02:17 hằng ngày | đối soát 9 bất biến kho / tiền / mã / hạng / đánh giá / suất flash sale | không phát hiện lệch dữ liệu |
 | `payments:prune-webhook-logs` | 03:23 | xóa log callback > 180 ngày | bảng log phình |
 | `queue:prune-failed --hours=720` | 03:41 | xóa job lỗi > 30 ngày | |
 | `deploy/backup-db.sh` | 01:15 | sao lưu DB (mục 6) | |

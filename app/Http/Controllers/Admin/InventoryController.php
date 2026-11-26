@@ -10,7 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-/** Kho: tồn hiện tại, sổ kho từng cây, kiểm kê theo số đếm thực tế, ghi hư hỏng. */
+/** Kho: tồn hiện tại, sổ kho từng cây, ghi hư hỏng / cây chết. Kiểm kê: phiếu kiểm kê riêng (StockCountController). */
 class InventoryController extends Controller
 {
     public function __construct(private InventoryService $inventory) {}
@@ -30,19 +30,6 @@ class InventoryController extends Controller
             ->latest('id')->paginate(30);
 
         return view('admin.inventory.show', compact('plant', 'movements'));
-    }
-
-    public function count(Request $request, Plant $plant): RedirectResponse
-    {
-        $data = $request->validate(['counted' => ['required', 'integer', 'min:0'], 'reason' => ['required', 'string', 'max:200']],
-            [], ['counted' => 'số đếm thực tế', 'reason' => 'ghi chú kiểm kê']);
-        try {
-            $m = $this->inventory->countTo($plant->id, (int) $data['counted'], $data['reason'], $request->user()->id);
-        } catch (BusinessException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', $m ? "Đã điều chỉnh tồn {$m->quantity} (còn {$m->stock_after})." : 'Số đếm khớp tồn kho, không cần điều chỉnh.');
     }
 
     public function damage(Request $request, Plant $plant): RedirectResponse

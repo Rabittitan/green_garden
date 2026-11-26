@@ -9,6 +9,7 @@ use App\Exceptions\BusinessException;
 use App\Exceptions\CouponNotApplicableException;
 use App\Exceptions\PriceChangedException;
 use App\Http\Requests\PlaceOrderRequest;
+use App\Models\Coupon;
 use App\Models\UserAddress;
 use App\Services\CartService;
 use App\Services\OrderService;
@@ -17,6 +18,7 @@ use App\Services\PricingService;
 use App\Support\Format;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -44,12 +46,16 @@ class CheckoutController extends Controller
 
         $user = $request->user()->load('tier');
         $couponCode = session(self::COUPON_KEY);
+        // Phí ship theo vùng: tính theo tỉnh đang điền sẵn (vừa nhập lỗi / địa chỉ mặc định); đổi tỉnh thì JS gọi shippingQuote
+        $addresses = $user->addresses()->get();
+        $default = $addresses->firstWhere('is_default', true) ?? $addresses->first();
+        $province = old('province', $default?->province);
         try {
-            $quote = $this->pricing->quoteCart($user, $this->cart->items(), $couponCode);
+            $quote = $this->pricing->quoteCart($user, $this->cart->items(), $couponCode, $province);
         } catch (CouponNotApplicableException $e) {
             session()->forget(self::COUPON_KEY);                     // mã hết hiệu lực -> bỏ mã, báo khách
             session()->now('error', $e->getMessage().' Mã đã được gỡ khỏi đơn.');
-            $quote = $this->pricing->quoteCart($user, $this->cart->items());
+            $quote = $this->pricing->quoteCart($user, $this->cart->items(), null, $province);
         } catch (BusinessException $e) {
             return redirect()->route('cart.index')->with('error', $e->getMessage());
         }
@@ -61,10 +67,32 @@ class CheckoutController extends Controller
         return view('checkout.form', [
             'quote' => $quote,
             'user' => $user,
-            'addresses' => $user->addresses()->get(),
+            'addresses' => $addresses,
             'methods' => PaymentMethod::available(),
             'token' => session(self::TOKEN_KEY),
             'nextTier' => $user->tier->next(),
+            // "Mã của tôi" còn dùng được: bấm để áp nhanh (hạn gần nhất trước)
+            'myCoupons' => Coupon::walletUsable($user->id)->orderBy('ends_at')->take(5)->get(),
+        ]);
+    }
+
+    /**
+     * Trang đặt hàng đổi tỉnh nhận hàng -> tính lại phí ship + tổng (chỉ đọc). JS cập nhật số hiển thị và expected_total;
+     * không có JS thì lúc đặt hàng server vẫn tính lại và báo "giá đã thay đổi" nếu khác.
+     */
+    public function shippingQuote(Request $request): JsonResponse
+    {
+        $province = $request->validate(['province' => ['nullable', 'string', 'max:100']])['province'] ?? null;
+        try {
+            $quote = $this->pricing->quoteCart($request->user()->load('tier'), $this->cart->items(), session(self::COUPON_KEY), $province);
+        } catch (BusinessException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'shipping_fee' => $quote->shippingFee, 'shipping_discount' => $quote->shippingDiscount, 'total' => $quote->total(),
+            'shipping_fee_text' => $quote->shippingFee > 0 ? Format::money($quote->shippingFee) : 'Miễn phí',
+            'total_text' => Format::money($quote->total()),
         ]);
     }
 

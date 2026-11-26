@@ -79,18 +79,38 @@ class PurchasingTest extends TestCase
         $this->assertLedgerConsistent();
     }
 
+    public function test_admin_only_approves_and_staff_only_requests(): void
+    {
+        try {
+            $this->purchases->createRequest($this->admin(), [1 => ['quantity' => 5, 'estimated_unit_cost' => 1]]);
+            $this->fail('Quản trị viên không được lập yêu cầu nhập');
+        } catch (BusinessException $e) {
+            $this->assertStringContainsString('do nhân viên lập', $e->getMessage());
+        }
+        try {
+            $this->purchases->draftFromLowStock($this->admin());
+            $this->fail('Quản trị viên không được lập yêu cầu nhập (kể cả từ cây dưới ngưỡng)');
+        } catch (BusinessException) {
+        }
+        $this->assertSame(0, PurchaseRequest::count());
+
+        $this->actingAs($this->admin())->get(route('admin.purchase-requests.create'))->assertRedirect(route('admin.purchase-requests.index'));
+        $this->get(route('admin.purchase-requests.index'))->assertDontSee('Lập yêu cầu</a>', false);
+        $this->actingAs($this->staff)->get(route('admin.purchase-requests.create'))->assertOk();
+    }
+
     public function test_four_eyes_rule_in_service_and_database(): void
     {
-        $pr = $this->purchases->createRequest($this->admin(), [1 => ['quantity' => 5, 'estimated_unit_cost' => 1]]);
-        $this->purchases->transition($pr, PR::Submitted, $this->admin());
+        $pr = $this->purchases->createRequest($this->staff, [1 => ['quantity' => 5, 'estimated_unit_cost' => 1]]);
+        $this->purchases->transition($pr, PR::Submitted, $this->staff);
         try {
-            $this->purchases->approve($pr, $this->admin());
+            $this->purchases->approve($pr, $this->staff);
             $this->fail('Người lập không được tự duyệt');
         } catch (BusinessException $e) {
             $this->assertStringContainsString('4 mắt', $e->getMessage());
         }
         $this->expectException(QueryException::class);                        // lưới an toàn ở DB
-        DB::table('purchase_requests')->where('id', $pr->id)->update(['approved_by' => $this->admin()->id]);
+        DB::table('purchase_requests')->where('id', $pr->id)->update(['approved_by' => $this->staff->id]);
     }
 
     public function test_approver_can_reduce_quantities_but_not_approve_nothing(): void

@@ -25,7 +25,7 @@ use Throwable;
 /**
  * Đặt hàng + vòng đời đơn.
  *
- * THỨ TỰ KHÓA (mọi luồng): users -> orders -> plants (id tăng dần) -> coupons -> payments.
+ * THỨ TỰ KHÓA (mọi luồng): users -> orders -> plants (id tăng dần) -> flash_sale_items (id tăng dần) -> coupons -> payments.
  * Mọi transaction dùng attempts = 3 để tự thử lại khi MySQL báo deadlock.
  * Kết nối chạy READ COMMITTED (config/database.php) nên không có gap lock.
  */
@@ -37,6 +37,7 @@ class OrderService
         private InventoryService $inventory,
         private PaymentService $payments,
         private OrderStateWriter $state,
+        private FlashSaleService $flashSales,
     ) {}
 
     // ================================================================ ĐẶT HÀNG
@@ -68,8 +69,9 @@ class OrderService
                     }
                 }
 
-                // 4. Khóa cây theo id tăng dần, kiểm tra còn bán + đủ hàng
+                // 4. Khóa cây theo id tăng dần, kiểm tra còn bán + đủ hàng; rồi khóa suất flash sale đang chạy (plants -> flash -> coupons)
                 $plants = $this->inventory->lockPlants(array_keys($data->cart));
+                $flash = $this->flashSales->activeItems(array_map('intval', array_keys($data->cart)), lock: true);
                 $items = [];
                 foreach ($data->cart as $plantId => $qty) {
                     $plant = $plants->get((int) $plantId);
@@ -82,13 +84,13 @@ class OrderService
                     if ($plant->stock < (int) $qty) {
                         throw new BusinessException("Cây \"{$plant->name}\" chỉ còn {$plant->stock} cây trong kho.");
                     }
-                    $items[] = ['plant' => $plant, 'quantity' => (int) $qty];
+                    $items[] = ['plant' => $plant, 'quantity' => (int) $qty, 'flash' => $flash->get((int) $plantId)];
                 }
 
                 // 5. Khóa mã + báo giá THẬT (cùng công thức với trang xem trước)
                 $coupon = $data->couponCode !== null && trim($data->couponCode) !== ''
                     ? $this->coupons->find($data->couponCode, lock: true) : null;
-                $quote = $this->pricing->quote($user, $items, $coupon);
+                $quote = $this->pricing->quote($user, $items, $coupon, $data->shipping['province']);   // phí ship theo vùng của tỉnh nhận hàng
 
                 // 6. Khách phải đồng ý đúng con số sẽ trả
                 if ($data->expectedTotal !== null && $quote->total() !== $data->expectedTotal) {
@@ -98,8 +100,12 @@ class OrderService
                 // 7-11. Ghi đơn, dòng hàng, trừ kho, lượt mã, khoản thu, lịch sử
                 $order = $this->createOrderRow($user, $data, $quote);
                 foreach ($quote->lines as $line) {
+                    if ($line->flashItem) {
+                        $this->flashSales->consume($line->flashItem, $line->quantity);
+                    }
                     $item = $order->items()->create([
-                        'plant_id' => $line->plant->id, 'plant_name' => $line->plant->name, 'plant_sku' => $line->plant->sku,
+                        'plant_id' => $line->plant->id, 'flash_sale_item_id' => $line->flashItem?->id,
+                        'plant_name' => $line->plant->name, 'plant_sku' => $line->plant->sku,
                         'unit_price' => $line->unitPrice, 'quantity' => $line->quantity,
                         'member_discount' => $line->memberDiscount, 'coupon_discount' => $line->couponDiscount,
                         'unit_cost' => $line->plant->cost_price,
@@ -238,6 +244,7 @@ class OrderService
             $this->inventory->move($plants[$item->plant_id], StockMovementType::SaleCancel, $item->quantity,
                 orderItem: $item, unitCost: $item->unit_cost, note: "Hủy đơn {$o->code}", by: $by);
         }
+        $this->flashSales->release($o);                                       // trả suất flash sale (khóa sau plants, trước coupons)
         $this->coupons->release($o);
         $this->payments->cancelPendingCharges($o);
         $refundable = $this->payments->refundableAmount($o);

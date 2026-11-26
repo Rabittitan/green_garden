@@ -49,15 +49,45 @@
 
 <div class="row">
     <div class="col-md-3 mb-3">
-        <label class="form-label">Ngưỡng nhập thêm *</label>
-        <input type="number" name="reorder_point" min="0" value="{{ old('reorder_point', $plant->reorder_point ?? 5) }}" class="form-control @error('reorder_point') is-invalid @enderror">
+        <label class="form-label" for="reorder_point">Ngưỡng nhập thêm *</label>
+        {{-- Không điền sẵn: mỗi cây một ngưỡng, người nhập tự quyết (tồn ≤ ngưỡng thì báo "sắp hết", gợi ý nhập thêm) --}}
+        <input type="number" id="reorder_point" name="reorder_point" min="0" required placeholder="VD: 10" value="{{ old('reorder_point', $plant->reorder_point ?? '') }}" class="form-control @error('reorder_point') is-invalid @enderror">
         @error('reorder_point') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
     @if($plant)
         <div class="col-md-5 mb-3">
-            <label class="form-label">Tồn kho / Giá vốn</label>
-            <div class="form-control-plaintext"><strong>{{ $plant->stock }}</strong> cây · giá vốn @money($plant->cost_price)
-                · <a href="{{ route('admin.inventory.show', $plant) }}">Kiểm kê / sổ kho</a></div>
+            <label class="form-label">Tồn kho</label>
+            <div class="form-control-plaintext"><strong>{{ $plant->stock }}</strong> cây · <a href="{{ route('admin.inventory.show', $plant) }}">Sổ kho</a></div>
+        </div>
+        {{-- Giá bán / giá vốn / lãi gộp: giá vốn KHÔNG sửa tay ở đây, nó tự tính từ các phiếu nhập kho --}}
+        @php
+            $margin = $plant->price - $plant->cost_price;
+            $marginPct = $plant->price > 0 ? round($margin * 100 / $plant->price, 1) : 0;
+        @endphp
+        <div class="col-12 mb-3">
+            <div class="gg-panel gg-panel-body">
+                <div class="fw-semibold mb-2">Giá bán, giá vốn và lãi gộp</div>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="gg-mini-stat"><small>Giá bán (đang nhập ở trên)</small><strong>@money($plant->price)</strong></div>
+                    <div class="gg-mini-stat"><small>Giá vốn bình quân</small><strong>@money($plant->cost_price)</strong></div>
+                    <div class="gg-mini-stat"><small>Lãi gộp mỗi cây</small><strong class="{{ $margin < 0 ? 'text-danger' : 'text-success' }}">@money($margin) ({{ number_format($marginPct, 1, ',', '.') }}%)</strong></div>
+                </div>
+                <p class="small text-muted mt-2 mb-2">
+                    <strong>Giá vốn bình quân</strong> tự tính khi nhập kho: (tồn cũ × giá vốn cũ + số nhập × giá nhập) ÷ tồn mới.
+                    Mỗi đơn bán lưu lại giá vốn tại thời điểm bán để tính lợi nhuận. Lãi gộp chưa trừ phí vận chuyển và các giảm giá của đơn.
+                </p>
+                @if(! empty($recentReceipts) && $recentReceipts->isNotEmpty())
+                    <div class="small fw-semibold">Giá nhập 5 lần gần nhất</div>
+                    <ul class="small mb-0">
+                        @foreach($recentReceipts as $r)
+                            <li>@vndt($r->receipt->received_at) · {{ $r->receipt->supplier->name ?? '' }} · {{ $r->quantity_received }} cây × <strong>@money($r->unit_cost)</strong>
+                                (phiếu <a href="{{ route('admin.goods-receipts.show', $r->goods_receipt_id) }}">{{ $r->receipt->code }}</a>)</li>
+                        @endforeach
+                    </ul>
+                @else
+                    <div class="small text-muted">Chưa có phiếu nhập kho nào cho cây này (giá vốn đang là giá lúc khai báo tồn đầu kỳ).</div>
+                @endif
+            </div>
         </div>
     @else
         <div class="col-md-3 mb-3">
@@ -66,7 +96,7 @@
             @error('opening_stock') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
         <div class="col-md-3 mb-3">
-            <label class="form-label">Giá vốn / cây *</label>
+            <label class="form-label" title="Giá nhập của số cây tồn đầu kỳ; các lần nhập kho sau sẽ tự tính giá vốn bình quân">Giá nhập tồn đầu kỳ / cây *</label>
             <input type="number" name="cost_price" min="0" value="{{ old('cost_price', 0) }}" class="form-control @error('cost_price') is-invalid @enderror">
             @error('cost_price') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
@@ -104,6 +134,12 @@
             <label class="form-label" for="pot_size">Chậu</label>
             <input id="pot_size" name="pot_size" maxlength="80" value="{{ old('pot_size', $plant->pot_size ?? '') }}" class="form-control @error('pot_size') is-invalid @enderror" placeholder="Chậu sứ Ø15 cm">
             @error('pot_size') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-3 mb-3">
+            <label class="form-label" for="weight_grams">Khối lượng đóng gói (gram)</label>
+            <input type="number" id="weight_grams" name="weight_grams" min="1" max="200000" value="{{ old('weight_grams', $plant->weight_grams ?? '') }}" class="form-control @error('weight_grams') is-invalid @enderror" placeholder="Để trống = {{ config('shop.shipping.default_weight_grams') }} g">
+            @error('weight_grams') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <div class="form-text">Gồm chậu + đất + thùng; dùng để tính phí ship theo cân nặng.</div>
         </div>
         <div class="col-md-3 mb-3">
             <label class="form-label" for="growth_rate">Tốc độ lớn</label>

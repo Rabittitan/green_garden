@@ -11,30 +11,38 @@
 </head>
 <body class="gg-admin">
 @php
-    $isAdmin = auth()->user()->isAdmin();
-    // [route, mẫu route để tô sáng, icon, nhãn]. Nhóm "Quản trị" chỉ hiện với quản trị viên (nhân viên không thấy cả tiêu đề nhóm).
-    $groups = array_filter([
+    $me = auth()->user();
+    $isAdmin = $me->isAdmin();
+    // [route, mẫu route để tô sáng, icon, nhãn, quyền cần có]. Nhân viên chỉ thấy mục được cấp quyền (trang Nhân viên);
+    // nhóm "Quản trị" chỉ hiện với quản trị viên (nhân viên không thấy cả tiêu đề nhóm). Nhóm rỗng thì ẩn tiêu đề.
+    $groups = [
         'Bán hàng' => [
-            ['admin.dashboard', 'admin.dashboard', 'fa-chart-line', 'Thống kê'],
-            ['admin.orders.index', 'admin.orders.*', 'fa-receipt', 'Đơn hàng'],
-            ['admin.reviews.index', 'admin.reviews.*', 'fa-star', 'Đánh giá'],
-            ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp'],
-            ['admin.articles.index', 'admin.articles.*', 'fa-newspaper', 'Tin tức'],
-            ['admin.slides.index', 'admin.slides.*', 'fa-images', 'Slide trang chủ'],
+            ['admin.dashboard', 'admin.dashboard', 'fa-chart-line', 'Thống kê', 'reports'],
+            ['admin.orders.index', 'admin.orders.*', 'fa-receipt', 'Đơn hàng', 'orders'],
+            ['admin.reviews.index', 'admin.reviews.*', 'fa-star', 'Đánh giá', 'reviews'],
+            ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp', 'reviews'],
+            ['admin.articles.index', 'admin.articles.*', 'fa-newspaper', 'Tin tức', 'content'],
+            ['admin.slides.index', 'admin.slides.*', 'fa-images', 'Slide trang chủ', 'content'],
+            ['admin.flash-sales.index', 'admin.flash-sales.*', 'fa-bolt', 'Flash sale', 'flash_sales'],
         ],
         'Kho & nhập hàng' => [
-            ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh'],
-            ['admin.inventory.index', 'admin.inventory.*', 'fa-warehouse', 'Kho'],
-            ['admin.purchase-requests.index', 'admin.purchase-requests.*', 'fa-clipboard-list', 'Yêu cầu nhập'],
-            ['admin.goods-receipts.index', 'admin.goods-receipts.*', 'fa-truck-ramp-box', 'Phiếu nhập kho'],
-            ['admin.suppliers.index', 'admin.suppliers.*', 'fa-handshake', 'Nhà cung cấp'],
+            ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh', 'catalog'],
+            ['admin.inventory.index', 'admin.inventory.*', 'fa-warehouse', 'Kho', 'inventory'],
+            ['admin.stock-counts.index', 'admin.stock-counts.*', 'fa-clipboard-check', 'Phiếu kiểm kê', 'admin'],
+            ['admin.purchase-requests.index', 'admin.purchase-requests.*', 'fa-clipboard-list', 'Yêu cầu nhập', 'purchasing'],
+            ['admin.goods-receipts.index', 'admin.goods-receipts.*', 'fa-truck-ramp-box', 'Phiếu nhập kho', 'purchasing'],
+            ['admin.suppliers.index', 'admin.suppliers.*', 'fa-handshake', 'Nhà cung cấp', 'purchasing'],
         ],
-        'Quản trị' => $isAdmin ? [
-            ['admin.coupons.index', 'admin.coupons.*', 'fa-ticket', 'Mã giảm giá'],
-            ['admin.customers.index', 'admin.customers.*', 'fa-users', 'Khách hàng'],
-            ['admin.tiers.index', 'admin.tiers.*', 'fa-crown', 'Hạng thành viên'],
-        ] : [],
-    ]);
+        'Quản trị' => [
+            ['admin.coupons.index', 'admin.coupons.*', 'fa-ticket', 'Mã giảm giá', 'admin'],
+            ['admin.customers.index', 'admin.customers.*', 'fa-users', 'Khách hàng', 'admin'],
+            ['admin.tiers.index', 'admin.tiers.*', 'fa-crown', 'Hạng thành viên', 'admin'],
+            ['admin.shipping-zones.index', 'admin.shipping-zones.*', 'fa-truck-fast', 'Phí vận chuyển', 'admin'],
+            ['admin.staff.index', 'admin.staff.*', 'fa-id-badge', 'Nhân viên', 'admin'],
+        ],
+    ];
+    $groups = array_filter(array_map(fn ($items) => array_values(array_filter($items,
+        fn ($i) => $i[4] === 'admin' ? $isAdmin : $me->hasPermission($i[4]))), $groups));
 @endphp
 <div class="gg-admin-shell">
     {{-- ===== MENU TRÁI (điện thoại: trượt ra khi bấm nút menu) ===== --}}

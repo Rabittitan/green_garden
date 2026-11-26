@@ -39,6 +39,7 @@
         box.ggSet = function (a) {
             var hasP = Array.prototype.some.call(p.options, function (o) { return o.value && o.value === a.province; });
             p.value = hasP ? a.province : '';
+            p.dispatchEvent(new CustomEvent('gg:province'));                 // báo trang khác (vd tính lại phí ship) mà không xóa xã
             fill(p.value, a.ward).then(function (ok) {
                 if (!note) return;
                 note.hidden = hasP && ok;
