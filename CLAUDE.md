@@ -23,7 +23,7 @@ vendor/bin/phpstan analyse --memory-limit=1G                # Larastan level 6, 
 php artisan shop:reconcile                                  # 10 data invariants; exit 1 on any mismatch
 ```
 
-Browser E2E (manual, not in CI): `tests/Browser/roles.e2e.cjs` (20 steps across customer / staff / admin, including scanning pot codes at packing, a defect report, QR labels and a 390px no-horizontal-overflow check of admin pages). Setup instructions are in the file header (needs `php artisan storage:link` for uploaded images). Use `.cjs`, because `package.json` sets `"type": "module"`. Add `E2E_STUB_CDN=1` on machines without internet: CSP is still checked.
+Browser E2E (manual, not in CI): `tests/Browser/roles.e2e.cjs` (21 steps across customer / staff / admin, including scanning pot codes at packing, a defect report, QR labels, scroll kept after "add to cart", the no-access redirect and a 390px no-horizontal-overflow check of admin pages). Setup instructions are in the file header (needs `php artisan storage:link` for uploaded images). Use `.cjs`, because `package.json` sets `"type": "module"`. Add `E2E_STUB_CDN=1` on machines without internet: CSP is still checked.
 
 `phpunit.xml` pins `APP_LOCALE=vi` and `APP_NAME="GreenGarden Shop"`, so tests pass even if a local `.env` still says `en` / `Laravel`; the app itself shows English validation messages until `.env` is fixed.
 
