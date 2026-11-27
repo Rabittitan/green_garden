@@ -4,20 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
-use App\Events\OrderPlaced;
 use App\Exceptions\BusinessException;
 use App\Exceptions\CouponNotApplicableException;
 use App\Exceptions\PriceChangedException;
 use App\Http\Requests\PlaceOrderRequest;
 use App\Models\Coupon;
-use App\Models\UserAddress;
+use App\Notifications\OrderReceived;
+use App\Services\AddressService;
 use App\Services\CartService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use App\Services\PricingService;
 use App\Support\Format;
+use App\Support\Notifier;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -146,11 +146,7 @@ class CheckoutController extends Controller
             if ($request->boolean('save_address') || ! $user->addresses()->exists()) {
                 $this->rememberAddress($user->id, $request);
             }
-            try {
-                OrderPlaced::dispatch($order);                         // lỗi gửi mail không làm hỏng đơn
-            } catch (\Throwable $e) {
-                report($e);
-            }
+            Notifier::send($user, new OrderReceived($order));        // sau commit, qua hàng đợi; lỗi gửi mail không làm hỏng đơn
         }
 
         if ($order->status === OrderStatus::PendingPayment && $order->payment_method === PaymentMethod::Vnpay) {
@@ -166,18 +162,7 @@ class CheckoutController extends Controller
 
     private function rememberAddress(int $userId, PlaceOrderRequest $request): void
     {
-        $fields = $request->safe()->only(['recipient_name', 'phone', 'province', 'district', 'ward', 'address_line']);
-        $exists = UserAddress::where('user_id', $userId)->where($fields)->exists();
-        // Sổ đầy thì thôi không lưu (đơn đã có snapshot địa chỉ, không mất gì)
-        if (! $exists && UserAddress::where('user_id', $userId)->count() < UserAddress::MAX_PER_USER) {
-            try {
-                UserAddress::create($fields + [
-                    'user_id' => $userId,
-                    'is_default' => ! UserAddress::where('user_id', $userId)->where('is_default', true)->exists(),
-                ]);
-            } catch (UniqueConstraintViolationException) {
-                // 2 đơn đầu tiên đặt cùng lúc cùng muốn làm "mặc định": đơn đã lưu xong, bỏ qua việc phụ này
-            }
-        }
+        app(AddressService::class)->rememberFromOrder($userId,
+            $request->safe()->only(['recipient_name', 'phone', 'province', 'district', 'ward', 'address_line']));
     }
 }

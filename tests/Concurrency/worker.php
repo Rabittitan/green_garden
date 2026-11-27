@@ -49,6 +49,10 @@ try {
             couponCode: $args[4] ?? null,
         ))->id,
         // Nhóm B: admin sửa phạm vi mã (thêm cây) đúng lúc khách đặt hàng bằng mã đó
+        // Nhóm 1 (27/11): admin TẠO mã có phạm vi cây (chèn coupon_plants) đúng lúc khách đặt hàng các cây đó
+        'coupon-create' => app(CouponService::class)->create(['code' => 'DUA'.getmypid(), 'name' => 'Tạo song song', 'type' => 'percent', 'value' => 5,
+            'scope' => 'plants', 'usage_limit_per_user' => 1, 'combinable_with_tier' => true, 'is_active' => true],
+            json_decode($args[0], true), [], User::where('role', 'admin')->firstOrFail())->id,
         'coupon-update' => app(CouponService::class)->update(Coupon::findOrFail((int) $args[0]),
             ['name' => 'Sửa song song '.getmypid(), 'value' => (int) $args[2]], json_decode($args[1], true), [])->id,
         'cancel' => app(OrderService::class)->cancel(Order::findOrFail((int) $args[0]), ActorType::Staff,

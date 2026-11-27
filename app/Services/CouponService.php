@@ -36,6 +36,35 @@ class CouponService
     public function __construct(private InventoryService $inventory) {}
 
     /**
+     * Admin tạo mã. Cùng thứ tự khóa với sửa mã: plants (id tăng dần) trước, vì chèn coupon_plants khóa ngoại tới plants.
+     *
+     * @param  array<string, mixed>  $attrs
+     * @param  array<int, int>  $plantIds
+     * @param  array<int, int>  $categoryIds
+     */
+    public function create(array $attrs, array $plantIds, array $categoryIds, User $by): Coupon
+    {
+        return DB::transaction(function () use ($attrs, $plantIds, $categoryIds, $by) {
+            $this->inventory->lockPlants($plantIds);
+            $coupon = Coupon::create($attrs + ['created_by' => $by->id]);
+            $coupon->plants()->sync($plantIds);
+            $coupon->categories()->sync($categoryIds);
+
+            return $coupon;
+        }, 3);
+    }
+
+    /** Xóa mềm: tắt rồi ẩn; đơn cũ vẫn tham chiếu được, mã không được tái sử dụng. */
+    public function delete(Coupon $coupon): void
+    {
+        DB::transaction(function () use ($coupon) {
+            $locked = Coupon::whereKey($coupon->id)->lockForUpdate()->firstOrFail();
+            $locked->update(['is_active' => false]);
+            $locked->delete();
+        }, 3);
+    }
+
+    /**
      * Admin sửa mã (nhóm B). Thứ tự khóa giống checkout / hủy đơn (ADR-003): plants (id tăng dần) -> coupons.
      * Trước đây khóa coupons rồi mới chạm plants (khóa ngoại khi sync coupon_plants) -> deadlock với checkout.
      * "Đã có người dùng" được xét MỘT lần, SAU khi khóa dòng mã, nên không thể lệch giữa lúc đổi luật và lúc đổi phạm vi.

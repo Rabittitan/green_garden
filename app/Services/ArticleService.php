@@ -39,7 +39,7 @@ class ArticleService
                 $article->plants()->sync($plantIds);
 
                 return $article;
-            });
+            }, 3);
         } catch (\Throwable $e) {
             $this->deleteStored($stored);                                     // lưu bài lỗi: không để lại ảnh mồ côi
 
@@ -55,6 +55,7 @@ class ArticleService
     {
         $stored = $cover ? $this->storeImage($cover) : null;
         $old = $article->image;
+        $oldInline = $this->inlineImages($article->content);
         try {
             DB::transaction(function () use ($article, $data, $plantIds, $stored, $removeCover) {
                 $article->fill($this->attributes($data, $article));
@@ -67,7 +68,7 @@ class ArticleService
                 }
                 $article->save();
                 $article->plants()->sync($plantIds);
-            });
+            }, 3);
         } catch (\Throwable $e) {
             $this->deleteStored($stored);
 
@@ -76,6 +77,8 @@ class ArticleService
         if ($old !== $article->image) {
             $this->deleteStored($old);                                        // ảnh bìa cũ do shop tải lên: xóa file
         }
+        // Ảnh chèn trong bài bị gỡ khỏi nội dung: xóa file nếu không bài nào khác còn dùng
+        $this->deleteUnusedInline(array_diff($oldInline, $this->inlineImages($article->content)), $article);
 
         return $article;
     }
@@ -87,8 +90,10 @@ class ArticleService
             throw new BusinessException('Bài đã có bình luận nên không xóa hẳn được. Hãy chuyển bài về "Nháp" để gỡ khỏi trang tin tức.');
         }
         $image = $article->image;
+        $inline = $this->inlineImages($article->content);
         $article->delete();                                                   // article_plant xóa theo khóa ngoại cascade
         $this->deleteStored($image);
+        $this->deleteUnusedInline($inline, $article);
     }
 
     /** Lưu 1 ảnh (bìa hoặc chèn trong bài), trả về đường dẫn công khai "/storage/articles/…". */
@@ -118,6 +123,34 @@ class ArticleService
     private function externalUrl(?string $url): ?string
     {
         return filled($url) && preg_match('#^https://#i', (string) $url) ? $url : null;
+    }
+
+    /**
+     * Ảnh do shop tải lên được chèn trong nội dung bài ("/storage/articles/Năm/Tháng/<uuid>.<đuôi>").
+     *
+     * @return list<string>
+     */
+    private function inlineImages(?string $content): array
+    {
+        preg_match_all('#/storage/'.self::IMAGE_DIR.'/\d{4}/\d{2}/[0-9a-f-]{36}\.(?:jpg|png|webp|gif)#i', (string) $content, $m);
+
+        return array_values(array_unique($m[0]));
+    }
+
+    /**
+     * Xóa file các ảnh trong bài KHÔNG còn bài nào dùng (nội dung hoặc ảnh bìa của bài khác, hay ảnh bìa của chính bài này).
+     *
+     * @param  array<int, string>  $paths
+     */
+    private function deleteUnusedInline(array $paths, Article $article): void
+    {
+        foreach ($paths as $path) {
+            $inUse = $path === $article->image || Article::where('id', '<>', $article->id)
+                ->where(fn ($q) => $q->where('content', 'like', '%'.$path.'%')->orWhere('image', $path))->exists();
+            if (! $inUse) {
+                $this->deleteStored($path);
+            }
+        }
     }
 
     private function deleteStored(?string $publicPath): void

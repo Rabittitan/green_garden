@@ -357,6 +357,20 @@ class ConcurrencyTest extends TestCase
         $this->assertSame(1, FlashSale::where('status', 'submitted')->count());
     }
 
+    /** Nhóm 1: admin tạo mã có phạm vi cây (qua CouponService, khóa plants trước) đúng lúc khách đặt các cây đó: không deadlock. */
+    public function test_creating_a_plant_scoped_coupon_while_customers_order_those_plants(): void
+    {
+        $users = User::factory()->count(3)->create();
+        $jobs = $users->map(fn ($u) => ['place', (string) $u->id, json_encode([1 => 1, 3 => 1]), (string) Str::uuid()])->all();
+        $jobs[] = ['coupon-create', json_encode([3, 1])];
+        $results = $this->race($jobs);
+
+        $this->assertSame(4, collect($results)->where('ok', true)->count());
+        $this->assertSame(3, Order::count());
+        $this->assertSame([1, 3], Coupon::where('name', 'Tạo song song')->sole()->plants()->orderBy('plants.id')->pluck('plants.id')->all());
+        $this->assertLedgerConsistent();
+    }
+
     /** 2 admin cùng xác nhận đã hoàn 1 khoản: chỉ ghi nhận 1 lần, không hoàn trùng. */
     public function test_double_refund_confirmation_is_recorded_once(): void
     {

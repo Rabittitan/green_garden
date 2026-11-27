@@ -27,11 +27,9 @@ class CouponGiftRuleController extends Controller
         return view('admin.coupon-gifts.create', ['rule' => new CouponGiftRule(['type' => 'fixed', 'valid_days' => 30, 'is_active' => true])]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, CouponGiftService $gifts): RedirectResponse
     {
-        $rule = new CouponGiftRule($this->validated($request, true));
-        $rule->created_by = $request->user()->id;
-        $rule->save();
+        $gifts->saveRule(null, $this->validated($request, true), $request->user());
 
         return redirect()->route('admin.coupon-gifts.index')->with('success', 'Đã tạo luật tặng mã. Chỉ áp cho đơn hoàn thành từ bây giờ.');
     }
@@ -41,9 +39,9 @@ class CouponGiftRuleController extends Controller
         return view('admin.coupon-gifts.edit', compact('rule'));
     }
 
-    public function update(Request $request, CouponGiftRule $rule): RedirectResponse
+    public function update(Request $request, CouponGiftRule $rule, CouponGiftService $gifts): RedirectResponse
     {
-        $rule->update($this->validated($request, true));
+        $gifts->saveRule($rule, $this->validated($request, true), $request->user());
 
         return redirect()->route('admin.coupon-gifts.index')->with('success', 'Đã cập nhật luật tặng mã (mã đã tặng trước đó giữ nguyên).');
     }

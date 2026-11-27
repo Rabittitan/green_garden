@@ -9,14 +9,12 @@ use App\Models\Category;
 use App\Models\FlashSaleItem;
 use App\Models\GoodsReceiptItem;
 use App\Models\Plant;
-use App\Services\InventoryService;
+use App\Services\PlantService;
 use App\Support\Format;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -66,24 +64,14 @@ class PlantController extends Controller
         return view('admin.plants.create', ['categories' => Category::orderBy('sort_order')->get()]);
     }
 
-    public function store(Request $request, InventoryService $inventory): RedirectResponse
+    public function store(Request $request, PlantService $plants): RedirectResponse
     {
         $data = $request->validate($this->rules() + [
             'opening_stock' => ['required', 'integer', 'min:0'],
             'cost_price' => ['required', 'integer', 'min:0'],
         ], [], ['opening_stock' => 'tồn đầu kỳ', 'cost_price' => 'giá vốn']);
-
-        DB::transaction(function () use ($data, $request, $inventory) {
-            $plant = Plant::create(Arr::except($data, ['opening_stock', 'cost_price']) + [
-                'slug' => $this->uniqueSlug($data['name']),
-                'sku' => ($data['sku'] ?? null) ?: 'TMP-'.Str::uuid(),
-                'is_active' => $request->boolean('is_active', true),
-            ]);
-            if (empty($data['sku'])) {
-                $plant->update(['sku' => 'GL'.str_pad((string) $plant->id, 5, '0', STR_PAD_LEFT)]);
-            }
-            $inventory->opening($plant, (int) $data['opening_stock'], (int) $data['cost_price'], $request->user()->id);
-        });
+        $plants->create(Arr::except($data, ['opening_stock', 'cost_price', 'is_active']), (int) $data['opening_stock'], (int) $data['cost_price'],
+            $request->boolean('is_active', true), $request->user()->id);
 
         return redirect()->route('admin.plants.index')->with('success', 'Đã thêm cây mới!');
     }
@@ -98,12 +86,12 @@ class PlantController extends Controller
         return view('admin.plants.edit', ['plant' => $plant, 'categories' => Category::orderBy('sort_order')->get(), 'recentReceipts' => $recentReceipts]);
     }
 
-    public function update(Request $request, Plant $plant): RedirectResponse
+    public function update(Request $request, Plant $plant, PlantService $plants): RedirectResponse
     {
         $data = $request->validate($this->rules($plant));
         $data['sku'] = ($data['sku'] ?? null) ?: $plant->sku;
         $data['is_active'] = $request->boolean('is_active');
-        $plant->update($data);                                          // stock / cost_price không có trong $data
+        $plants->update($plant, $data);                                 // stock / cost_price không có trong $data
 
         // Cây đang / sắp có flash sale đã duyệt mà giá mới không còn cao hơn giá sale: đợt sale đó thôi tác dụng với cây này
         $outpriced = FlashSaleItem::with('sale')->where('plant_id', $plant->id)->where('sale_price', '>=', $plant->price)
@@ -116,22 +104,10 @@ class PlantController extends Controller
     }
 
     /** Xóa mềm: đơn cũ, sổ kho, đánh giá vẫn giữ nguyên tham chiếu. */
-    public function destroy(Plant $plant): RedirectResponse
+    public function destroy(Plant $plant, PlantService $plants): RedirectResponse
     {
-        $plant->update(['is_active' => false]);
-        $plant->delete();
+        $plants->delete($plant);
 
         return back()->with('success', "Đã ngừng bán và ẩn cây \"{$plant->name}\".");
-    }
-
-    private function uniqueSlug(string $name): string
-    {
-        $base = Str::slug($name) ?: 'cay';
-        $slug = $base;
-        for ($i = 2; Plant::withTrashed()->where('slug', $slug)->exists(); $i++) {
-            $slug = "{$base}-{$i}";
-        }
-
-        return $slug;
     }
 }

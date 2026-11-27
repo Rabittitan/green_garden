@@ -3,10 +3,12 @@
 use App\Enums\UserRole;
 use App\Models\PaymentWebhookLog;
 use App\Models\User;
+use App\Notifications\Admin\ReconcileFailed;
 use App\Services\CouponGiftService;
 use App\Services\MembershipService;
 use App\Services\OrderService;
 use App\Services\ReviewService;
+use App\Support\Notifier;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -103,19 +105,25 @@ Artisan::command('shop:reconcile', function () {
                                       <> p.stock + (SELECT COALESCE(SUM(i.quantity),0) FROM order_items i JOIN orders o ON o.id = i.order_id
                                       WHERE i.plant_id = p.id AND o.status IN ('pending_payment','pending','confirmed'))",
     ];
-    $failed = 0;
+    $failures = [];
     foreach ($checks as $label => $sql) {
         $ids = array_column(DB::select($sql), 'id');
         if ($ids) {
-            $failed++;
-            $this->error("✗ {$label}: ".implode(', ', array_slice($ids, 0, 20)));
+            $failures[$label] = array_slice($ids, 0, 20);
+            $this->error("✗ {$label}: ".implode(', ', $failures[$label]));
             Log::error("Đối soát thất bại: {$label}", ['ids' => $ids]);
         } else {
             $this->info("✓ {$label}");
         }
     }
+    // Lệch thì báo ngay mọi quản trị viên đang hoạt động (trước đây chỉ ghi log, phải tự mở log mới biết)
+    if ($failures !== []) {
+        foreach (User::where('role', UserRole::Admin->value)->where('is_active', true)->get() as $admin) {
+            Notifier::send($admin, new ReconcileFailed($failures, now()));
+        }
+    }
 
-    return $failed === 0 ? 0 : 1;
+    return $failures === [] ? 0 : 1;
 })->purpose('Đối soát bất biến dữ liệu (kho, tiền, mã, hạng)');
 
 Schedule::command('orders:expire-unpaid')->everyMinute()->withoutOverlapping();

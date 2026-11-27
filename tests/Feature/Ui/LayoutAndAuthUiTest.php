@@ -163,12 +163,12 @@ class LayoutAndAuthUiTest extends TestCase
         foreach (['app', 'resources', 'config', 'lang'] as $dir) {
             $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path($dir), \FilesystemIterator::SKIP_DOTS));
             foreach ($files as $file) {
-                if (preg_match('/GreenLife|GREENLIFE/', (string) file_get_contents($file->getPathname()))) {
+                if (preg_match('/GreenLife|GREENLIFE|Green Life|GardenLife|Garden Life/', (string) file_get_contents($file->getPathname()))) {   // cả "GardenLife" (lỗi tiêu đề mail 27/11)
                     $leaks[] = str_replace(base_path().'/', '', $file->getPathname());
                 }
             }
         }
-        $this->assertSame([], $leaks, 'Còn tên thương hiệu cũ "GreenLife"');
+        $this->assertSame([], $leaks, 'Còn tên thương hiệu cũ / viết sai ("GreenLife", "GardenLife")');
         $this->assertSame('GreenGarden Shop', config('app.name'));
     }
 
