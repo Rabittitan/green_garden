@@ -28,6 +28,21 @@ class CouponGiftService
      * Đơn phải HOÀN THÀNH và đã qua hạn đổi trả (khách trả hàng thì không được quà), hoàn thành sau khi luật được tạo
      * (bật luật mới không tặng ngược cho đơn cũ). UNIQUE(gift_rule_id, source_order_id): chạy trùng / song song không tặng 2 lần.
      */
+    /**
+     * Thêm (rule = null) hoặc sửa luật tặng mã. Mã đã tặng trước đó giữ nguyên; luật mới chỉ áp cho đơn hoàn thành từ lúc tạo.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public function saveRule(?CouponGiftRule $rule, array $fields, User $by): CouponGiftRule
+    {
+        return DB::transaction(function () use ($rule, $fields, $by) {
+            $rule ??= tap(new CouponGiftRule, fn (CouponGiftRule $r) => $r->created_by = $by->id);
+            $rule->fill($fields)->save();
+
+            return $rule;
+        }, 3);
+    }
+
     public function issueDueGifts(int $limit = 200): int
     {
         $issued = 0;

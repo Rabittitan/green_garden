@@ -181,7 +181,9 @@ class AdminFlowTest extends TestCase
     {
         $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->customer()))->assertSessionHas('success');
         $this->assertFalse($this->customer()->is_active);
-        $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->admin()))->assertNoAccess();
+        $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->admin()))
+            ->assertSessionHas('error', 'Tài khoản nhân viên / quản trị được khóa ở trang Nhân viên.');   // báo rõ thay vì "không có quyền"
+        $this->assertTrue($this->admin()->refresh()->is_active);
     }
 
     public function test_console_commands(): void

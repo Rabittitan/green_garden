@@ -147,15 +147,15 @@ Chỉ deploy commit có CI xanh (Test + Larastan) trên GitHub.
 | Theo dõi | Cách | Ngưỡng báo động |
 |---|---|---|
 | Site sống + kết nối DB | uptime monitor gọi `GET /up` | khác 200 |
-| Đối soát hằng đêm | `storage/logs/laravel-*.log` chứa `Đối soát thất bại` | có bất kỳ dòng nào |
+| Đối soát hằng đêm | **email** "[Cần xử lý] Đối soát dữ liệu…" gửi tới mọi quản trị viên đang hoạt động (cần worker hàng đợi + SMTP); log `storage/logs/laravel-*.log` chứa `Đối soát thất bại` | có bất kỳ email / dòng nào |
 | Mail | `php artisan queue:failed` | > 0 |
 | Worker | `supervisorctl status` | không RUNNING |
 | Sao lưu | `/var/log/greenlife-backup.log` | thiếu dòng `OK` của hôm nay |
 | Đơn chờ thanh toán quá hạn | đối soát mục "Đơn chờ thanh toán quá hạn > 10 phút" | có → cron chết |
 
-**Khi đối soát báo lệch** — không sửa tay số liệu. Đọc id trong log, rồi:
+**Khi đối soát báo lệch** — không sửa tay số liệu. Đọc id trong email hoặc log, rồi:
 
-- *Tồn kho lệch sổ kho*: tìm thao tác gây lệch trong `stock_movements` của cây đó; điều chỉnh bằng chức năng **Kiểm kê** trên trang Kho (ghi bút toán `adjustment` có lý do), không `UPDATE plants`.
+- *Tồn kho lệch sổ kho* / *Số chậu trong kho lệch tồn*: tìm thao tác gây lệch trong `stock_movements` và lịch sử chậu (Tra cứu chậu) của cây đó; điều chỉnh bằng **Phiếu kiểm kê** (quét mã, ghi bút toán `adjustment`), không `UPDATE plants` / `plant_units`.
 - *Tiền đã thu/hoàn lệch*: đối chiếu `payments` + `payment_webhook_logs` + sao kê VNPay; báo dev.
 - *Điểm đánh giá / lượt hữu ích lệch*: `php artisan reviews:rebuild` (dựng lại điểm sao + lượt hữu ích từ dữ liệu gốc).
 - *Tổng chi tiêu khách lệch*: `php artisan membership:recalculate-all` (chỉ nâng hạng, không hạ hạng ai).

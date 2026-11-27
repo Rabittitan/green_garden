@@ -3,16 +3,16 @@
 namespace Tests\Feature\Regression;
 
 use App\Enums\TierChangeReason;
-use App\Events\OrderPlaced;
 use App\Mail\OrderPlacedMail;
 use App\Models\MembershipTier;
 use App\Models\Order;
 use App\Models\PaymentWebhookLog;
+use App\Notifications\OrderReceived;
 use App\Services\MembershipService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Tests\Concerns\BuildsOrders;
 use Tests\TestCase;
 
@@ -61,12 +61,18 @@ class H1BugsTest extends TestCase
         $this->assertSame('diamond', $this->customer()->tier->code);
     }
 
-    /** B2: mail xác nhận phải gửi đúng tên người nhận (cột customer_name đã bỏ). */
+    /** B2: mail xác nhận phải gửi đúng tên người nhận (cột customer_name đã bỏ); 27/11: tiêu đề đúng thương hiệu (từng ghi "GardenLife"). */
     public function test_b2_order_mail_uses_recipient_name(): void
     {
-        Mail::fake();
-        OrderPlaced::dispatch($this->place());
-        Mail::assertSent(OrderPlacedMail::class, fn ($m) => $m->hasTo('khach@greenlife.test', 'Nguyễn Văn Khách'));
+        Notification::fake();
+        $order = $this->place();
+        $this->customer()->notify(new OrderReceived($order));
+        Notification::assertSentTo($this->customer(), OrderReceived::class, function (OrderReceived $n) use ($order) {
+            $mail = $n->toMail($this->customer());                              // Mailable thật gửi đi (mẫu emails.orders.placed)
+
+            return $mail instanceof OrderPlacedMail && $mail->hasTo('khach@greenlife.test', 'Nguyễn Văn Khách')
+                && $mail->envelope()->subject === "Đặt hàng thành công - Đơn {$order->code} - GreenGarden";
+        });
     }
 
     /** B3: hạ ngưỡng hạng thì khách đủ điều kiện được nâng ngay, không phải chờ đơn mới. */

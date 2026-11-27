@@ -8,7 +8,7 @@
 
 | Chỉ số | Kết quả |
 |---|---|
-| Test tự động (MySQL thật) | **533 test qua**, 47.378 assertion, ~3,5 phút (lúc nghiệm thu 17/11: 370 test) |
+| Test tự động (MySQL thật) | **539 test qua**, 47.418 assertion, ~3,5 phút (lúc nghiệm thu 17/11: 370 test) |
 | Larastan level 6 | 0 lỗi |
 | Pint (định dạng) | sạch |
 | `composer audit` | 0 lỗ hổng |
@@ -21,7 +21,7 @@
 
 | Mã | Tiêu chí | Bằng chứng | Kết quả |
 |---|---|---|---|
-| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 533 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
+| **C1** | Đúng nghiệp vụ; mỗi lỗi có test đỏ → xanh | 539 test xanh trên MySQL. Mọi lỗi tìm ra ở H1–H8 đều có test hồi quy (`tests/Feature/Regression/*`, cùng các test mang tên lỗi trong từng nhóm). Ở H8, độ đỏ-trước được kiểm lại bằng cách chạy test trên code cũ | ✅ |
 | **C2** | Toàn vẹn dữ liệu | `shop:reconcile` (10 bất biến: kho = sổ kho, tiền thu/hoàn = payments, giảm giá dòng = đơn, lượt mã, điểm đánh giá, lượt hữu ích, đơn quá hạn, chi tiêu hạng, suất flash sale đã bán = dòng hàng chưa hủy, chậu trên kệ = tồn + đã đặt chưa giao) chạy ở 3 chỗ: trong ma trận trạng thái (sau mỗi ô), trên CI (DB mới + seed), và sau kịch bản trình duyệt. Schema đổi 2 lần sau khi chốt, đều theo yêu cầu của chủ shop và chỉ THÊM: K8 (22/11/2026) thêm 6 cột thông tin chi tiết vào `plants` (cho phép trống, CHECK `chk_plants_growth_rate`); 23/11/2026 thêm bảng `home_slides` (slide trang chủ, không khóa ngoại); 25/11/2026 thêm cột `users.permissions` (phân quyền nhân viên, NULL = đủ quyền như cũ) và ví mã (bảng `coupon_gift_rules`, cột `coupons.owner_user_id / gift_rule_id / source_order_id`), flash sale (bảng `flash_sales`, `flash_sale_items`, cột `order_items.flash_sale_item_id`), phiếu kiểm kê (bảng `stock_counts`, `stock_count_items`, cột `stock_movements.stock_count_item_id`), phí ship theo vùng (bảng `shipping_zones`, `shipping_zone_provinces`, cột `plants.weight_grams`); 26/11/2026 thêm kênh liên hệ (bảng `contact_channels`), mã từng chậu (bảng `plant_units`, `plant_unit_events`; migration phát mã cho hàng đang tồn), phiếu báo lỗi (bảng `defect_reports`, `defect_report_items`, cột `stock_movements.defect_report_item_id`), kiểm kê quét mã (bảng `stock_count_scans`, cột `stock_counts.unit_event_mark`). Không sửa cột cũ | ✅ |
 | **C3** | Đồng thời | 12 kịch bản đua bằng **tiến trình PHP thật**, gồm: tranh cây cuối, bấm đúp nhiều tab, IPN đua với hết hạn, hủy đua với đặt mới, mã chứng từ, nhập kho đua với đặt hàng, đánh giá trùng, nhân viên hủy đua với IPN, giao đua với hủy, 2 admin cùng xác nhận hoàn tiền, 3 admin cùng xác nhận đơn, **admin sửa phạm vi mã giảm giá đúng lúc khách đặt hàng bằng mã đó (nhóm B, 11/2026)**. Kết quả: không tồn âm, không thu tiền 2 lần, không deadlock | ✅ |
 | **C4** | Luồng khép kín | `OrderStateMatrixTest`: 12 hành động × 9 trạng thái = 108 ô. Ô được phép phải chạy xong và đối soát sạch; ô bị cấm phải không để lại tác dụng phụ. Mọi trạng thái đều tới được, và mọi trạng thái chưa kết thúc đều có lối ra. Kịch bản trình duyệt đi qua đủ các nút bấm thật của cả 3 vai trò | ✅ |
@@ -77,6 +77,7 @@ Mỗi đợt đều chạy lại đủ: toàn bộ test trên MySQL, Larastan, P
 | Góp ý 26/11 | Thống kê: 3 biểu đồ tròn (tình trạng đơn, doanh thu theo danh mục, theo cách thanh toán), màu cố định theo đối tượng, bảng màu đã kiểm tra mù màu, có vòng CSS dự phòng khi CDN lỗi. Trình soạn bài có "Xem trước" + ảnh thu nhỏ. "Sản phẩm hot" thành dải trượt ngang tự chạy; slide luôn tự chạy (cả khi máy bật giảm chuyển động / chuột nằm trên slide), có nút tạm dừng | **Lỗi ảnh bài viết không hiện**: thiếu link `public/storage` thì `/storage/...` rơi vào route ký của disk riêng tư → 403. Sửa `config/filesystems.php`: disk `public` tự phát file khi thiếu link, disk `local` thôi chiếm `/storage`. Test hồi quy đỏ trên code cũ |
 | Góp ý 26/11 (đợt 2) | Bong bóng mạng xã hội (Zalo / Facebook / TikTok, admin nhập link). **Mã riêng từng chậu**: phát mã khi nhập / tồn đầu kỳ, in tem QR 50×30 mm cho máy in nhiệt, tra cứu lịch sử chậu; **quét mã khi đóng gói** mới giao được; nhận hoàn quét chậu hỏng. **Phiếu báo lỗi** (nhân viên lập, quản trị viên khác duyệt, kèm ảnh) thay "ghi hư hỏng"; **báo cáo hàng lỗi** theo loại lỗi / cây / nhà cung cấp. **Kiểm kê quét mã** thay gõ số đếm | Bất biến #10 trong `shop:reconcile` và trong mọi test; 3 kịch bản đua mới (2 đơn quét cùng chậu, duyệt phiếu lỗi đua với giao, chốt kiểm kê đua với đặt hàng); camera thử bằng video giả (jsQR đọc đúng mã); PDF tem: mỗi tem 1 trang 50×30 mm. Quét bằng camera cần HTTPS |
 | Góp ý 26/11 (đợt 3) | **Lỗi giá flash sale**: hạ giá thường dưới giá sale thì khách bị tính giá sale (đắt hơn). Nay khách luôn trả giá thấp hơn, giỏ hàng dùng chung quy tắc giá, trang không còn quảng cáo "sale" đắt hơn, sửa giá cây đang sale có cảnh báo. **Duyệt trùng**: 2 đợt sale trùng giờ chung cây không còn cùng được duyệt. Vào link **không có quyền** -> về trang đầu của vai trò kèm thông báo; thông báo hiện **nổi**, không đẩy trang; gửi form quay lại cùng trang thì giữ chỗ cuộn | Test hồi quy giá sale đỏ trên code cũ (200.000đ thay vì 125.000đ); test đua duyệt trùng: code cũ duyệt cả 2 đợt (3/3 lần), code mới 1; 38 chỗ kiểm 403 chuyển sang kiểm "bị chuyển về + thông báo" (JSON vẫn 403); E2E thêm bước giữ chỗ cuộn khi thêm vào giỏ |
+| Nhóm 1 sau rà soát (27/11) | Ghi DB còn nằm trong controller (cấu hình hạng, tạo / xóa mã giảm giá, cây, nhà cung cấp, khóa khách, luật tặng mã, sổ địa chỉ, nhớ địa chỉ khi đặt hàng) chuyển hết về service; mọi giao dịch trong `app/` có tự thử lại khi deadlock. Đối soát lệch **gửi email** mọi quản trị viên. Mail đặt hàng đi qua `Notifier`; **sửa tiêu đề mail ghi sai thương hiệu "GardenLife"**. Ảnh chèn trong bài bị gỡ / bài bị xóa thì xóa file nếu không bài nào khác dùng | Test hồi quy đỏ trên code cũ (email đối soát, dọn ảnh, tiêu đề mail, kiểm thương hiệu mở rộng bắt cả "GardenLife"); test đua mới: tạo mã có phạm vi cây đúng lúc khách đặt các cây đó |
 
 ## Chưa kiểm được trong môi trường này (không tính là đạt)
 
@@ -93,7 +94,7 @@ Mỗi đợt đều chạy lại đủ: toàn bộ test trên MySQL, Larastan, P
 
 Trả một phần đơn hàng · API hoàn tiền tự động của VNPay · cổng MoMo · hóa đơn VAT · nhiều kho.
 
-Hạn chế đã biết (ưu tiên thấp): ảnh chèn **trong nội dung** bài tin tức không tự xóa khi sửa/xóa bài (ảnh bìa thì có), file thừa chỉ tốn dung lượng.
+Hạn chế đã biết (ưu tiên thấp): ảnh đã tải lên trong trình soạn nhưng **không lưu vào bài nào** (bỏ dở) không tự xóa; file thừa chỉ tốn dung lượng. (Ảnh bị gỡ khỏi bài / bài bị xóa đã được dọn từ 27/11.)
 
 ## Tóm tắt các giai đoạn
 

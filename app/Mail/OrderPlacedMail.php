@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/** Nội dung mail "Đặt hàng thành công". Việc xếp hàng đợi do Listener lo, Mailable này không queue riêng. */
+/** Nội dung mail "Đặt hàng thành công". Gửi qua notification OrderReceived (hàng đợi do Notifier / notification lo). */
 class OrderPlacedMail extends Mailable
 {
     use Queueable, SerializesModels;
@@ -20,7 +20,7 @@ class OrderPlacedMail extends Mailable
     {
         $code = $this->order->code ?? '#'.$this->order->id;
 
-        return new Envelope(subject: "Đặt hàng thành công - Đơn {$code} - GardenLife");
+        return new Envelope(subject: "Đặt hàng thành công - Đơn {$code} - GreenGarden");
     }
 
     public function content(): Content

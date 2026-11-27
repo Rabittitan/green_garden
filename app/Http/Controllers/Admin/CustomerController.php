@@ -8,6 +8,7 @@ use App\Exceptions\BusinessException;
 use App\Http\Controllers\Controller;
 use App\Models\MembershipTier;
 use App\Models\User;
+use App\Services\CustomerService;
 use App\Services\MembershipService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -72,10 +73,13 @@ class CustomerController extends Controller
         return back()->with('success', 'Đã đổi hạng thành viên.');
     }
 
-    public function toggleActive(User $user): RedirectResponse
+    public function toggleActive(User $user, CustomerService $customers): RedirectResponse
     {
-        abort_if($user->isBackOffice(), 403);
-        $user->forceFill(['is_active' => ! $user->is_active])->save();
+        try {
+            $user = $customers->toggleActive($user);
+        } catch (BusinessException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', $user->is_active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.');
     }

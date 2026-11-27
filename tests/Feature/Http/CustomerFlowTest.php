@@ -10,8 +10,9 @@ use App\Models\Order;
 use App\Models\Plant;
 use App\Models\User;
 use App\Models\UserAddress;
+use App\Notifications\OrderReceived;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Tests\Concerns\BuildsOrders;
 use Tests\TestCase;
 
@@ -62,7 +63,7 @@ class CustomerFlowTest extends TestCase
 
     public function test_cod_checkout_end_to_end(): void
     {
-        Mail::fake();
+        Notification::fake();
         $user = $this->customer();
         $this->openCheckout($user)->assertSee('280.000đ')->assertSee('Phí vận chuyển');
 
@@ -74,7 +75,7 @@ class CustomerFlowTest extends TestCase
         $this->assertSame(29, $this->stock(1));
         $this->assertSame([], session('cart', []));
         $this->assertNull(session('checkout.token'));
-        Mail::assertSent(OrderPlacedMail::class);
+        Notification::assertSentTo($user, OrderReceived::class, fn (OrderReceived $n) => $n->toMail($user) instanceof OrderPlacedMail);
 
         $this->get(route('orders.show', $order))->assertOk()->assertSee($order->code)->assertSee('Chờ xác nhận')->assertSee('Hủy đơn');
         $this->get(route('orders.index'))->assertOk()->assertSee($order->code);

@@ -121,6 +121,40 @@ class MembershipService
         $this->changeTier($user, $target, TierChangeReason::Upgrade, $trigger?->id, null, null);
     }
 
+    /**
+     * Admin lưu cấu hình hạng (tên, ngưỡng, % giảm, trần, miễn ship). Ngưỡng phải tăng dần theo rank; hạng cơ bản = 0.
+     * Xong thì nâng ngay khách đủ ngưỡng mới (hạng không bao giờ tự hạ). recalculateAll chạy SAU transaction
+     * (nó khóa users -> orders, không được lồng trong giao dịch khác).
+     *
+     * @param  array<int, array<string, mixed>>  $data  tier_id => cột
+     * @return int số khách được nâng hạng
+     */
+    public function saveTierConfig(array $data): int
+    {
+        DB::transaction(function () use ($data) {
+            $tiers = MembershipTier::ordered()->lockForUpdate()->get();          // 2 admin cùng lưu: người sau chờ, không đụng UNIQUE
+            $prev = -1;
+            foreach ($tiers as $t) {
+                $min = (int) ($data[$t->id]['min_spend'] ?? -1);
+                if ($min <= $prev) {
+                    throw new BusinessException("Ngưỡng của hạng {$t->name} phải lớn hơn hạng thấp hơn.");
+                }
+                $prev = $min;
+            }
+            // min_spend UNIQUE: tạm đẩy ngưỡng về số rất lớn trước để hoán đổi ngưỡng giữa các hạng không đụng nhau
+            foreach ($tiers as $t) {
+                if ($t->rank > 0) {
+                    $t->update(['min_spend' => 9_000_000_000_000 + $t->rank]);
+                }
+            }
+            foreach ($tiers as $t) {
+                $t->update($data[$t->id]);
+            }
+        }, 3);
+
+        return $this->recalculateAll();
+    }
+
     /** Tính lại cho mọi khách (sau khi đổi ngưỡng hạng). Trả số khách được nâng hạng. */
     public function recalculateAll(): int
     {

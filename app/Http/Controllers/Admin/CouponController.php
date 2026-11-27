@@ -15,7 +15,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -38,14 +37,10 @@ class CouponController extends Controller
         return view('admin.coupons.create', $this->formData(new Coupon(['type' => 'percent', 'scope' => 'order', 'usage_limit_per_user' => 1, 'combinable_with_tier' => true, 'is_active' => true])));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, CouponService $coupons): RedirectResponse
     {
         $data = $this->validated($request, null);
-        DB::transaction(function () use ($data, $request) {
-            $coupon = Coupon::create($data['attrs'] + ['created_by' => $request->user()->id]);
-            $coupon->plants()->sync($data['plant_ids']);
-            $coupon->categories()->sync($data['category_ids']);
-        });
+        $coupons->create($data['attrs'], $data['plant_ids'], $data['category_ids'], $request->user());
 
         return redirect()->route('admin.coupons.index')->with('success', 'Đã tạo mã giảm giá.');
     }
@@ -68,10 +63,9 @@ class CouponController extends Controller
     }
 
     /** Xóa mềm: đơn cũ vẫn tham chiếu được; code không được tái sử dụng. */
-    public function destroy(Coupon $coupon): RedirectResponse
+    public function destroy(Coupon $coupon, CouponService $coupons): RedirectResponse
     {
-        $coupon->update(['is_active' => false]);
-        $coupon->delete();
+        $coupons->delete($coupon);
 
         return back()->with('success', "Đã xóa mã {$coupon->code}.");
     }
