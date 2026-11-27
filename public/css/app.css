@@ -478,3 +478,73 @@ a { text-underline-offset: 3px; }
 .gg-flash-box { background: #fff1ee; border: 1px solid #ffccbc; border-radius: 12px; padding: .7rem .9rem; }
 @media print { .no-print, .gg-admin-sidebar, .gg-admin-top { display: none !important; } .gg-admin-content { padding: 0; } }
 .gg-province-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .15rem .75rem; max-height: 460px; overflow-y: auto; }
+
+/* ================================================================ Bong bóng mạng xã hội (góc phải dưới, trang khách) */
+.gg-social { position: fixed; right: 18px; bottom: 18px; z-index: 1040; }
+.gg-social-toggle { list-style: none; width: 56px; height: 56px; border-radius: 50%; background: var(--gg-green); color: #fff; display: grid; place-items: center;
+    cursor: pointer; box-shadow: 0 6px 20px rgba(27, 94, 32, .35); transition: transform .15s; }
+.gg-social-toggle::-webkit-details-marker { display: none; }
+.gg-social-toggle:hover { transform: scale(1.06); }
+.gg-social-toggle:focus-visible { outline: 3px solid #fff; box-shadow: 0 0 0 6px var(--gg-green); }
+.gg-social-toggle svg { width: 28px; height: 28px; }
+.gg-social:not([open]) .gg-social-toggle { animation: gg-social-pulse 2.4s ease-out infinite; }
+.gg-social .gg-social-close, .gg-social[open] .gg-social-open { display: none; }
+.gg-social[open] .gg-social-close { display: block; }
+.gg-social-list { position: absolute; right: 0; bottom: 66px; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; align-items: flex-end; }
+.gg-social[open] .gg-social-list { animation: gg-social-in .18s ease-out; }
+.gg-social-item { display: flex; align-items: center; gap: .55rem; padding: .3rem .3rem .3rem .85rem; border-radius: 999px; background: #fff; color: var(--gg-ink);
+    text-decoration: none; font-weight: 700; font-size: .9rem; box-shadow: var(--gg-shadow-lg); flex-direction: row-reverse; }
+.gg-social-item:hover { color: var(--gg-green); }
+.gg-social-item svg { width: 40px; height: 40px; flex: 0 0 auto; }
+.gg-social-icon-lg svg { width: 44px; height: 44px; display: block; }
+@keyframes gg-social-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes gg-social-pulse { 0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, .45), 0 6px 20px rgba(27, 94, 32, .35); }
+    70% { box-shadow: 0 0 0 14px rgba(46, 125, 50, 0), 0 6px 20px rgba(27, 94, 32, .35); } 100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0), 0 6px 20px rgba(27, 94, 32, .35); } }
+@media (prefers-reduced-motion: reduce) { .gg-social:not([open]) .gg-social-toggle, .gg-social[open] .gg-social-list { animation: none; } }
+@media print { .gg-social { display: none; } }
+
+/* ================================================================ Mã từng chậu: ô quét (máy quét USB / camera), tra cứu */
+.gg-scan-input { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; flex: 1 1 220px; min-width: 0; }
+.gg-scan-input::placeholder { text-transform: none; letter-spacing: normal; font-family: var(--gg-font); }
+.gg-scan-video { position: relative; margin-top: .6rem; border-radius: 12px; overflow: hidden; background: #000; max-width: 420px; }
+.gg-scan-video[hidden] { display: none; }
+.gg-scan-video video { display: block; width: 100%; height: auto; }
+.gg-scan-aim { position: absolute; inset: 18% 22%; border: 3px solid rgba(255,255,255,.9); border-radius: 14px; box-shadow: 0 0 0 999px rgba(0,0,0,.28); pointer-events: none; }
+.gg-scan-status { min-height: 1.4em; margin-top: .4rem; font-weight: 600; font-size: .9rem; }
+.gg-scan-status.ok { color: var(--gg-green); }
+.gg-scan-status.bad { color: #b3261e; }
+.gg-code-big { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.5rem; font-weight: 800; letter-spacing: .05em; }
+.gg-code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: .35rem; }
+.gg-code-grid a { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85rem; padding: .25rem .5rem; border: 1px solid var(--gg-line); border-radius: 8px; text-decoration: none; color: var(--gg-ink); background: #fff; text-align: center; }
+.gg-code-grid a:hover { border-color: var(--gg-green); color: var(--gg-green); }
+.gg-scan-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .35rem; }
+.gg-scan-list li { display: inline-flex; align-items: center; gap: .35rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85rem;
+    padding: .2rem .25rem .2rem .55rem; border-radius: 999px; background: var(--gg-green-light); color: var(--gg-green-dark); }
+.gg-scan-list button { border: 0; background: transparent; color: inherit; padding: 0 .3rem; line-height: 1; font-size: 1rem; }
+
+.gg-unit-chip { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .78rem; padding: .05rem .4rem; border-radius: 6px;
+    background: #eef2ee; color: var(--gg-ink); text-decoration: none; margin: .1rem 0; }
+.gg-unit-chip.sold { background: #e3f2fd; color: #0d47a1; }
+.gg-unit-chip.in_stock { background: var(--gg-green-light); color: var(--gg-green-dark); }
+.gg-unit-chip.damaged { background: #fdecea; color: #b3261e; text-decoration: line-through; }
+
+/* ================================================================ Thông báo nổi (toast): không đẩy nội dung trang */
+.gg-toasts { position: fixed; top: 100px; right: 18px; z-index: 1085; display: flex; flex-direction: column; gap: .6rem; width: min(380px, calc(100vw - 24px)); pointer-events: none; }
+.gg-toast { pointer-events: auto; display: flex; align-items: flex-start; gap: .65rem; padding: .8rem .75rem .8rem 1rem; border-radius: 12px; background: #fff;
+    color: var(--gg-ink); box-shadow: 0 10px 30px rgba(16, 40, 16, .18), 0 2px 6px rgba(16, 40, 16, .08); border-left: 5px solid var(--gg-green);
+    font-size: .93rem; line-height: 1.45; animation: gg-toast-in .22s ease-out; }
+.gg-toast > .fa { font-size: 1.15rem; margin-top: .1rem; color: var(--gg-green); }
+.gg-toast.warning { border-left-color: #f59e0b; } .gg-toast.warning > .fa { color: #b45309; }
+.gg-toast.error { border-left-color: #dc3545; } .gg-toast.error > .fa { color: #b3261e; }
+.gg-toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gg-toast-text ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+.gg-toast-close { border: 0; background: transparent; color: var(--gg-muted); font-size: 1.35rem; line-height: 1; padding: 0 .25rem; cursor: pointer; }
+.gg-toast-close:hover { color: var(--gg-ink); }
+.gg-toast.hide { opacity: 0; transform: translateX(16px); transition: opacity .22s, transform .22s; }
+.gg-admin-content .gg-toasts { top: 70px; }            /* dưới thanh trên cùng (dính) của trang quản trị */
+@keyframes gg-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 575.98px) {
+    .gg-toasts { top: 10px; right: 12px; left: 12px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .gg-toast { animation: none; } .gg-toast.hide { transition: none; } }
+@media print { .gg-toasts { display: none; } }

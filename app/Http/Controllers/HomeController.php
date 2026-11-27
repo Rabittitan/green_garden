@@ -35,7 +35,9 @@ class HomeController extends Controller
         $flashItems = FlashSaleItem::with(['plant.category', 'sale'])
             ->whereHas('sale', fn ($q) => $q->where('status', FlashSaleStatus::Approved->value)->where('starts_at', '<=', now())->where('ends_at', '>', now()))
             ->whereHas('plant', fn ($q) => $q->where('is_active', true)->whereNull('deleted_at'))
-            ->orderBy('sale_price')->get()->unique('plant_id')->values();
+            ->orderBy('sale_price')->get()
+            ->filter(fn (FlashSaleItem $i) => $i->sale_price < $i->plant->price)          // giá thường đã hạ dưới giá sale: không còn là sale
+            ->unique('plant_id')->values();
         $flashMap = $flashItems->keyBy('plant_id');
 
         // Gửi dữ liệu sang view resources/views/home.blade.php

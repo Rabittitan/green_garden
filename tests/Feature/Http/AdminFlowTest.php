@@ -6,9 +6,11 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Coupon;
+use App\Models\DefectReport;
 use App\Models\MembershipTier;
 use App\Models\Order;
 use App\Models\Plant;
+use App\Models\PlantUnit;
 use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,11 +23,11 @@ class AdminFlowTest extends TestCase
 
     public function test_access_control(): void
     {
-        $this->actingAs($this->customer())->get(route('admin.dashboard'))->assertForbidden();
+        $this->actingAs($this->customer())->get(route('admin.dashboard'))->assertNoAccess();
         $staff = User::factory()->staff()->create();
         $this->actingAs($staff)->get(route('admin.orders.index'))->assertOk();
-        $this->actingAs($staff)->get(route('admin.coupons.index'))->assertForbidden();
-        $this->actingAs($staff)->get(route('admin.tiers.index'))->assertForbidden();
+        $this->actingAs($staff)->get(route('admin.coupons.index'))->assertNoAccess();
+        $this->actingAs($staff)->get(route('admin.tiers.index'))->assertNoAccess();
         $staff->forceFill(['is_active' => false])->save();
         $this->actingAs($staff)->get(route('admin.orders.index'))->assertRedirect(route('login'));   // bị khóa: đăng xuất luôn
         $this->assertGuest();
@@ -50,10 +52,12 @@ class AdminFlowTest extends TestCase
     {
         $order = $this->place();
         $this->actingAs($this->admin());
-        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'X'])->assertSessionHas('error');  // chưa xác nhận
+        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'X', 'unit_codes' => $this->packCodes($order)])
+            ->assertSessionHas('error');                                                                        // chưa xác nhận
         $this->post(route('admin.orders.confirm', $order))->assertSessionHas('success');
         $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN'])->assertSessionHasErrors('tracking_code');
-        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'GHN1'])->assertSessionHas('success');
+        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'GHN1'])->assertSessionHasErrors('unit_codes');   // chưa quét chậu
+        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'GHN1', 'unit_codes' => $this->packCodes($order)])->assertSessionHas('success');
         $this->post(route('admin.orders.complete', $order))->assertSessionHas('success');
 
         $order->refresh();
@@ -67,7 +71,7 @@ class AdminFlowTest extends TestCase
         $this->ipn($order->payments()->sole());
         $this->actingAs($this->admin());
         $this->post(route('admin.orders.confirm', $order));
-        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'G2']);
+        $this->post(route('admin.orders.ship', $order), ['shipping_carrier' => 'GHN', 'tracking_code' => 'G2', 'unit_codes' => $this->packCodes($order)]);
         $this->post(route('admin.orders.returning', $order), ['reason' => 'Khách không nhận'])->assertSessionHas('success');
         $item = $order->items()->sole();
         $this->post(route('admin.orders.receive-return', $order), [
@@ -111,21 +115,26 @@ class AdminFlowTest extends TestCase
         $this->assertLedgerConsistent();
     }
 
-    public function test_inventory_damage_and_stock_count_link(): void
+    public function test_defect_report_flow_and_stock_count_link(): void
     {
-        $this->actingAs($this->admin());
-        $this->post(route('admin.inventory.damage', 1), ['quantity' => 2, 'reason' => 'Cây chết'])->assertSessionHas('success');
-        $this->post(route('admin.inventory.damage', 16), ['quantity' => 5, 'reason' => 'x'])->assertSessionHas('error');
-        $this->assertSame(28, $this->stock(1));
-        $this->get(route('admin.inventory.show', 1))->assertOk()->assertSee('Phiếu kiểm kê')->assertSee('Hư hỏng');
-
-        // Nhân viên: ghi cây chết được, không thấy / không vào được phiếu kiểm kê (việc của quản trị viên)
+        // Nhân viên: lập phiếu báo lỗi được, không thấy / không vào được phiếu kiểm kê (việc của quản trị viên)
         $staff = User::factory()->staff()->create();
         $this->actingAs($staff)->get(route('admin.inventory.show', 1))->assertOk()
-            ->assertSee('Ghi hư hỏng / cây chết')->assertDontSee(route('admin.stock-counts.index'), false);
-        $this->get(route('admin.stock-counts.index'))->assertForbidden();
-        $this->post(route('admin.inventory.damage', 1), ['quantity' => 1, 'reason' => 'Cây héo'])->assertSessionHas('success');
-        $this->assertSame(27, $this->stock(1));
+            ->assertSee('Lập phiếu báo lỗi')->assertDontSee(route('admin.stock-counts.index'), false);
+        $this->get(route('admin.stock-counts.index'))->assertNoAccess();
+        $codes = PlantUnit::where('plant_id', 1)->where('status', 'in_stock')->orderBy('id')->take(2)->pluck('code');
+        $this->post(route('admin.defect-reports.store'), ['lines' => [$codes[0] => ['type' => 'dead'], $codes[1] => ['type' => 'pest', 'note' => 'Rệp']]])
+            ->assertRedirect();
+        $report = DefectReport::sole();
+        $this->assertSame(30, $this->stock(1));                                            // chưa duyệt: kho chưa đổi
+        $this->post(route('admin.defect-reports.approve', $report))->assertNoAccess();
+
+        $this->actingAs($this->admin());
+        $this->get(route('admin.defect-reports.show', $report))->assertOk()->assertSee('Duyệt &amp; xuất hủy 2 chậu', false);
+        $this->post(route('admin.defect-reports.approve', $report))->assertSessionHas('success');
+        $this->assertSame(28, $this->stock(1));
+        $this->get(route('admin.inventory.show', 1))->assertOk()->assertSee('Phiếu kiểm kê')->assertSee('Hư hỏng')->assertSee('Phiếu báo lỗi');
+        $this->assertLedgerConsistent();
     }
 
     public function test_coupon_crud_and_lock_after_use(): void
@@ -172,7 +181,7 @@ class AdminFlowTest extends TestCase
     {
         $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->customer()))->assertSessionHas('success');
         $this->assertFalse($this->customer()->is_active);
-        $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->admin()))->assertForbidden();
+        $this->actingAs($this->admin())->post(route('admin.customers.toggle', $this->admin()))->assertNoAccess();
     }
 
     public function test_console_commands(): void

@@ -9,6 +9,8 @@ use App\Enums\ActorType;
 use App\Enums\PaymentMethod;
 use App\Exceptions\BusinessException;
 use App\Models\Coupon;
+use App\Models\DefectReport;
+use App\Models\FlashSale;
 use App\Models\GoodsReceipt;
 use App\Models\Order;
 use App\Models\Payment;
@@ -16,6 +18,8 @@ use App\Models\StockCount;
 use App\Models\User;
 use App\Services\CouponGiftService;
 use App\Services\CouponService;
+use App\Services\DefectReportService;
+use App\Services\FlashSaleService;
 use App\Services\Orders\PlaceOrderData;
 use App\Services\OrderService;
 use App\Services\Payments\PaymentGateway;
@@ -52,6 +56,13 @@ try {
         'expire' => app(OrderService::class)->expireOverdue(),
         'confirm' => app(OrderService::class)->confirm(Order::findOrFail((int) $args[0]), User::where('role', 'admin')->firstOrFail())->status->value,
         'ship' => app(OrderService::class)->ship(Order::findOrFail((int) $args[0]), 'GHN', 'RACE', User::where('role', 'admin')->firstOrFail())->status->value,
+        // Flash sale: 2 quản trị viên cùng lúc duyệt 2 đợt trùng giờ có chung cây
+        'flash-approve' => app(FlashSaleService::class)->approve(FlashSale::findOrFail((int) $args[0]), User::findOrFail((int) $args[1]))->status->value,
+        // Phiếu báo lỗi: quản trị viên duyệt xuất hủy đúng lúc nhân viên quét chậu đó để giao
+        'defect-approve' => app(DefectReportService::class)->approve(DefectReport::findOrFail((int) $args[0]), User::where('role', 'admin')->firstOrFail())->status,
+        // Mã từng chậu: 2 nhân viên quét CÙNG chậu cho 2 đơn khác nhau
+        'ship-codes' => app(OrderService::class)->ship(Order::findOrFail((int) $args[0]), 'GHN', 'RACE', User::where('role', 'admin')->firstOrFail(),
+            json_decode($args[1], true))->status->value,
         'confirm-refund' => app(PaymentService::class)->confirmRefund(Payment::findOrFail((int) $args[0]), User::where('role', 'admin')->firstOrFail(), 'RF-'.getmypid())->status->value,
         'complete-receipt' => (function () use ($args) {
             app(PurchaseService::class)->completeReceipt(GoodsReceipt::findOrFail((int) $args[0]), null);

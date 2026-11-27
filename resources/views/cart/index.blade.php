@@ -25,7 +25,7 @@
                         <div>
                             <a href="{{ route('plants.show', $id) }}" class="fw-bold text-decoration-none text-dark">{{ $line['plant']->name }}</a>
                             <div class="small text-muted">
-                                @if($line['unit'] < $line['plant']->price)
+                                @if($line['applied'])
                                     <span class="badge bg-danger"><i class="fa fa-bolt"></i> Flash sale</span>
                                     <strong class="text-danger">@money($line['unit'])</strong> <s>@money($line['plant']->price)</s>
                                 @else

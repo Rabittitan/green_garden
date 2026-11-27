@@ -40,7 +40,7 @@ class SecurityHeaders
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'DENY',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
-            'Permissions-Policy' => 'camera=(), microphone=(), geolocation=(), payment=()',
+            'Permissions-Policy' => 'camera=(self), microphone=(), geolocation=(), payment=()',   // camera: quét mã chậu trong trang quản trị
             'Cross-Origin-Opener-Policy' => 'same-origin',
         ];
         if ($request->isSecure()) {

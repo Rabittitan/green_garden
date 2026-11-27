@@ -6,6 +6,7 @@ use App\Enums\CommentStatus;
 use App\Models\Category;
 use App\Models\Plant;
 use App\Models\PlantReview;
+use App\Models\User;
 use App\Services\FlashSaleService;
 use App\Services\ReviewService;
 use Illuminate\Contracts\View\View;
@@ -84,13 +85,18 @@ class PlantController extends Controller
         // Nạp danh mục cho cây chính + cây liên quan trong CÙNG 1 câu (trang này sát ngân sách 15 câu SQL)
         (new EloquentCollection([$plant, ...$related->all()]))->load('category');
 
-        $reviews = $plant->approvedReviews()->with('user')->orderByDesc('helpful_count')->latest('id')
+        $reviews = $plant->approvedReviews()->orderByDesc('helpful_count')->latest('id')
             ->simplePaginate(5, ['*'], 'review_page')->withQueryString();       // không cần COUNT: tổng đã có ở rating_count
         $distribution = $plant->approvedReviews()->selectRaw('rating, COUNT(*) c')->groupBy('rating')->pluck('c', 'rating');
 
         $comments = $plant->comments()->whereNull('parent_id')->where('status', CommentStatus::Published->value)
-            ->with(['user', 'replies' => fn ($q) => $q->where('status', CommentStatus::Published->value)->with('user')])
+            ->with(['replies' => fn ($q) => $q->where('status', CommentStatus::Published->value)])
             ->orderByDesc('id')->simplePaginate(10, ['*'], 'qa_page')->withQueryString();
+        // Người viết đánh giá + hỏi + shop trả lời: nạp trong 1 câu thay vì 3 (trang này sát ngân sách 15 câu SQL)
+        $replies = $comments->getCollection()->flatMap(fn ($c) => $c->replies);
+        $authored = (new EloquentCollection([...$reviews->items(), ...$comments->items(), ...$replies->all()]));
+        $authors = User::whereIn('id', $authored->pluck('user_id')->unique()->values())->get()->keyBy('id');
+        $authored->each(fn ($m) => $m->setRelation('user', $authors->get($m->user_id)));
 
         $flashMap = $flashSales->activeItems([$plant->id, ...$related->pluck('id')->all()]);
 
@@ -99,7 +105,7 @@ class PlantController extends Controller
             'plant' => $plant, 'related' => $related, 'reviews' => $reviews, 'distribution' => $distribution, 'comments' => $comments,
             'myReview' => $user ? PlantReview::where('user_id', $user->id)->where('plant_id', $plant->id)->first() : null,
             'canReview' => $user && $reviewService->proofOfPurchase($user, $plant->id) !== null,
-            'votedIds' => $user ? DB::table('review_votes')->where('user_id', $user->id)
+            'votedIds' => $user && $reviews->isNotEmpty() ? DB::table('review_votes')->where('user_id', $user->id)
                 ->whereIn('plant_review_id', $reviews->pluck('id'))->pluck('plant_review_id')->all() : [],
         ]);
     }

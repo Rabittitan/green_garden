@@ -1,6 +1,8 @@
 {{-- Thẻ hiển thị 1 cây. Nhận biến $plant (đã nạp sẵn category), tùy chọn $sold (số đã bán gần đây: hiện nhãn "Hot"),
      $flash (FlashSaleItem đang chạy: hiện giá sale + giá gạch). Số sao / tồn kho lấy từ cột của cây: không truy vấn thêm.
      onerror: ảnh lỗi thì hiện ảnh dự phòng --}}
+{{-- Giá sale không còn rẻ hơn giá thường (đã hạ giá thường sau khi duyệt sale): không hiện là sale --}}
+@php if (! empty($flash) && $flash->sale_price >= $plant->price) { $flash = null; } @endphp
 <div class="card plant-card h-100">
     <a href="{{ route('plants.show', $plant->id) }}" class="gg-card-media">
         <img src="{{ $plant->image }}" alt="{{ $plant->name }}" loading="lazy"

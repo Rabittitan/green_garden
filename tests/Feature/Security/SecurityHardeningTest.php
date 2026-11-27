@@ -40,7 +40,9 @@ class SecurityHardeningTest extends TestCase
         $this->get('/__boom')->assertStatus(500)->assertSee('Có lỗi xảy ra')
             ->assertDontSee('sieu-bi-mat')->assertDontSee('RuntimeException')->assertDontSee('vendor/laravel');
         $this->get('/khong-co-trang-nay')->assertNotFound()->assertSee('Không tìm thấy trang');
-        $this->actingAs($this->customer())->get(route('admin.dashboard'))->assertForbidden()->assertSee('Không có quyền truy cập');
+        $this->actingAs($this->customer())->get(route('admin.dashboard'))->assertNoAccess('home');            // trang web: về trang chủ
+        $this->get(route('home'))->assertSee('Bạn không có quyền truy cập trang đó.');                           // thông báo nổi
+        $this->getJson(route('admin.units.check', ['code' => 'X']))->assertForbidden()->assertDontSee('vendor/laravel');   // JSON: vẫn 403
     }
 
     public function test_user_content_is_escaped(): void

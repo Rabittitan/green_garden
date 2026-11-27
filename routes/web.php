@@ -3,16 +3,19 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
+use App\Http\Controllers\Admin\ContactChannelController as AdminContactChannelController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CouponGiftRuleController as AdminCouponGiftRuleController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DefectReportController as AdminDefectReportController;
 use App\Http\Controllers\Admin\FlashSaleController as AdminFlashSaleController;
 use App\Http\Controllers\Admin\GoodsReceiptController as AdminGoodsReceiptController;
 use App\Http\Controllers\Admin\HomeSlideController as AdminHomeSlideController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PlantController as AdminPlantController;
+use App\Http\Controllers\Admin\PlantUnitController as AdminPlantUnitController;
 use App\Http\Controllers\Admin\PurchaseRequestController as AdminPurchaseRequestController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
@@ -133,6 +136,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Trang đầu: nhân viên không có quyền "Thống kê" được chuyển tới mục đầu tiên mình được dùng
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Từng chậu: kiểm tra mã khi quét (giao hàng, báo lỗi, kiểm kê) + in tem (phiếu nhập, kho). Chỉ đọc.
+    Route::get('/units/check', [AdminPlantUnitController::class, 'check'])->name('units.check');
+    Route::get('/units/labels', [AdminPlantUnitController::class, 'labels'])->name('units.labels');
+
     Route::middleware('admin:catalog')->group(function () {
         Route::resource('plants', AdminPlantController::class)->except(['show']);
     });
@@ -153,7 +160,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::middleware('admin:inventory')->group(function () {
         Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
         Route::get('/inventory/{plant}', [AdminInventoryController::class, 'show'])->name('inventory.show');
-        Route::post('/inventory/{plant}/damage', [AdminInventoryController::class, 'damage'])->name('inventory.damage');
+        Route::get('/units', [AdminPlantUnitController::class, 'index'])->name('units.index');
+        // Phiếu báo hàng lỗi: nhân viên lập (quét chậu lỗi), quản trị viên duyệt ở nhóm admin:admin bên dưới
+        Route::resource('defect-reports', AdminDefectReportController::class)->only(['index', 'create', 'store', 'show'])->parameters(['defect-reports' => 'defectReport']);
     });
 
     // Đánh giá + hỏi đáp
@@ -173,6 +182,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/articles/preview', [AdminArticleController::class, 'preview'])->name('articles.preview');
         Route::resource('articles', AdminArticleController::class);
         Route::resource('slides', AdminHomeSlideController::class)->except(['show']);
+        Route::get('/contact-channels', [AdminContactChannelController::class, 'index'])->name('contact-channels.index');
+        Route::put('/contact-channels', [AdminContactChannelController::class, 'update'])->name('contact-channels.update');
     });
 
     // Flash sale: nhân viên tạo / sửa / gửi duyệt / hủy đợt chưa duyệt (duyệt, từ chối: nhóm admin:admin bên dưới)
@@ -194,10 +205,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/goods-receipts/{goods_receipt}/cancel', [AdminGoodsReceiptController::class, 'cancel'])->name('goods-receipts.cancel');
     });
 
+    // Báo cáo hàng lỗi (số lượng + giá trị thiệt hại): nhóm Thống kê
+    Route::get('/defects/report', [AdminDefectReportController::class, 'report'])->middleware('admin:reports')->name('defects.report');
+
     Route::middleware('admin:admin')->group(function () {
-        // Phiếu kiểm kê (nghiệp vụ riêng, dạng báo cáo) là việc của quản trị viên; nhân viên chỉ ghi hư hỏng / cây chết
+        Route::post('/defect-reports/{defectReport}/approve', [AdminDefectReportController::class, 'approve'])->name('defect-reports.approve');
+        Route::post('/defect-reports/{defectReport}/reject', [AdminDefectReportController::class, 'reject'])->name('defect-reports.reject');
+        // Phiếu kiểm kê (nghiệp vụ riêng, dạng báo cáo) là việc của quản trị viên; nhân viên lập phiếu báo lỗi (duyệt ở trên)
         Route::resource('stock-counts', AdminStockCountController::class)->only(['index', 'store', 'show', 'update'])->parameters(['stock-counts' => 'stockCount']);
         Route::post('/stock-counts/{stockCount}/cancel', [AdminStockCountController::class, 'cancel'])->name('stock-counts.cancel');
+        Route::post('/stock-counts/{stockCount}/scan', [AdminStockCountController::class, 'scan'])->name('stock-counts.scan');
         Route::post('/purchase-requests/{purchase_request}/approve', [AdminPurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
         Route::post('/purchase-requests/{purchase_request}/reject', [AdminPurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
         Route::post('/orders/{order}/confirm-transfer', [AdminOrderController::class, 'confirmTransfer'])->name('orders.confirm-transfer');

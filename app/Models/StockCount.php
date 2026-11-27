@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property string $code
  * @property string $status
  * @property int|null $category_id
+ * @property int|null $unit_event_mark id lớn nhất của plant_unit_events lúc mở phiếu
  * @property string|null $note
  * @property int $created_by
  * @property int|null $completed_by
@@ -29,7 +30,7 @@ class StockCount extends Model
 
     protected function casts(): array
     {
-        return ['completed_at' => 'datetime'];
+        return ['completed_at' => 'datetime', 'unit_event_mark' => 'integer'];
     }
 
     /** @return HasMany<StockCountItem, $this> */

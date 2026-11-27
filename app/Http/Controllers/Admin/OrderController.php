@@ -45,7 +45,7 @@ class OrderController extends Controller
     public function show(Order $order): View
     {
         $this->orders->expireIfOverdue($order);
-        $order->refresh()->load(['user.tier', 'items.plant', 'payments.creator', 'histories.changedBy', 'redemption']);
+        $order->refresh()->load(['user.tier', 'items.plant', 'items.units', 'payments.creator', 'histories.changedBy', 'redemption']);
 
         return view('admin.orders.show', [
             'order' => $order,
@@ -67,10 +67,15 @@ class OrderController extends Controller
 
     public function ship(Request $request, Order $order): RedirectResponse
     {
-        $data = $request->validate(['shipping_carrier' => ['required', 'string', 'max:30'], 'tracking_code' => ['required', 'string', 'max:50']],
-            [], ['shipping_carrier' => 'đơn vị vận chuyển', 'tracking_code' => 'mã vận đơn']);
+        $data = $request->validate([
+            'shipping_carrier' => ['required', 'string', 'max:30'], 'tracking_code' => ['required', 'string', 'max:50'],
+            // Mã từng chậu quét khi đóng gói: bắt buộc (OrderService kiểm đủ số, đúng cây, còn trong kho)
+            'unit_codes' => ['required', 'array', 'max:500'], 'unit_codes.*' => ['required', 'string', 'max:20'],
+        ], ['unit_codes.required' => 'Hãy quét mã từng chậu khi đóng gói trước khi giao.'],
+            ['shipping_carrier' => 'đơn vị vận chuyển', 'tracking_code' => 'mã vận đơn', 'unit_codes' => 'mã chậu']);
 
-        return $this->run(fn () => $this->orders->ship($order, $data['shipping_carrier'], $data['tracking_code'], $request->user()), 'Đã giao cho đơn vị vận chuyển.');
+        return $this->run(fn () => $this->orders->ship($order, $data['shipping_carrier'], $data['tracking_code'], $request->user(), array_values($data['unit_codes'])),
+            'Đã giao cho đơn vị vận chuyển.');
     }
 
     public function complete(Request $request, Order $order): RedirectResponse
@@ -107,10 +112,13 @@ class OrderController extends Controller
             'items.*.damaged' => ['required', 'integer', 'min:0'],
             'refund_amount' => ['nullable', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:255'],
+            'damaged_codes' => ['nullable', 'array', 'max:500'], 'damaged_codes.*' => ['required', 'string', 'max:20'],   // mã chậu hỏng đã quét
         ]);
+        // Màn hình luôn gửi cờ quét (kể cả khi không có chậu hỏng) -> kiểm đúng chậu; thiếu cờ (JS lỗi) thì lấy các chậu đầu tiên
+        $damagedCodes = $request->boolean('scanned') ? array_values($data['damaged_codes'] ?? []) : null;
 
         return $this->run(fn () => $this->orders->receiveReturn($order, $data['items'], $request->user(),
-            isset($data['refund_amount']) ? (int) $data['refund_amount'] : null, $data['note'] ?? null), 'Đã nhận hàng hoàn về kho.');
+            isset($data['refund_amount']) ? (int) $data['refund_amount'] : null, $data['note'] ?? null, $damagedCodes), 'Đã nhận hàng hoàn về kho.');
     }
 
     public function confirmTransfer(Request $request, Order $order): RedirectResponse

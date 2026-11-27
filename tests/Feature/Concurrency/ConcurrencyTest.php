@@ -14,8 +14,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Plant;
 use App\Models\PlantReview;
+use App\Models\PlantUnit;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\DefectReportService;
 use App\Services\OrderService;
 use App\Services\PurchaseService;
 use App\Services\StockCountService;
@@ -234,12 +236,13 @@ class ConcurrencyTest extends TestCase
         $this->artisan('shop:reconcile')->assertSuccessful();
     }
 
-    /** Đợt 5: chốt phiếu kiểm kê đúng lúc khách đặt hàng cùng cây -> không deadlock, áp chênh lệch, sổ kho khớp. */
+    /** Chốt phiếu kiểm kê (quét mã) đúng lúc khách đặt hàng cùng cây -> không deadlock, áp chênh lệch, sổ kho + chậu khớp. */
     public function test_completing_stock_count_while_customers_order_the_same_plants(): void
     {
         $count = app(StockCountService::class)->create($this->admin(), null, 'Đua');
-        foreach ($count->items as $item) {
-            $item->update(['counted_qty' => in_array($item->plant_id, [1, 3], true) ? $item->system_qty - 2 : $item->system_qty]);   // thiếu 2 cây #1, #3
+        $missing = [...PlantUnit::where('plant_id', 1)->orderBy('id')->take(2)->pluck('code'), ...PlantUnit::where('plant_id', 3)->orderBy('id')->take(2)->pluck('code')];
+        foreach (PlantUnit::where('status', 'in_stock')->whereNotIn('code', $missing)->pluck('code') as $code) {   // quét đủ kệ, thiếu 2 chậu #1, #3
+            app(StockCountService::class)->scan($count, $this->admin(), $code);
         }
         $users = User::factory()->count(3)->create();
         $jobs = $users->map(fn ($u) => ['place', (string) $u->id, json_encode([1 => 1, 3 => 1]), (string) Str::uuid()])->all();
@@ -294,6 +297,64 @@ class ConcurrencyTest extends TestCase
         $this->assertContains($order->status, [OrderStatus::Shipping, OrderStatus::Cancelled]);
         $this->assertSame($order->status === OrderStatus::Cancelled ? 30 : 28, $this->stock(1));
         $this->assertLedgerConsistent();
+    }
+
+    /** Mã từng chậu: 2 đơn cùng quét 1 chậu lúc đóng gói -> chậu chỉ giao cho đúng 1 đơn, đơn kia báo lỗi và chưa giao. */
+    public function test_same_unit_scanned_for_two_orders_ships_once(): void
+    {
+        $a = $this->place(cart: [1 => 1]);
+        $b = $this->place(User::factory()->create(), [1 => 1]);
+        foreach ([$a, $b] as $o) {
+            app(OrderService::class)->confirm($o, $this->admin());
+        }
+        $code = PlantUnit::where('plant_id', 1)->where('status', 'in_stock')->orderBy('id')->value('code');
+        $results = $this->race([['ship-codes', (string) $a->id, json_encode([$code])], ['ship-codes', (string) $b->id, json_encode([$code])]]);
+
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $this->assertSame(1, Order::where('status', OrderStatus::Shipping->value)->count());
+        $unit = PlantUnit::where('code', $code)->sole();
+        $this->assertSame(Order::where('status', OrderStatus::Shipping->value)->sole()->items()->sole()->id, $unit->order_item_id);
+        $this->assertSame(1, $unit->events()->where('type', 'shipped')->count());
+        $this->assertLedgerConsistent();
+    }
+
+    /** Duyệt phiếu báo lỗi đúng lúc chậu đó được quét giao: chậu chỉ đi 1 đường (hoặc xuất hủy, hoặc giao), kho khớp. */
+    public function test_defect_approval_racing_shipping_of_the_same_pot(): void
+    {
+        $o = $this->place(cart: [1 => 1]);
+        app(OrderService::class)->confirm($o, $this->admin());
+        $code = PlantUnit::where('plant_id', 1)->where('status', 'in_stock')->orderBy('id')->value('code');
+        $report = app(DefectReportService::class)->create(User::factory()->staff()->create(), [$code => ['type' => 'broken']], null);
+        $results = $this->race([['defect-approve', (string) $report->id], ['ship-codes', (string) $o->id, json_encode([$code])]]);
+
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $unit = PlantUnit::where('code', $code)->sole();
+        $shipped = $o->refresh()->status === OrderStatus::Shipping;
+        $this->assertSame($shipped ? 'sold' : 'damaged', $unit->status->value);
+        $this->assertSame($shipped ? 'submitted' : 'approved', $report->refresh()->status);
+        $this->assertSame($shipped ? 29 : 28, $this->stock(1));
+        $this->assertLedgerConsistent();
+    }
+
+    /** 2 quản trị viên cùng lúc duyệt 2 đợt sale trùng giờ có chung cây: chỉ 1 đợt được duyệt (lỗi duyệt trùng 26/11). */
+    public function test_two_admins_approving_overlapping_sales_only_one_wins(): void
+    {
+        $staff = User::factory()->staff()->create();
+        $admin2 = User::factory()->create(['role' => 'admin']);
+        $sales = [];
+        foreach ([[1, 3], [3, 5]] as $i => $plants) {                                         // chung cây #3
+            $sale = new FlashSale(['name' => 'Đợt '.$i, 'starts_at' => now()->addHour(), 'ends_at' => now()->addHours(3)]);
+            $sale->forceFill(['created_by' => $staff->id, 'status' => 'submitted'])->save();
+            foreach ($plants as $p) {
+                $sale->items()->create(['plant_id' => $p, 'sale_price' => 1000, 'quantity_limit' => null]);
+            }
+            $sales[] = $sale;
+        }
+        $results = $this->race([['flash-approve', (string) $sales[0]->id, (string) $this->admin()->id], ['flash-approve', (string) $sales[1]->id, (string) $admin2->id]]);
+
+        $this->assertSame(1, collect($results)->where('ok', true)->count());
+        $this->assertSame(1, FlashSale::where('status', 'approved')->count());
+        $this->assertSame(1, FlashSale::where('status', 'submitted')->count());
     }
 
     /** 2 admin cùng xác nhận đã hoàn 1 khoản: chỉ ghi nhận 1 lần, không hoàn trùng. */

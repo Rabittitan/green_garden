@@ -38,7 +38,7 @@ class UploadedImagesWithoutStorageLinkTest extends TestCase
         $this->get('/storage/bi-mat.txt')->assertNotFound();
         $this->get('/storage/articles/khong-co.png')->assertNotFound();
         $this->get('/storage/..%2F..%2F.env')->assertNotFound();
-        $this->put('/storage/articles/ghi-de.png', [])->assertForbidden();     // tải lên trực tiếp cần link ký -> chặn
+        $this->put('/storage/articles/ghi-de.png', [])->assertForbidden();    // tải lên trực tiếp cần link ký -> chặn (route không phiên: vẫn 403)
         Storage::disk('public')->assertMissing('articles/ghi-de.png');
     }
 }

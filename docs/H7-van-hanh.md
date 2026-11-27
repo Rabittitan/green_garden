@@ -88,7 +88,7 @@ Kiểm tra nhanh sau khi sửa `.env`: `php artisan optimize && php artisan abou
 |---|---|---|---|
 | `orders:expire-unpaid` | mỗi phút | hủy đơn VNPay quá 15 phút / chuyển khoản quá 24h chưa trả, **trả hàng về kho** | hàng bị giữ mãi, khách khác không mua được |
 | `membership:record-spend` | mỗi giờ | đơn đã qua 7 ngày đổi trả → cộng chi tiêu, tự lên hạng | khách không được lên hạng |
-| `shop:reconcile` | 02:17 hằng ngày | đối soát 9 bất biến kho / tiền / mã / hạng / đánh giá / suất flash sale | không phát hiện lệch dữ liệu |
+| `shop:reconcile` | 02:17 hằng ngày | đối soát 10 bất biến kho / tiền / mã / hạng / đánh giá / suất flash sale / số chậu trên kệ | không phát hiện lệch dữ liệu |
 | `payments:prune-webhook-logs` | 03:23 | xóa log callback > 180 ngày | bảng log phình |
 | `queue:prune-failed --hours=720` | 03:41 | xóa job lỗi > 30 ngày | |
 | `deploy/backup-db.sh` | 01:15 | sao lưu DB (mục 6) | |
@@ -174,3 +174,14 @@ Chỉ deploy commit có CI xanh (Test + Larastan) trên GitHub.
 - Đổi `APP_KEY` sẽ đăng xuất mọi người và làm hỏng link xác thực email đang chờ — chỉ đổi khi lộ khóa.
 - `composer audit` chạy trong CI ở mỗi lần push; có cảnh báo lỗ hổng → cập nhật gói rồi deploy.
 - Khóa tài khoản nhân viên nghỉ việc ngay trên trang Khách hàng: phiên đang đăng nhập bị đăng xuất ở request kế tiếp.
+
+## Mã từng chậu, in tem, máy quét (từ 26/11/2026)
+
+- **Lần triển khai đầu:** `migrate` tự phát mã cho mọi chậu đang trên kệ (tồn + đã đặt chưa giao). Sau đó in tem cho từng cây ở Kho → chọn cây → **In tem chậu trong kho**, rồi dán tem lên chậu. Chưa dán xong thì chưa giao được những chậu đó, vì giao hàng bắt quét mã.
+- **Nhập hàng:** nhập kho xong, mở phiếu nhập → **In tem** (tem của đúng phiếu đó) rồi dán trước khi đưa lên kệ.
+- **Máy in tem nhiệt:** cài khổ giấy 50 × 30 mm trong driver. Trong hộp thoại in: khổ 50 × 30, lề None, tỉ lệ 100%, bỏ đầu trang / chân trang. Mỗi tem in ra một trang.
+- **Máy quét USB / Bluetooth:** phải đọc được **QR (2D)**, chế độ bàn phím (HID), có gửi Enter sau mã. Bấm vào ô quét rồi quét.
+- **Camera điện thoại:** cần site chạy **HTTPS** (trình duyệt chỉ cho mở camera trên HTTPS) và cho phép trình duyệt dùng camera. Header `Permissions-Policy` đã mở `camera=(self)`.
+- **Mất tem / tem mờ:** Tra cứu chậu → gõ mã (in dưới QR) → **In lại tem**. Hàng hoàn của đơn giao trước khi có mã được phát mã mới; vào Tra cứu chậu để in tem.
+- **Đối soát lệch "Số chậu trong kho lệch tồn":** không sửa tay. Kiểm tra xem có ai sửa DB trực tiếp không, rồi làm phiếu kiểm kê (quét) để đưa kho về đúng.
+

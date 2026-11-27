@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\PlantUnitService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -9,7 +10,8 @@ use Illuminate\Support\Str;
 
 /**
  * Dữ liệu mẫu. Ghi thẳng bằng DB (không qua Model) để seeder chỉ phụ thuộc schema.
- * Tồn đầu kỳ của mỗi cây = 1 bút toán 'opening' trong sổ kho, nên plants.stock khớp SUM(stock_movements).
+ * Tồn đầu kỳ của mỗi cây = 1 bút toán 'opening' trong sổ kho, nên plants.stock khớp SUM(stock_movements);
+ * mỗi chậu tồn đầu kỳ được phát 1 mã riêng (plant_units).
  */
 class DatabaseSeeder extends Seeder
 {
@@ -85,10 +87,11 @@ class DatabaseSeeder extends Seeder
                 'light' => $p[4], 'element' => $p[5], 'image' => $p[6], 'description' => $p[7],
                 'created_at' => $now, 'updated_at' => $now,
             ]);
-            DB::table('stock_movements')->insert([                      // mọi cây mẫu đều có tồn đầu > 0
+            $movementId = DB::table('stock_movements')->insertGetId([   // mọi cây mẫu đều có tồn đầu > 0
                 'plant_id' => $plantId, 'type' => 'opening', 'quantity' => $p[3], 'stock_after' => $p[3],
                 'unit_cost' => $costPrice, 'note' => 'Tồn đầu kỳ', 'created_at' => $now,
             ]);
+            PlantUnitService::insert($plantId, $p[3], $movementId, null, null, 'Tồn đầu kỳ', $now);   // mỗi chậu một mã
         }
 
         // ===== 4. Mã giảm giá mẫu =====
@@ -114,6 +117,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // ===== 6. Thông tin chi tiết cây mẫu + bài viết + slide trang chủ =====
-        $this->call([PlantDetailSeeder::class, ArticleSeeder::class, HomeSlideSeeder::class]);
+        $this->call([PlantDetailSeeder::class, ArticleSeeder::class, HomeSlideSeeder::class, ContactChannelSeeder::class]);
     }
 }

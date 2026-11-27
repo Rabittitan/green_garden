@@ -1,5 +1,6 @@
 /*
- * Kịch bản trình duyệt 3 vai trò (khách / nhân viên / quản trị) — H5, bổ sung H8 (CSP, thanh toán lại, trang lỗi).
+ * Kịch bản trình duyệt 3 vai trò (khách / nhân viên / quản trị) — H5, bổ sung H8 (CSP, thanh toán lại, trang lỗi),
+ * 26/11: quét mã từng chậu khi đóng gói, phiếu báo lỗi, in tem QR, bong bóng mạng xã hội.
  * Chuẩn bị: php artisan migrate:fresh --seed ; php artisan storage:link ; tạo nhân viên staff@greenlife.test / 123456 ;
  *           PAYMENT_GATEWAY=fake, APP_ENV=local ; php artisan serve
  * (Máy không có internet: thêm E2E_STUB_CDN=1 để giả lập CDN, vẫn kiểm được CSP)
@@ -33,6 +34,13 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
   const login = async (p, email) => { await p.goto(B + '/dang-nhap'); await p.fill('input[name=email]', email); await p.fill('input[name=password]', '123456');
     await Promise.all([p.waitForNavigation(), p.click('form[action$="dang-nhap"] button')]); };
   const click = async (p, text) => Promise.all([p.waitForNavigation(), p.click(text)]);
+  // Mã các chậu "Trong kho" của 1 cây (trang Tra cứu chậu), mở ở tab phụ để không rời trang đang làm
+  const shelfCodes = async (p, plantId, n) => { const t = await p.context().newPage(); await t.goto(B + '/admin/units?plant=' + plantId);
+    const codes = await t.$$eval('.gg-code-grid a', as => as.map(a => new URL(a.href).searchParams.get('ma'))); await t.close(); return codes.slice(0, n); };
+  // Máy quét USB = gõ mã rồi Enter vào ô quét; chờ trang báo nhận đúng mã đó
+  const scan = async (p, input, code, okWord) => { await p.fill(input, code); await p.press(input, 'Enter');
+    const shown = code.slice(0, 4) + '-' + code.slice(4);
+    await p.waitForFunction(([w, c]) => [...document.querySelectorAll('[data-scan-status]')].some(s => s.textContent.includes(w + ' ' + c)), [okWord, shown], { timeout: 5000 }); };
   const expect = async (p, text) => { if (!(await p.content()).includes(text)) throw new Error('không thấy: ' + text); };
 
   const customer = await ctx(), staff = await ctx(), admin = await ctx();
@@ -54,18 +62,51 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     if (!(await customer.isVisible('#print-btn'))) throw new Error('thiếu nút in');
   });
   // ===== NHÂN VIÊN: xử lý đơn
-  await step('nhân viên: xác nhận -> giao -> hoàn thành', async () => {
+  await step('nhân viên: xác nhận -> quét mã từng chậu khi đóng gói -> giao -> hoàn thành', async () => {
     await staff.goto(B + '/admin/orders'); await click(staff, 'text=Chi tiết'); await expect(staff, 'Ghi chú của khách:');
     await click(staff, 'text=Xác nhận đơn');
+    if (!(await staff.isDisabled('[data-pack-submit]'))) throw new Error('chưa quét mà nút giao không bị khóa');
+    const lines = JSON.parse(await staff.textContent('#dong-goi [data-pack-lines]'));
+    for (const l of lines) {
+      for (const code of await shelfCodes(staff, l.plant, l.qty)) await scan(staff, '#pack-scan-input', code, 'Đã nhận');   // máy quét USB: gõ mã + Enter
+    }
     await staff.fill('input[name=shipping_carrier]', 'GHN'); await staff.fill('input[name=tracking_code]', 'E2E-STAFF');
-    await click(staff, 'text=Giao cho vận chuyển'); await click(staff, 'text=Giao thành công'); await expect(staff, 'Đơn đã hoàn thành');
+    await click(staff, 'text=Giao cho vận chuyển'); await expect(staff, 'Đã giao cho đơn vị vận chuyển');
+    await click(staff, 'text=Giao thành công'); await expect(staff, 'Đơn đã hoàn thành');
+  });
+  await step('nhân viên: lập phiếu báo lỗi bằng quét tem; quản trị viên duyệt -> xuất hủy', async () => {
+    const [code] = await shelfCodes(staff, 2, 1);
+    await staff.goto(B + '/admin/defect-reports/create'); await scan(staff, '#defect-scan-input', code, 'Đã thêm');
+    await click(staff, 'text=Gửi phiếu chờ duyệt'); await expect(staff, 'chờ quản trị viên duyệt');
+    const url = staff.url();
+    await admin.goto(url); await click(admin, 'text=Duyệt & xuất hủy 1 chậu'); await expect(admin, 'Đã duyệt, đã xuất hủy');
+  });
+  await step('in tem QR: trang tem vẽ được mã QR (thư viện tự host, CSP cho phép)', async () => {
+    await staff.goto(B + '/admin/units/labels?plant=3');
+    const svgs = await staff.$$eval('.label .qr svg', s => s.length), labels = await staff.$$eval('.label', s => s.length);
+    if (!labels || svgs !== labels) throw new Error('QR vẽ ' + svgs + '/' + labels + ' tem');
   });
   await step('nhân viên: không thấy menu quản trị tiền / mã / hạng', async () => {
     await staff.goto(B + '/admin'); const html = await staff.content();
     if (html.includes('Mã giảm giá') || html.includes('Hạng thành viên')) throw new Error('nhân viên thấy menu chỉ dành cho quản trị');
-    const r = await staff.goto(B + '/admin/coupons'); if (r.status() !== 403) throw new Error('vào được /admin/coupons: ' + r.status());
+    await staff.goto(B + '/admin/coupons');                                       // không có quyền -> về trang đầu khu quản trị + thông báo nổi
+    if (new URL(staff.url()).pathname !== '/admin') throw new Error('không bị chuyển về trang đầu: ' + staff.url());
+    if (!(await staff.isVisible('.gg-toast.error'))) throw new Error('thiếu thông báo nổi "không có quyền"');
+    await expect(staff, 'Bạn không có quyền truy cập trang đó.');
   });
   // ===== KHÁCH: sổ địa chỉ chọn Tỉnh -> Phường/xã (K9: tải danh sách xã bằng JS, CSP vẫn áp)
+  await step('khách: thêm vào giỏ từ giữa trang danh sách -> giữ nguyên chỗ cuộn, thông báo nổi', async () => {
+    await customer.goto(B + '/cay-canh'); const btn = (await customer.$$('form[action*="/gio-hang/them/"] button'))[5];
+    await btn.scrollIntoViewIfNeeded(); const before = await customer.evaluate(() => scrollY);
+    await Promise.all([customer.waitForNavigation(), btn.click()]); await customer.waitForSelector('.gg-toast.success');
+    const after = await customer.evaluate(() => scrollY);
+    if (before < 200 || Math.abs(after - before) > 40) throw new Error('trang nhảy: ' + before + ' -> ' + after);
+  });
+  await step('khách: bong bóng mạng xã hội mở / đóng, link mở tab mới', async () => {
+    await customer.goto(B + '/'); await customer.click('.gg-social-toggle');
+    const links = await customer.$$eval('.gg-social-item', as => as.filter(a => a.getBoundingClientRect().width > 0 && a.target === '_blank').length);
+    if (links < 1) throw new Error('không thấy kênh liên hệ'); await customer.click('.gg-social-toggle');
+  });
   await step('khách: sổ địa chỉ — đổi tỉnh thì tải danh sách phường/xã', async () => {
     await customer.goto(B + '/tai-khoan/dia-chi'); await customer.selectOption('#f-province', 'Thành phố Đà Nẵng');
     await customer.waitForFunction(() => [...document.querySelectorAll('#f-ward option')].some(o => o.value === 'Phường Hải Châu'), null, { timeout: 5000 });
@@ -160,11 +201,13 @@ const B = process.env.APP_URL || 'http://127.0.0.1:8000';
     }
     await admin.setViewportSize({ width: 1280, height: 720 });
   });
-  await step('trang lỗi tiếng Việt (404, 403) có CSS, không lộ chi tiết', async () => {
+  await step('trang lỗi 404 tiếng Việt; link không có quyền -> về trang chủ, thông báo nổi đóng được', async () => {
     const r = await customer.goto(B + '/khong-co-trang-nay'); if (r.status() !== 404) throw new Error('404? ' + r.status());
     await expect(customer, 'Không tìm thấy trang');
-    const f = await customer.goto(B + '/admin'); if (f.status() !== 403) throw new Error('403? ' + f.status());
-    await expect(customer, 'Không có quyền truy cập');
+    await customer.goto(B + '/admin'); if (new URL(customer.url()).pathname !== '/') throw new Error('không về trang chủ: ' + customer.url());
+    const pos = await customer.$eval('.gg-toast.error', t => getComputedStyle(t.parentElement).position);
+    if (pos !== 'fixed') throw new Error('thông báo không nổi: ' + pos);
+    await customer.click('.gg-toast.error [data-toast-close]'); await customer.waitForSelector('.gg-toast.error', { state: 'detached', timeout: 2000 });
     const h = await customer.goto(B + '/'); const csp = h.headers()['content-security-policy'] || '';
     if (!csp.includes("frame-ancestors 'none'")) throw new Error('thiếu CSP');
   });

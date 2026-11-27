@@ -7,6 +7,17 @@
 <p>Tồn hiện tại: <strong class="fs-5">{{ $plant->stock }}</strong> · Ngưỡng nhập thêm: {{ $plant->reorder_point }} · Giá vốn bình quân: @money($plant->cost_price)</p>
 
 <div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card card-body shadow-sm h-100" data-testid="units-card">
+            <h6 class="fw-bold"><i class="fa fa-qrcode"></i> Từng chậu (mã riêng)</h6>
+            <p class="small text-muted mb-2">Trên kệ <strong>{{ $unitsOnShelf }}</strong> chậu
+                ({{ $plant->stock }} còn bán được{{ $unitsOnShelf > $plant->stock ? ' + '.($unitsOnShelf - $plant->stock).' đã có đơn đặt, chờ quét giao' : '' }}).</p>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ route('admin.units.index', ['plant' => $plant->id]) }}" class="btn btn-sm btn-outline-green"><i class="fa fa-list"></i> Xem các chậu</a>
+                <a href="{{ route('admin.units.labels', ['plant' => $plant->id]) }}" class="btn btn-sm btn-green"><i class="fa fa-print"></i> In tem chậu trong kho</a>
+            </div>
+        </div>
+    </div>
     @if(auth()->user()->isAdmin())
     <div class="col-md-6">
         <div class="card card-body shadow-sm h-100">
@@ -17,15 +28,11 @@
     </div>
     @endif
     <div class="col-md-6">
-        <form action="{{ route('admin.inventory.damage', $plant) }}" method="POST" class="card card-body shadow-sm">@csrf
-            <h6 class="fw-bold">Ghi hư hỏng / cây chết</h6>
-            <p class="small text-muted mb-2">Xuất khỏi kho số cây không còn bán được.</p>
-            <div class="input-group">
-                <input type="number" name="quantity" min="1" max="{{ $plant->stock }}" class="form-control" placeholder="Số lượng" required>
-                <input name="reason" class="form-control" placeholder="Lý do" required>
-                <button class="btn btn-outline-danger">Ghi nhận</button>
-            </div>
-        </form>
+        <div class="card card-body shadow-sm h-100">
+            <h6 class="fw-bold">Hàng lỗi / cây chết</h6>
+            <p class="small text-muted mb-2">Lập <strong>phiếu báo lỗi</strong>: quét tem từng chậu lỗi, chọn loại lỗi, chụp ảnh. Quản trị viên duyệt thì chậu mới được xuất hủy khỏi kho.</p>
+            <a href="{{ route('admin.defect-reports.create') }}" class="btn btn-outline-danger align-self-start"><i class="fa fa-triangle-exclamation"></i> Lập phiếu báo lỗi</a>
+        </div>
     </div>
 </div>
 
@@ -41,7 +48,8 @@
                 <td class="text-end">@money($m->unit_cost)</td>
                 <td>
                     @if($m->orderItem) <a href="{{ route('admin.orders.show', $m->orderItem->order) }}">{{ $m->orderItem->order->code }}</a>
-                    @elseif($m->goodsReceiptItem) <a href="{{ route('admin.goods-receipts.show', $m->goodsReceiptItem->receipt) }}">{{ $m->goodsReceiptItem->receipt->code }}</a> @endif
+                    @elseif($m->goodsReceiptItem) <a href="{{ route('admin.goods-receipts.show', $m->goodsReceiptItem->receipt) }}">{{ $m->goodsReceiptItem->receipt->code }}</a>
+                    @elseif($m->defectItem) <a href="{{ route('admin.defect-reports.show', $m->defectItem->defect_report_id) }}">Phiếu báo lỗi</a> @endif
                 </td>
                 <td>{{ $m->creator?->name }} {{ $m->note ? '· '.$m->note : '' }}</td>
             </tr>

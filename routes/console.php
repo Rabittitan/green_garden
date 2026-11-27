@@ -98,6 +98,10 @@ Artisan::command('shop:reconcile', function () {
                                       - (CAST(o.shipping_fee AS SIGNED) - CAST(o.shipping_discount AS SIGNED)))),0) FROM orders o WHERE o.user_id = u.id AND o.spend_recorded_at IS NOT NULL)',
         'Suất flash sale đã bán lệch đơn hàng' => "SELECT f.id FROM flash_sale_items f WHERE f.sold_count <> (SELECT COALESCE(SUM(i.quantity),0) FROM order_items i
                                       JOIN orders o ON o.id = i.order_id WHERE i.flash_sale_item_id = f.id AND o.status <> 'cancelled')",
+        // Chậu trên kệ = tồn + số đã đặt mà chưa quét giao (tồn trừ lúc đặt, chậu chỉ rời kho lúc giao)
+        'Số chậu trong kho lệch tồn' => "SELECT p.id FROM plants p WHERE (SELECT COUNT(*) FROM plant_units u WHERE u.plant_id = p.id AND u.status = 'in_stock')
+                                      <> p.stock + (SELECT COALESCE(SUM(i.quantity),0) FROM order_items i JOIN orders o ON o.id = i.order_id
+                                      WHERE i.plant_id = p.id AND o.status IN ('pending_payment','pending','confirmed'))",
     ];
     $failed = 0;
     foreach ($checks as $label => $sql) {

@@ -6,6 +6,7 @@ use App\Exceptions\BusinessException;
 use App\Models\Plant;
 use App\Services\CartService;
 use App\Services\FlashSaleService;
+use App\Services\PricingService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,13 +23,12 @@ class CartController extends Controller
         }
         $items = $this->cart->items();
         $plants = Plant::whereIn('id', array_keys($items))->get()->keyBy('id');
-        // Flash sale đang chạy: cùng quy tắc với báo giá (đủ suất cho cả dòng mới tính giá sale)
+        // Flash sale đang chạy: đơn giá lấy từ ĐÚNG quy tắc của báo giá / đặt hàng (PricingService::unitPrice)
         $flash = $this->flashSales->activeItems(array_map('intval', array_keys($items)));
         $lines = collect($items)->map(function ($qty, $id) use ($plants, $flash) {
-            $f = $flash->get((int) $id);
-            $unit = $f && $f->covers((int) $qty) ? $f->sale_price : $plants[$id]->price;
+            [$unit, $applied] = PricingService::unitPrice($plants[$id], (int) $qty, $flash->get((int) $id));
 
-            return ['plant' => $plants[$id], 'quantity' => $qty, 'unit' => $unit, 'flash' => $f, 'total' => $unit * $qty];
+            return ['plant' => $plants[$id], 'quantity' => $qty, 'unit' => $unit, 'flash' => $flash->get((int) $id), 'applied' => $applied, 'total' => $unit * $qty];
         });
 
         return view('cart.index', ['lines' => $lines, 'subtotal' => $lines->sum('total')]);

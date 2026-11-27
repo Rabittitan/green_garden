@@ -18,16 +18,20 @@
     $groups = [
         'Bán hàng' => [
             ['admin.dashboard', 'admin.dashboard', 'fa-chart-line', 'Thống kê', 'reports'],
+            ['admin.defects.report', 'admin.defects.report', 'fa-chart-pie', 'Báo cáo hàng lỗi', 'reports'],
             ['admin.orders.index', 'admin.orders.*', 'fa-receipt', 'Đơn hàng', 'orders'],
             ['admin.reviews.index', 'admin.reviews.*', 'fa-star', 'Đánh giá', 'reviews'],
             ['admin.comments.index', 'admin.comments.*', 'fa-comments', 'Hỏi đáp', 'reviews'],
             ['admin.articles.index', 'admin.articles.*', 'fa-newspaper', 'Tin tức', 'content'],
             ['admin.slides.index', 'admin.slides.*', 'fa-images', 'Slide trang chủ', 'content'],
+            ['admin.contact-channels.index', 'admin.contact-channels.*', 'fa-comment-dots', 'Kênh liên hệ', 'content'],
             ['admin.flash-sales.index', 'admin.flash-sales.*', 'fa-bolt', 'Flash sale', 'flash_sales'],
         ],
         'Kho & nhập hàng' => [
             ['admin.plants.index', 'admin.plants.*', 'fa-leaf', 'Cây cảnh', 'catalog'],
             ['admin.inventory.index', 'admin.inventory.*', 'fa-warehouse', 'Kho', 'inventory'],
+            ['admin.units.index', 'admin.units.index', 'fa-qrcode', 'Tra cứu chậu', 'inventory'],
+            ['admin.defect-reports.index', 'admin.defect-reports.*', 'fa-triangle-exclamation', 'Phiếu báo lỗi', 'inventory'],
             ['admin.stock-counts.index', 'admin.stock-counts.*', 'fa-clipboard-check', 'Phiếu kiểm kê', 'admin'],
             ['admin.purchase-requests.index', 'admin.purchase-requests.*', 'fa-clipboard-list', 'Yêu cầu nhập', 'purchasing'],
             ['admin.goods-receipts.index', 'admin.goods-receipts.*', 'fa-truck-ramp-box', 'Phiếu nhập kho', 'purchasing'],
@@ -77,21 +81,7 @@
             </div>
         </header>
         <main class="gg-admin-content">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show"><i class="fa fa-check-circle"></i> {{ session('success') }}
-                    <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-            @endif
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show"><i class="fa fa-triangle-exclamation"></i> {{ session('error') }}
-                    <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-            @endif
-            @if(session('warning'))
-                <div class="alert alert-warning alert-dismissible fade show"><i class="fa fa-circle-info"></i> {{ session('warning') }}
-                    <button class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button></div>
-            @endif
-            @if($errors->any())
-                <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
-            @endif
+            @include('partials.toasts', ['withErrors' => true])
 
             @yield('content')
         </main>
@@ -106,6 +96,7 @@
         document.addEventListener('click', function (e) { if (bar.classList.contains('show') && !bar.contains(e.target)) bar.classList.remove('show'); });
     })();
 </script>
+<script src="{{ asset('js/toasts.js') }}?v={{ @filemtime(public_path('js/toasts.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>
